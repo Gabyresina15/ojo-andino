@@ -1,0 +1,2272 @@
+{
+  "abra-pampa": {
+    "comunidadId": "abra-pampa",
+    "generadoEn": "2026-11-22T13:35:14.089Z",
+    "fuenteCache": true,
+    "meteorologia": {
+      "fuente": "NASA POWER",
+      "ultimoDiaConDato": "2026-11-19",
+      "demoraDeclarada": "2–3 días (meteorología)",
+      "climatologiaPeriodo": "January 2001 - December 2025",
+      "precipitacionMm30d": {
+        "observado": 82.09,
+        "climatologia": 42.61,
+        "unidad": "mm",
+        "porcentaje": 92.7,
+        "ventana": "21/10–19/11/2026 (30 días con dato)",
+        "diasConDato": 30
+      },
+      "temperaturaC7d": {
+        "mediaObservada": 14.19,
+        "climatologiaMes": 11.16,
+        "mesClimatologico": "NOV",
+        "ventana": "13/11–19/11"
+      },
+      "serie": [
+        {
+          "fecha": "2026-10-21",
+          "lluviaMm": 0.22,
+          "climaMm": 1.11,
+          "t2m": 12.7
+        },
+        {
+          "fecha": "2026-10-22",
+          "lluviaMm": 0.22,
+          "climaMm": 1.11,
+          "t2m": 14.26
+        },
+        {
+          "fecha": "2026-10-23",
+          "lluviaMm": 1.07,
+          "climaMm": 1.11,
+          "t2m": 13.45
+        },
+        {
+          "fecha": "2026-10-24",
+          "lluviaMm": 0.1,
+          "climaMm": 1.11,
+          "t2m": 13.54
+        },
+        {
+          "fecha": "2026-10-25",
+          "lluviaMm": 0.25,
+          "climaMm": 1.11,
+          "t2m": 10.88
+        },
+        {
+          "fecha": "2026-10-26",
+          "lluviaMm": 0.12,
+          "climaMm": 1.11,
+          "t2m": 11.31
+        },
+        {
+          "fecha": "2026-10-27",
+          "lluviaMm": 3.14,
+          "climaMm": 1.11,
+          "t2m": 11.1
+        },
+        {
+          "fecha": "2026-10-28",
+          "lluviaMm": 3.74,
+          "climaMm": 1.11,
+          "t2m": 8.57
+        },
+        {
+          "fecha": "2026-10-29",
+          "lluviaMm": 3.35,
+          "climaMm": 1.11,
+          "t2m": 8.43
+        },
+        {
+          "fecha": "2026-10-30",
+          "lluviaMm": 0.93,
+          "climaMm": 1.11,
+          "t2m": 9.59
+        },
+        {
+          "fecha": "2026-10-31",
+          "lluviaMm": 0.22,
+          "climaMm": 1.11,
+          "t2m": 10.89
+        },
+        {
+          "fecha": "2026-11-01",
+          "lluviaMm": 0.27,
+          "climaMm": 1.6,
+          "t2m": 12.29
+        },
+        {
+          "fecha": "2026-11-02",
+          "lluviaMm": 0.25,
+          "climaMm": 1.6,
+          "t2m": 13.73
+        },
+        {
+          "fecha": "2026-11-03",
+          "lluviaMm": 0,
+          "climaMm": 1.6,
+          "t2m": 14.65
+        },
+        {
+          "fecha": "2026-11-04",
+          "lluviaMm": 7.06,
+          "climaMm": 1.6,
+          "t2m": 14.87
+        },
+        {
+          "fecha": "2026-11-05",
+          "lluviaMm": 2.16,
+          "climaMm": 1.6,
+          "t2m": 15.32
+        },
+        {
+          "fecha": "2026-11-06",
+          "lluviaMm": 0.66,
+          "climaMm": 1.6,
+          "t2m": 14.86
+        },
+        {
+          "fecha": "2026-11-07",
+          "lluviaMm": 3.33,
+          "climaMm": 1.6,
+          "t2m": 12.96
+        },
+        {
+          "fecha": "2026-11-08",
+          "lluviaMm": 2.71,
+          "climaMm": 1.6,
+          "t2m": 12.11
+        },
+        {
+          "fecha": "2026-11-09",
+          "lluviaMm": 2.42,
+          "climaMm": 1.6,
+          "t2m": 12.7
+        },
+        {
+          "fecha": "2026-11-10",
+          "lluviaMm": 1.31,
+          "climaMm": 1.6,
+          "t2m": 14.9
+        },
+        {
+          "fecha": "2026-11-11",
+          "lluviaMm": 27.67,
+          "climaMm": 1.6,
+          "t2m": 10.96
+        },
+        {
+          "fecha": "2026-11-12",
+          "lluviaMm": 1.94,
+          "climaMm": 1.6,
+          "t2m": 11.66
+        },
+        {
+          "fecha": "2026-11-13",
+          "lluviaMm": 3.37,
+          "climaMm": 1.6,
+          "t2m": 13
+        },
+        {
+          "fecha": "2026-11-14",
+          "lluviaMm": 12.64,
+          "climaMm": 1.6,
+          "t2m": 12.44
+        },
+        {
+          "fecha": "2026-11-15",
+          "lluviaMm": 1.28,
+          "climaMm": 1.6,
+          "t2m": 14.41
+        },
+        {
+          "fecha": "2026-11-16",
+          "lluviaMm": 0.3,
+          "climaMm": 1.6,
+          "t2m": 14.33
+        },
+        {
+          "fecha": "2026-11-17",
+          "lluviaMm": 0.45,
+          "climaMm": 1.6,
+          "t2m": 14.32
+        },
+        {
+          "fecha": "2026-11-18",
+          "lluviaMm": 0.49,
+          "climaMm": 1.6,
+          "t2m": 15.11
+        },
+        {
+          "fecha": "2026-11-19",
+          "lluviaMm": 0.42,
+          "climaMm": 1.6,
+          "t2m": 15.71
+        }
+      ]
+    },
+    "ndvi": {
+      "fuente": "MODIS MOD13Q1 vía ORNL TESViS",
+      "ultimoComposite": {
+        "fecha": "2026-11-01",
+        "modisDate": "A2026305",
+        "ndvi": 0.138
+      },
+      "compositeAnterior": {
+        "fecha": "2026-10-16",
+        "modisDate": "A2026289",
+        "ndvi": 0.115
+      },
+      "compositeAnioAnterior": {
+        "fecha": "2025-11-01",
+        "modisDate": "A2025305",
+        "ndvi": 0.134
+      },
+      "aviso": "Producto compuesto de 16 días a 250 m: no es un dato de hoy. Índice de verdor, no porcentaje de pasto."
+    },
+    "errores": []
+  },
+  "susques": {
+    "comunidadId": "susques",
+    "generadoEn": "2026-11-22T13:35:16.551Z",
+    "fuenteCache": true,
+    "meteorologia": {
+      "fuente": "NASA POWER",
+      "ultimoDiaConDato": "2026-11-19",
+      "demoraDeclarada": "2–3 días (meteorología)",
+      "climatologiaPeriodo": "January 2001 - December 2025",
+      "precipitacionMm30d": {
+        "observado": 8.66,
+        "climatologia": 41.09,
+        "unidad": "mm",
+        "porcentaje": -78.9,
+        "ventana": "21/10–19/11/2026 (30 días con dato)",
+        "diasConDato": 30
+      },
+      "temperaturaC7d": {
+        "mediaObservada": 13.09,
+        "climatologiaMes": 10.14,
+        "mesClimatologico": "NOV",
+        "ventana": "13/11–19/11"
+      },
+      "serie": [
+        {
+          "fecha": "2026-10-21",
+          "lluviaMm": 0,
+          "climaMm": 0.92,
+          "t2m": 9.09
+        },
+        {
+          "fecha": "2026-10-22",
+          "lluviaMm": 0,
+          "climaMm": 0.92,
+          "t2m": 9.81
+        },
+        {
+          "fecha": "2026-10-23",
+          "lluviaMm": 0.03,
+          "climaMm": 0.92,
+          "t2m": 9.5
+        },
+        {
+          "fecha": "2026-10-24",
+          "lluviaMm": 0,
+          "climaMm": 0.92,
+          "t2m": 8.66
+        },
+        {
+          "fecha": "2026-10-25",
+          "lluviaMm": 0,
+          "climaMm": 0.92,
+          "t2m": 9.38
+        },
+        {
+          "fecha": "2026-10-26",
+          "lluviaMm": 0,
+          "climaMm": 0.92,
+          "t2m": 9.06
+        },
+        {
+          "fecha": "2026-10-27",
+          "lluviaMm": 0,
+          "climaMm": 0.92,
+          "t2m": 8.14
+        },
+        {
+          "fecha": "2026-10-28",
+          "lluviaMm": 0.4,
+          "climaMm": 0.92,
+          "t2m": 7.35
+        },
+        {
+          "fecha": "2026-10-29",
+          "lluviaMm": 0.02,
+          "climaMm": 0.92,
+          "t2m": 7.42
+        },
+        {
+          "fecha": "2026-10-30",
+          "lluviaMm": 0,
+          "climaMm": 0.92,
+          "t2m": 6.67
+        },
+        {
+          "fecha": "2026-10-31",
+          "lluviaMm": 0,
+          "climaMm": 0.92,
+          "t2m": 7
+        },
+        {
+          "fecha": "2026-11-01",
+          "lluviaMm": 0,
+          "climaMm": 1.63,
+          "t2m": 8.09
+        },
+        {
+          "fecha": "2026-11-02",
+          "lluviaMm": 0,
+          "climaMm": 1.63,
+          "t2m": 9.86
+        },
+        {
+          "fecha": "2026-11-03",
+          "lluviaMm": 0,
+          "climaMm": 1.63,
+          "t2m": 10.37
+        },
+        {
+          "fecha": "2026-11-04",
+          "lluviaMm": 0,
+          "climaMm": 1.63,
+          "t2m": 11.48
+        },
+        {
+          "fecha": "2026-11-05",
+          "lluviaMm": 0,
+          "climaMm": 1.63,
+          "t2m": 12.49
+        },
+        {
+          "fecha": "2026-11-06",
+          "lluviaMm": 0,
+          "climaMm": 1.63,
+          "t2m": 13.31
+        },
+        {
+          "fecha": "2026-11-07",
+          "lluviaMm": 0.29,
+          "climaMm": 1.63,
+          "t2m": 13.97
+        },
+        {
+          "fecha": "2026-11-08",
+          "lluviaMm": 0.57,
+          "climaMm": 1.63,
+          "t2m": 14
+        },
+        {
+          "fecha": "2026-11-09",
+          "lluviaMm": 0.16,
+          "climaMm": 1.63,
+          "t2m": 14.93
+        },
+        {
+          "fecha": "2026-11-10",
+          "lluviaMm": 0.3,
+          "climaMm": 1.63,
+          "t2m": 14.52
+        },
+        {
+          "fecha": "2026-11-11",
+          "lluviaMm": 2.14,
+          "climaMm": 1.63,
+          "t2m": 12.87
+        },
+        {
+          "fecha": "2026-11-12",
+          "lluviaMm": 2.28,
+          "climaMm": 1.63,
+          "t2m": 12.86
+        },
+        {
+          "fecha": "2026-11-13",
+          "lluviaMm": 2.22,
+          "climaMm": 1.63,
+          "t2m": 13.03
+        },
+        {
+          "fecha": "2026-11-14",
+          "lluviaMm": 0.25,
+          "climaMm": 1.63,
+          "t2m": 14.34
+        },
+        {
+          "fecha": "2026-11-15",
+          "lluviaMm": 0,
+          "climaMm": 1.63,
+          "t2m": 14.13
+        },
+        {
+          "fecha": "2026-11-16",
+          "lluviaMm": 0,
+          "climaMm": 1.63,
+          "t2m": 12.68
+        },
+        {
+          "fecha": "2026-11-17",
+          "lluviaMm": 0,
+          "climaMm": 1.63,
+          "t2m": 12.39
+        },
+        {
+          "fecha": "2026-11-18",
+          "lluviaMm": 0,
+          "climaMm": 1.63,
+          "t2m": 12.39
+        },
+        {
+          "fecha": "2026-11-19",
+          "lluviaMm": 0,
+          "climaMm": 1.63,
+          "t2m": 12.67
+        }
+      ]
+    },
+    "ndvi": {
+      "fuente": "MODIS MOD13Q1 vía ORNL TESViS",
+      "ultimoComposite": {
+        "fecha": "2026-11-01",
+        "modisDate": "A2026305",
+        "ndvi": 0.083
+      },
+      "compositeAnterior": {
+        "fecha": "2026-10-16",
+        "modisDate": "A2026289",
+        "ndvi": 0.074
+      },
+      "compositeAnioAnterior": {
+        "fecha": "2025-11-01",
+        "modisDate": "A2025305",
+        "ndvi": 0.073
+      },
+      "aviso": "Producto compuesto de 16 días a 250 m: no es un dato de hoy. Índice de verdor, no porcentaje de pasto."
+    },
+    "errores": []
+  },
+  "la-quiaca": {
+    "comunidadId": "la-quiaca",
+    "generadoEn": "2026-11-22T13:35:18.840Z",
+    "fuenteCache": true,
+    "meteorologia": {
+      "fuente": "NASA POWER",
+      "ultimoDiaConDato": "2026-11-19",
+      "demoraDeclarada": "2–3 días (meteorología)",
+      "climatologiaPeriodo": "January 2001 - December 2025",
+      "precipitacionMm30d": {
+        "observado": 71.46,
+        "climatologia": 38.12,
+        "unidad": "mm",
+        "porcentaje": 87.5,
+        "ventana": "21/10–19/11/2026 (30 días con dato)",
+        "diasConDato": 30
+      },
+      "temperaturaC7d": {
+        "mediaObservada": 15.22,
+        "climatologiaMes": 12.17,
+        "mesClimatologico": "NOV",
+        "ventana": "13/11–19/11"
+      },
+      "serie": [
+        {
+          "fecha": "2026-10-21",
+          "lluviaMm": 0.07,
+          "climaMm": 1.03,
+          "t2m": 13.56
+        },
+        {
+          "fecha": "2026-10-22",
+          "lluviaMm": 0.36,
+          "climaMm": 1.03,
+          "t2m": 15.4
+        },
+        {
+          "fecha": "2026-10-23",
+          "lluviaMm": 1.63,
+          "climaMm": 1.03,
+          "t2m": 15.29
+        },
+        {
+          "fecha": "2026-10-24",
+          "lluviaMm": 0.47,
+          "climaMm": 1.03,
+          "t2m": 15.42
+        },
+        {
+          "fecha": "2026-10-25",
+          "lluviaMm": 0.4,
+          "climaMm": 1.03,
+          "t2m": 12.24
+        },
+        {
+          "fecha": "2026-10-26",
+          "lluviaMm": 0.23,
+          "climaMm": 1.03,
+          "t2m": 11.92
+        },
+        {
+          "fecha": "2026-10-27",
+          "lluviaMm": 1.42,
+          "climaMm": 1.03,
+          "t2m": 12.35
+        },
+        {
+          "fecha": "2026-10-28",
+          "lluviaMm": 2.35,
+          "climaMm": 1.03,
+          "t2m": 9.79
+        },
+        {
+          "fecha": "2026-10-29",
+          "lluviaMm": 1.41,
+          "climaMm": 1.03,
+          "t2m": 9.72
+        },
+        {
+          "fecha": "2026-10-30",
+          "lluviaMm": 0.32,
+          "climaMm": 1.03,
+          "t2m": 10.81
+        },
+        {
+          "fecha": "2026-10-31",
+          "lluviaMm": 0.05,
+          "climaMm": 1.03,
+          "t2m": 11.93
+        },
+        {
+          "fecha": "2026-11-01",
+          "lluviaMm": 0.16,
+          "climaMm": 1.41,
+          "t2m": 13.32
+        },
+        {
+          "fecha": "2026-11-02",
+          "lluviaMm": 0.27,
+          "climaMm": 1.41,
+          "t2m": 14.89
+        },
+        {
+          "fecha": "2026-11-03",
+          "lluviaMm": 0.02,
+          "climaMm": 1.41,
+          "t2m": 16.09
+        },
+        {
+          "fecha": "2026-11-04",
+          "lluviaMm": 3.62,
+          "climaMm": 1.41,
+          "t2m": 16.05
+        },
+        {
+          "fecha": "2026-11-05",
+          "lluviaMm": 2.97,
+          "climaMm": 1.41,
+          "t2m": 15.86
+        },
+        {
+          "fecha": "2026-11-06",
+          "lluviaMm": 1.31,
+          "climaMm": 1.41,
+          "t2m": 15.64
+        },
+        {
+          "fecha": "2026-11-07",
+          "lluviaMm": 4.22,
+          "climaMm": 1.41,
+          "t2m": 13.4
+        },
+        {
+          "fecha": "2026-11-08",
+          "lluviaMm": 7.7,
+          "climaMm": 1.41,
+          "t2m": 12.44
+        },
+        {
+          "fecha": "2026-11-09",
+          "lluviaMm": 2.6,
+          "climaMm": 1.41,
+          "t2m": 13.37
+        },
+        {
+          "fecha": "2026-11-10",
+          "lluviaMm": 1.65,
+          "climaMm": 1.41,
+          "t2m": 15.6
+        },
+        {
+          "fecha": "2026-11-11",
+          "lluviaMm": 15.23,
+          "climaMm": 1.41,
+          "t2m": 12.12
+        },
+        {
+          "fecha": "2026-11-12",
+          "lluviaMm": 1.5,
+          "climaMm": 1.41,
+          "t2m": 13.34
+        },
+        {
+          "fecha": "2026-11-13",
+          "lluviaMm": 3.34,
+          "climaMm": 1.41,
+          "t2m": 13.43
+        },
+        {
+          "fecha": "2026-11-14",
+          "lluviaMm": 11.27,
+          "climaMm": 1.41,
+          "t2m": 13.18
+        },
+        {
+          "fecha": "2026-11-15",
+          "lluviaMm": 2.82,
+          "climaMm": 1.41,
+          "t2m": 15.13
+        },
+        {
+          "fecha": "2026-11-16",
+          "lluviaMm": 0.81,
+          "climaMm": 1.41,
+          "t2m": 15.61
+        },
+        {
+          "fecha": "2026-11-17",
+          "lluviaMm": 1.3,
+          "climaMm": 1.41,
+          "t2m": 15.81
+        },
+        {
+          "fecha": "2026-11-18",
+          "lluviaMm": 1.26,
+          "climaMm": 1.41,
+          "t2m": 16.47
+        },
+        {
+          "fecha": "2026-11-19",
+          "lluviaMm": 0.7,
+          "climaMm": 1.41,
+          "t2m": 16.89
+        }
+      ]
+    },
+    "ndvi": {
+      "fuente": "MODIS MOD13Q1 vía ORNL TESViS",
+      "ultimoComposite": {
+        "fecha": "2026-11-01",
+        "modisDate": "A2026305",
+        "ndvi": 0.154
+      },
+      "compositeAnterior": {
+        "fecha": "2026-10-16",
+        "modisDate": "A2026289",
+        "ndvi": 0.16
+      },
+      "compositeAnioAnterior": {
+        "fecha": "2025-11-01",
+        "modisDate": "A2025305",
+        "ndvi": 0.104
+      },
+      "aviso": "Producto compuesto de 16 días a 250 m: no es un dato de hoy. Índice de verdor, no porcentaje de pasto."
+    },
+    "errores": []
+  },
+  "yavi": {
+    "comunidadId": "yavi",
+    "generadoEn": "2026-11-22T13:35:21.272Z",
+    "fuenteCache": true,
+    "meteorologia": {
+      "fuente": "NASA POWER",
+      "ultimoDiaConDato": "2026-11-19",
+      "demoraDeclarada": "2–3 días (meteorología)",
+      "climatologiaPeriodo": "January 2001 - December 2025",
+      "precipitacionMm30d": {
+        "observado": 71.46,
+        "climatologia": 38.12,
+        "unidad": "mm",
+        "porcentaje": 87.5,
+        "ventana": "21/10–19/11/2026 (30 días con dato)",
+        "diasConDato": 30
+      },
+      "temperaturaC7d": {
+        "mediaObservada": 15.22,
+        "climatologiaMes": 12.17,
+        "mesClimatologico": "NOV",
+        "ventana": "13/11–19/11"
+      },
+      "serie": [
+        {
+          "fecha": "2026-10-21",
+          "lluviaMm": 0.07,
+          "climaMm": 1.03,
+          "t2m": 13.56
+        },
+        {
+          "fecha": "2026-10-22",
+          "lluviaMm": 0.36,
+          "climaMm": 1.03,
+          "t2m": 15.4
+        },
+        {
+          "fecha": "2026-10-23",
+          "lluviaMm": 1.63,
+          "climaMm": 1.03,
+          "t2m": 15.29
+        },
+        {
+          "fecha": "2026-10-24",
+          "lluviaMm": 0.47,
+          "climaMm": 1.03,
+          "t2m": 15.42
+        },
+        {
+          "fecha": "2026-10-25",
+          "lluviaMm": 0.4,
+          "climaMm": 1.03,
+          "t2m": 12.24
+        },
+        {
+          "fecha": "2026-10-26",
+          "lluviaMm": 0.23,
+          "climaMm": 1.03,
+          "t2m": 11.92
+        },
+        {
+          "fecha": "2026-10-27",
+          "lluviaMm": 1.42,
+          "climaMm": 1.03,
+          "t2m": 12.35
+        },
+        {
+          "fecha": "2026-10-28",
+          "lluviaMm": 2.35,
+          "climaMm": 1.03,
+          "t2m": 9.79
+        },
+        {
+          "fecha": "2026-10-29",
+          "lluviaMm": 1.41,
+          "climaMm": 1.03,
+          "t2m": 9.72
+        },
+        {
+          "fecha": "2026-10-30",
+          "lluviaMm": 0.32,
+          "climaMm": 1.03,
+          "t2m": 10.81
+        },
+        {
+          "fecha": "2026-10-31",
+          "lluviaMm": 0.05,
+          "climaMm": 1.03,
+          "t2m": 11.93
+        },
+        {
+          "fecha": "2026-11-01",
+          "lluviaMm": 0.16,
+          "climaMm": 1.41,
+          "t2m": 13.32
+        },
+        {
+          "fecha": "2026-11-02",
+          "lluviaMm": 0.27,
+          "climaMm": 1.41,
+          "t2m": 14.89
+        },
+        {
+          "fecha": "2026-11-03",
+          "lluviaMm": 0.02,
+          "climaMm": 1.41,
+          "t2m": 16.09
+        },
+        {
+          "fecha": "2026-11-04",
+          "lluviaMm": 3.62,
+          "climaMm": 1.41,
+          "t2m": 16.05
+        },
+        {
+          "fecha": "2026-11-05",
+          "lluviaMm": 2.97,
+          "climaMm": 1.41,
+          "t2m": 15.86
+        },
+        {
+          "fecha": "2026-11-06",
+          "lluviaMm": 1.31,
+          "climaMm": 1.41,
+          "t2m": 15.64
+        },
+        {
+          "fecha": "2026-11-07",
+          "lluviaMm": 4.22,
+          "climaMm": 1.41,
+          "t2m": 13.4
+        },
+        {
+          "fecha": "2026-11-08",
+          "lluviaMm": 7.7,
+          "climaMm": 1.41,
+          "t2m": 12.44
+        },
+        {
+          "fecha": "2026-11-09",
+          "lluviaMm": 2.6,
+          "climaMm": 1.41,
+          "t2m": 13.37
+        },
+        {
+          "fecha": "2026-11-10",
+          "lluviaMm": 1.65,
+          "climaMm": 1.41,
+          "t2m": 15.6
+        },
+        {
+          "fecha": "2026-11-11",
+          "lluviaMm": 15.23,
+          "climaMm": 1.41,
+          "t2m": 12.12
+        },
+        {
+          "fecha": "2026-11-12",
+          "lluviaMm": 1.5,
+          "climaMm": 1.41,
+          "t2m": 13.34
+        },
+        {
+          "fecha": "2026-11-13",
+          "lluviaMm": 3.34,
+          "climaMm": 1.41,
+          "t2m": 13.43
+        },
+        {
+          "fecha": "2026-11-14",
+          "lluviaMm": 11.27,
+          "climaMm": 1.41,
+          "t2m": 13.18
+        },
+        {
+          "fecha": "2026-11-15",
+          "lluviaMm": 2.82,
+          "climaMm": 1.41,
+          "t2m": 15.13
+        },
+        {
+          "fecha": "2026-11-16",
+          "lluviaMm": 0.81,
+          "climaMm": 1.41,
+          "t2m": 15.61
+        },
+        {
+          "fecha": "2026-11-17",
+          "lluviaMm": 1.3,
+          "climaMm": 1.41,
+          "t2m": 15.81
+        },
+        {
+          "fecha": "2026-11-18",
+          "lluviaMm": 1.26,
+          "climaMm": 1.41,
+          "t2m": 16.47
+        },
+        {
+          "fecha": "2026-11-19",
+          "lluviaMm": 0.7,
+          "climaMm": 1.41,
+          "t2m": 16.89
+        }
+      ]
+    },
+    "ndvi": {
+      "fuente": "MODIS MOD13Q1 vía ORNL TESViS",
+      "ultimoComposite": {
+        "fecha": "2026-11-01",
+        "modisDate": "A2026305",
+        "ndvi": 0.209
+      },
+      "compositeAnterior": {
+        "fecha": "2026-10-16",
+        "modisDate": "A2026289",
+        "ndvi": 0.239
+      },
+      "compositeAnioAnterior": {
+        "fecha": "2025-11-01",
+        "modisDate": "A2025305",
+        "ndvi": 0.254
+      },
+      "aviso": "Producto compuesto de 16 días a 250 m: no es un dato de hoy. Índice de verdor, no porcentaje de pasto."
+    },
+    "errores": []
+  },
+  "humahuaca": {
+    "comunidadId": "humahuaca",
+    "generadoEn": "2026-11-22T13:35:23.894Z",
+    "fuenteCache": true,
+    "meteorologia": {
+      "fuente": "NASA POWER",
+      "ultimoDiaConDato": "2026-11-19",
+      "demoraDeclarada": "2–3 días (meteorología)",
+      "climatologiaPeriodo": "January 2001 - December 2025",
+      "precipitacionMm30d": {
+        "observado": 64.07,
+        "climatologia": 48.16,
+        "unidad": "mm",
+        "porcentaje": 33,
+        "ventana": "21/10–19/11/2026 (30 días con dato)",
+        "diasConDato": 30
+      },
+      "temperaturaC7d": {
+        "mediaObservada": 14.08,
+        "climatologiaMes": 10.78,
+        "mesClimatologico": "NOV",
+        "ventana": "13/11–19/11"
+      },
+      "serie": [
+        {
+          "fecha": "2026-10-21",
+          "lluviaMm": 0.34,
+          "climaMm": 1.2,
+          "t2m": 12.54
+        },
+        {
+          "fecha": "2026-10-22",
+          "lluviaMm": 0.09,
+          "climaMm": 1.2,
+          "t2m": 13.6
+        },
+        {
+          "fecha": "2026-10-23",
+          "lluviaMm": 0.92,
+          "climaMm": 1.2,
+          "t2m": 12.44
+        },
+        {
+          "fecha": "2026-10-24",
+          "lluviaMm": 0,
+          "climaMm": 1.2,
+          "t2m": 12.25
+        },
+        {
+          "fecha": "2026-10-25",
+          "lluviaMm": 0.18,
+          "climaMm": 1.2,
+          "t2m": 10.5
+        },
+        {
+          "fecha": "2026-10-26",
+          "lluviaMm": 0,
+          "climaMm": 1.2,
+          "t2m": 11.14
+        },
+        {
+          "fecha": "2026-10-27",
+          "lluviaMm": 3.36,
+          "climaMm": 1.2,
+          "t2m": 10.41
+        },
+        {
+          "fecha": "2026-10-28",
+          "lluviaMm": 8.44,
+          "climaMm": 1.2,
+          "t2m": 7.48
+        },
+        {
+          "fecha": "2026-10-29",
+          "lluviaMm": 5.03,
+          "climaMm": 1.2,
+          "t2m": 7.75
+        },
+        {
+          "fecha": "2026-10-30",
+          "lluviaMm": 0.87,
+          "climaMm": 1.2,
+          "t2m": 8.84
+        },
+        {
+          "fecha": "2026-10-31",
+          "lluviaMm": 0.34,
+          "climaMm": 1.2,
+          "t2m": 10.06
+        },
+        {
+          "fecha": "2026-11-01",
+          "lluviaMm": 0.29,
+          "climaMm": 1.84,
+          "t2m": 11.57
+        },
+        {
+          "fecha": "2026-11-02",
+          "lluviaMm": 0.47,
+          "climaMm": 1.84,
+          "t2m": 13.14
+        },
+        {
+          "fecha": "2026-11-03",
+          "lluviaMm": 0,
+          "climaMm": 1.84,
+          "t2m": 14.03
+        },
+        {
+          "fecha": "2026-11-04",
+          "lluviaMm": 3.09,
+          "climaMm": 1.84,
+          "t2m": 14.3
+        },
+        {
+          "fecha": "2026-11-05",
+          "lluviaMm": 0.95,
+          "climaMm": 1.84,
+          "t2m": 15.01
+        },
+        {
+          "fecha": "2026-11-06",
+          "lluviaMm": 0.39,
+          "climaMm": 1.84,
+          "t2m": 14.96
+        },
+        {
+          "fecha": "2026-11-07",
+          "lluviaMm": 2.92,
+          "climaMm": 1.84,
+          "t2m": 13.12
+        },
+        {
+          "fecha": "2026-11-08",
+          "lluviaMm": 1.43,
+          "climaMm": 1.84,
+          "t2m": 11.81
+        },
+        {
+          "fecha": "2026-11-09",
+          "lluviaMm": 2.26,
+          "climaMm": 1.84,
+          "t2m": 12.84
+        },
+        {
+          "fecha": "2026-11-10",
+          "lluviaMm": 1.62,
+          "climaMm": 1.84,
+          "t2m": 14.74
+        },
+        {
+          "fecha": "2026-11-11",
+          "lluviaMm": 15.19,
+          "climaMm": 1.84,
+          "t2m": 11.5
+        },
+        {
+          "fecha": "2026-11-12",
+          "lluviaMm": 2.36,
+          "climaMm": 1.84,
+          "t2m": 11.92
+        },
+        {
+          "fecha": "2026-11-13",
+          "lluviaMm": 2.98,
+          "climaMm": 1.84,
+          "t2m": 13.32
+        },
+        {
+          "fecha": "2026-11-14",
+          "lluviaMm": 9.21,
+          "climaMm": 1.84,
+          "t2m": 12.75
+        },
+        {
+          "fecha": "2026-11-15",
+          "lluviaMm": 0.52,
+          "climaMm": 1.84,
+          "t2m": 14.54
+        },
+        {
+          "fecha": "2026-11-16",
+          "lluviaMm": 0.28,
+          "climaMm": 1.84,
+          "t2m": 14.14
+        },
+        {
+          "fecha": "2026-11-17",
+          "lluviaMm": 0.2,
+          "climaMm": 1.84,
+          "t2m": 13.97
+        },
+        {
+          "fecha": "2026-11-18",
+          "lluviaMm": 0.23,
+          "climaMm": 1.84,
+          "t2m": 14.53
+        },
+        {
+          "fecha": "2026-11-19",
+          "lluviaMm": 0.11,
+          "climaMm": 1.84,
+          "t2m": 15.32
+        }
+      ]
+    },
+    "ndvi": {
+      "fuente": "MODIS MOD13Q1 vía ORNL TESViS",
+      "ultimoComposite": {
+        "fecha": "2026-11-01",
+        "modisDate": "A2026305",
+        "ndvi": 0.181
+      },
+      "compositeAnterior": {
+        "fecha": "2026-10-16",
+        "modisDate": "A2026289",
+        "ndvi": 0.164
+      },
+      "compositeAnioAnterior": {
+        "fecha": "2025-11-01",
+        "modisDate": "A2025305",
+        "ndvi": 0.132
+      },
+      "aviso": "Producto compuesto de 16 días a 250 m: no es un dato de hoy. Índice de verdor, no porcentaje de pasto."
+    },
+    "errores": []
+  },
+  "tilcara": {
+    "comunidadId": "tilcara",
+    "generadoEn": "2026-11-22T13:35:29.955Z",
+    "fuenteCache": true,
+    "meteorologia": {
+      "fuente": "NASA POWER",
+      "ultimoDiaConDato": "2026-11-19",
+      "demoraDeclarada": "2–3 días (meteorología)",
+      "climatologiaPeriodo": "January 2001 - December 2025",
+      "precipitacionMm30d": {
+        "observado": 52.07,
+        "climatologia": 51.42,
+        "unidad": "mm",
+        "porcentaje": 1.3,
+        "ventana": "21/10–19/11/2026 (30 días con dato)",
+        "diasConDato": 30
+      },
+      "temperaturaC7d": {
+        "mediaObservada": 14.46,
+        "climatologiaMes": 10.23,
+        "mesClimatologico": "NOV",
+        "ventana": "13/11–19/11"
+      },
+      "serie": [
+        {
+          "fecha": "2026-10-21",
+          "lluviaMm": 0.27,
+          "climaMm": 1.22,
+          "t2m": 12.33
+        },
+        {
+          "fecha": "2026-10-22",
+          "lluviaMm": 0,
+          "climaMm": 1.22,
+          "t2m": 13.39
+        },
+        {
+          "fecha": "2026-10-23",
+          "lluviaMm": 0.51,
+          "climaMm": 1.22,
+          "t2m": 12.82
+        },
+        {
+          "fecha": "2026-10-24",
+          "lluviaMm": 0,
+          "climaMm": 1.22,
+          "t2m": 12.17
+        },
+        {
+          "fecha": "2026-10-25",
+          "lluviaMm": 0.79,
+          "climaMm": 1.22,
+          "t2m": 9.75
+        },
+        {
+          "fecha": "2026-10-26",
+          "lluviaMm": 0,
+          "climaMm": 1.22,
+          "t2m": 11.06
+        },
+        {
+          "fecha": "2026-10-27",
+          "lluviaMm": 2.85,
+          "climaMm": 1.22,
+          "t2m": 10.13
+        },
+        {
+          "fecha": "2026-10-28",
+          "lluviaMm": 10.39,
+          "climaMm": 1.22,
+          "t2m": 6.94
+        },
+        {
+          "fecha": "2026-10-29",
+          "lluviaMm": 5.21,
+          "climaMm": 1.22,
+          "t2m": 7.55
+        },
+        {
+          "fecha": "2026-10-30",
+          "lluviaMm": 0.36,
+          "climaMm": 1.22,
+          "t2m": 8.84
+        },
+        {
+          "fecha": "2026-10-31",
+          "lluviaMm": 0.19,
+          "climaMm": 1.22,
+          "t2m": 9.9
+        },
+        {
+          "fecha": "2026-11-01",
+          "lluviaMm": 0.31,
+          "climaMm": 2,
+          "t2m": 11.16
+        },
+        {
+          "fecha": "2026-11-02",
+          "lluviaMm": 0.54,
+          "climaMm": 2,
+          "t2m": 12.74
+        },
+        {
+          "fecha": "2026-11-03",
+          "lluviaMm": 0,
+          "climaMm": 2,
+          "t2m": 13.86
+        },
+        {
+          "fecha": "2026-11-04",
+          "lluviaMm": 0.79,
+          "climaMm": 2,
+          "t2m": 14.3
+        },
+        {
+          "fecha": "2026-11-05",
+          "lluviaMm": 0.15,
+          "climaMm": 2,
+          "t2m": 14.64
+        },
+        {
+          "fecha": "2026-11-06",
+          "lluviaMm": 0.47,
+          "climaMm": 2,
+          "t2m": 15.77
+        },
+        {
+          "fecha": "2026-11-07",
+          "lluviaMm": 3.24,
+          "climaMm": 2,
+          "t2m": 12.73
+        },
+        {
+          "fecha": "2026-11-08",
+          "lluviaMm": 0.97,
+          "climaMm": 2,
+          "t2m": 10.59
+        },
+        {
+          "fecha": "2026-11-09",
+          "lluviaMm": 1.66,
+          "climaMm": 2,
+          "t2m": 12.31
+        },
+        {
+          "fecha": "2026-11-10",
+          "lluviaMm": 2,
+          "climaMm": 2,
+          "t2m": 14.97
+        },
+        {
+          "fecha": "2026-11-11",
+          "lluviaMm": 4.24,
+          "climaMm": 2,
+          "t2m": 12.28
+        },
+        {
+          "fecha": "2026-11-12",
+          "lluviaMm": 2.38,
+          "climaMm": 2,
+          "t2m": 12.93
+        },
+        {
+          "fecha": "2026-11-13",
+          "lluviaMm": 4.85,
+          "climaMm": 2,
+          "t2m": 13.57
+        },
+        {
+          "fecha": "2026-11-14",
+          "lluviaMm": 7.72,
+          "climaMm": 2,
+          "t2m": 12.98
+        },
+        {
+          "fecha": "2026-11-15",
+          "lluviaMm": 1.22,
+          "climaMm": 2,
+          "t2m": 14.76
+        },
+        {
+          "fecha": "2026-11-16",
+          "lluviaMm": 0.39,
+          "climaMm": 2,
+          "t2m": 14.97
+        },
+        {
+          "fecha": "2026-11-17",
+          "lluviaMm": 0.25,
+          "climaMm": 2,
+          "t2m": 14.57
+        },
+        {
+          "fecha": "2026-11-18",
+          "lluviaMm": 0.26,
+          "climaMm": 2,
+          "t2m": 14.75
+        },
+        {
+          "fecha": "2026-11-19",
+          "lluviaMm": 0.06,
+          "climaMm": 2,
+          "t2m": 15.6
+        }
+      ]
+    },
+    "ndvi": {
+      "fuente": "MODIS MOD13Q1 vía ORNL TESViS",
+      "ultimoComposite": {
+        "fecha": "2026-11-01",
+        "modisDate": "A2026305",
+        "ndvi": 0.173
+      },
+      "compositeAnterior": {
+        "fecha": "2026-10-16",
+        "modisDate": "A2026289",
+        "ndvi": 0.167
+      },
+      "compositeAnioAnterior": {
+        "fecha": "2025-11-01",
+        "modisDate": "A2025305",
+        "ndvi": 0.196
+      },
+      "aviso": "Producto compuesto de 16 días a 250 m: no es un dato de hoy. Índice de verdor, no porcentaje de pasto."
+    },
+    "errores": []
+  },
+  "maimara": {
+    "comunidadId": "maimara",
+    "generadoEn": "2026-11-22T13:35:32.415Z",
+    "fuenteCache": true,
+    "meteorologia": {
+      "fuente": "NASA POWER",
+      "ultimoDiaConDato": "2026-11-19",
+      "demoraDeclarada": "2–3 días (meteorología)",
+      "climatologiaPeriodo": "January 2001 - December 2025",
+      "precipitacionMm30d": {
+        "observado": 52.07,
+        "climatologia": 51.42,
+        "unidad": "mm",
+        "porcentaje": 1.3,
+        "ventana": "21/10–19/11/2026 (30 días con dato)",
+        "diasConDato": 30
+      },
+      "temperaturaC7d": {
+        "mediaObservada": 14.46,
+        "climatologiaMes": 10.23,
+        "mesClimatologico": "NOV",
+        "ventana": "13/11–19/11"
+      },
+      "serie": [
+        {
+          "fecha": "2026-10-21",
+          "lluviaMm": 0.27,
+          "climaMm": 1.22,
+          "t2m": 12.33
+        },
+        {
+          "fecha": "2026-10-22",
+          "lluviaMm": 0,
+          "climaMm": 1.22,
+          "t2m": 13.39
+        },
+        {
+          "fecha": "2026-10-23",
+          "lluviaMm": 0.51,
+          "climaMm": 1.22,
+          "t2m": 12.82
+        },
+        {
+          "fecha": "2026-10-24",
+          "lluviaMm": 0,
+          "climaMm": 1.22,
+          "t2m": 12.17
+        },
+        {
+          "fecha": "2026-10-25",
+          "lluviaMm": 0.79,
+          "climaMm": 1.22,
+          "t2m": 9.75
+        },
+        {
+          "fecha": "2026-10-26",
+          "lluviaMm": 0,
+          "climaMm": 1.22,
+          "t2m": 11.06
+        },
+        {
+          "fecha": "2026-10-27",
+          "lluviaMm": 2.85,
+          "climaMm": 1.22,
+          "t2m": 10.13
+        },
+        {
+          "fecha": "2026-10-28",
+          "lluviaMm": 10.39,
+          "climaMm": 1.22,
+          "t2m": 6.94
+        },
+        {
+          "fecha": "2026-10-29",
+          "lluviaMm": 5.21,
+          "climaMm": 1.22,
+          "t2m": 7.55
+        },
+        {
+          "fecha": "2026-10-30",
+          "lluviaMm": 0.36,
+          "climaMm": 1.22,
+          "t2m": 8.84
+        },
+        {
+          "fecha": "2026-10-31",
+          "lluviaMm": 0.19,
+          "climaMm": 1.22,
+          "t2m": 9.9
+        },
+        {
+          "fecha": "2026-11-01",
+          "lluviaMm": 0.31,
+          "climaMm": 2,
+          "t2m": 11.16
+        },
+        {
+          "fecha": "2026-11-02",
+          "lluviaMm": 0.54,
+          "climaMm": 2,
+          "t2m": 12.74
+        },
+        {
+          "fecha": "2026-11-03",
+          "lluviaMm": 0,
+          "climaMm": 2,
+          "t2m": 13.86
+        },
+        {
+          "fecha": "2026-11-04",
+          "lluviaMm": 0.79,
+          "climaMm": 2,
+          "t2m": 14.3
+        },
+        {
+          "fecha": "2026-11-05",
+          "lluviaMm": 0.15,
+          "climaMm": 2,
+          "t2m": 14.64
+        },
+        {
+          "fecha": "2026-11-06",
+          "lluviaMm": 0.47,
+          "climaMm": 2,
+          "t2m": 15.77
+        },
+        {
+          "fecha": "2026-11-07",
+          "lluviaMm": 3.24,
+          "climaMm": 2,
+          "t2m": 12.73
+        },
+        {
+          "fecha": "2026-11-08",
+          "lluviaMm": 0.97,
+          "climaMm": 2,
+          "t2m": 10.59
+        },
+        {
+          "fecha": "2026-11-09",
+          "lluviaMm": 1.66,
+          "climaMm": 2,
+          "t2m": 12.31
+        },
+        {
+          "fecha": "2026-11-10",
+          "lluviaMm": 2,
+          "climaMm": 2,
+          "t2m": 14.97
+        },
+        {
+          "fecha": "2026-11-11",
+          "lluviaMm": 4.24,
+          "climaMm": 2,
+          "t2m": 12.28
+        },
+        {
+          "fecha": "2026-11-12",
+          "lluviaMm": 2.38,
+          "climaMm": 2,
+          "t2m": 12.93
+        },
+        {
+          "fecha": "2026-11-13",
+          "lluviaMm": 4.85,
+          "climaMm": 2,
+          "t2m": 13.57
+        },
+        {
+          "fecha": "2026-11-14",
+          "lluviaMm": 7.72,
+          "climaMm": 2,
+          "t2m": 12.98
+        },
+        {
+          "fecha": "2026-11-15",
+          "lluviaMm": 1.22,
+          "climaMm": 2,
+          "t2m": 14.76
+        },
+        {
+          "fecha": "2026-11-16",
+          "lluviaMm": 0.39,
+          "climaMm": 2,
+          "t2m": 14.97
+        },
+        {
+          "fecha": "2026-11-17",
+          "lluviaMm": 0.25,
+          "climaMm": 2,
+          "t2m": 14.57
+        },
+        {
+          "fecha": "2026-11-18",
+          "lluviaMm": 0.26,
+          "climaMm": 2,
+          "t2m": 14.75
+        },
+        {
+          "fecha": "2026-11-19",
+          "lluviaMm": 0.06,
+          "climaMm": 2,
+          "t2m": 15.6
+        }
+      ]
+    },
+    "ndvi": {
+      "fuente": "MODIS MOD13Q1 vía ORNL TESViS",
+      "ultimoComposite": {
+        "fecha": "2026-11-01",
+        "modisDate": "A2026305",
+        "ndvi": 0.278
+      },
+      "compositeAnterior": {
+        "fecha": "2026-10-16",
+        "modisDate": "A2026289",
+        "ndvi": 0.19
+      },
+      "compositeAnioAnterior": {
+        "fecha": "2025-11-01",
+        "modisDate": "A2025305",
+        "ndvi": 0.282
+      },
+      "aviso": "Producto compuesto de 16 días a 250 m: no es un dato de hoy. Índice de verdor, no porcentaje de pasto."
+    },
+    "errores": []
+  },
+  "purmamarca": {
+    "comunidadId": "purmamarca",
+    "generadoEn": "2026-11-22T13:35:34.865Z",
+    "fuenteCache": true,
+    "meteorologia": {
+      "fuente": "NASA POWER",
+      "ultimoDiaConDato": "2026-11-19",
+      "demoraDeclarada": "2–3 días (meteorología)",
+      "climatologiaPeriodo": "January 2001 - December 2025",
+      "precipitacionMm30d": {
+        "observado": 52.07,
+        "climatologia": 51.42,
+        "unidad": "mm",
+        "porcentaje": 1.3,
+        "ventana": "21/10–19/11/2026 (30 días con dato)",
+        "diasConDato": 30
+      },
+      "temperaturaC7d": {
+        "mediaObservada": 14.46,
+        "climatologiaMes": 10.23,
+        "mesClimatologico": "NOV",
+        "ventana": "13/11–19/11"
+      },
+      "serie": [
+        {
+          "fecha": "2026-10-21",
+          "lluviaMm": 0.27,
+          "climaMm": 1.22,
+          "t2m": 12.33
+        },
+        {
+          "fecha": "2026-10-22",
+          "lluviaMm": 0,
+          "climaMm": 1.22,
+          "t2m": 13.39
+        },
+        {
+          "fecha": "2026-10-23",
+          "lluviaMm": 0.51,
+          "climaMm": 1.22,
+          "t2m": 12.82
+        },
+        {
+          "fecha": "2026-10-24",
+          "lluviaMm": 0,
+          "climaMm": 1.22,
+          "t2m": 12.17
+        },
+        {
+          "fecha": "2026-10-25",
+          "lluviaMm": 0.79,
+          "climaMm": 1.22,
+          "t2m": 9.75
+        },
+        {
+          "fecha": "2026-10-26",
+          "lluviaMm": 0,
+          "climaMm": 1.22,
+          "t2m": 11.06
+        },
+        {
+          "fecha": "2026-10-27",
+          "lluviaMm": 2.85,
+          "climaMm": 1.22,
+          "t2m": 10.13
+        },
+        {
+          "fecha": "2026-10-28",
+          "lluviaMm": 10.39,
+          "climaMm": 1.22,
+          "t2m": 6.94
+        },
+        {
+          "fecha": "2026-10-29",
+          "lluviaMm": 5.21,
+          "climaMm": 1.22,
+          "t2m": 7.55
+        },
+        {
+          "fecha": "2026-10-30",
+          "lluviaMm": 0.36,
+          "climaMm": 1.22,
+          "t2m": 8.84
+        },
+        {
+          "fecha": "2026-10-31",
+          "lluviaMm": 0.19,
+          "climaMm": 1.22,
+          "t2m": 9.9
+        },
+        {
+          "fecha": "2026-11-01",
+          "lluviaMm": 0.31,
+          "climaMm": 2,
+          "t2m": 11.16
+        },
+        {
+          "fecha": "2026-11-02",
+          "lluviaMm": 0.54,
+          "climaMm": 2,
+          "t2m": 12.74
+        },
+        {
+          "fecha": "2026-11-03",
+          "lluviaMm": 0,
+          "climaMm": 2,
+          "t2m": 13.86
+        },
+        {
+          "fecha": "2026-11-04",
+          "lluviaMm": 0.79,
+          "climaMm": 2,
+          "t2m": 14.3
+        },
+        {
+          "fecha": "2026-11-05",
+          "lluviaMm": 0.15,
+          "climaMm": 2,
+          "t2m": 14.64
+        },
+        {
+          "fecha": "2026-11-06",
+          "lluviaMm": 0.47,
+          "climaMm": 2,
+          "t2m": 15.77
+        },
+        {
+          "fecha": "2026-11-07",
+          "lluviaMm": 3.24,
+          "climaMm": 2,
+          "t2m": 12.73
+        },
+        {
+          "fecha": "2026-11-08",
+          "lluviaMm": 0.97,
+          "climaMm": 2,
+          "t2m": 10.59
+        },
+        {
+          "fecha": "2026-11-09",
+          "lluviaMm": 1.66,
+          "climaMm": 2,
+          "t2m": 12.31
+        },
+        {
+          "fecha": "2026-11-10",
+          "lluviaMm": 2,
+          "climaMm": 2,
+          "t2m": 14.97
+        },
+        {
+          "fecha": "2026-11-11",
+          "lluviaMm": 4.24,
+          "climaMm": 2,
+          "t2m": 12.28
+        },
+        {
+          "fecha": "2026-11-12",
+          "lluviaMm": 2.38,
+          "climaMm": 2,
+          "t2m": 12.93
+        },
+        {
+          "fecha": "2026-11-13",
+          "lluviaMm": 4.85,
+          "climaMm": 2,
+          "t2m": 13.57
+        },
+        {
+          "fecha": "2026-11-14",
+          "lluviaMm": 7.72,
+          "climaMm": 2,
+          "t2m": 12.98
+        },
+        {
+          "fecha": "2026-11-15",
+          "lluviaMm": 1.22,
+          "climaMm": 2,
+          "t2m": 14.76
+        },
+        {
+          "fecha": "2026-11-16",
+          "lluviaMm": 0.39,
+          "climaMm": 2,
+          "t2m": 14.97
+        },
+        {
+          "fecha": "2026-11-17",
+          "lluviaMm": 0.25,
+          "climaMm": 2,
+          "t2m": 14.57
+        },
+        {
+          "fecha": "2026-11-18",
+          "lluviaMm": 0.26,
+          "climaMm": 2,
+          "t2m": 14.75
+        },
+        {
+          "fecha": "2026-11-19",
+          "lluviaMm": 0.06,
+          "climaMm": 2,
+          "t2m": 15.6
+        }
+      ]
+    },
+    "ndvi": {
+      "fuente": "MODIS MOD13Q1 vía ORNL TESViS",
+      "ultimoComposite": {
+        "fecha": "2026-11-01",
+        "modisDate": "A2026305",
+        "ndvi": 0.121
+      },
+      "compositeAnterior": {
+        "fecha": "2026-10-16",
+        "modisDate": "A2026289",
+        "ndvi": 0.124
+      },
+      "compositeAnioAnterior": {
+        "fecha": "2025-11-01",
+        "modisDate": "A2025305",
+        "ndvi": 0.157
+      },
+      "aviso": "Producto compuesto de 16 días a 250 m: no es un dato de hoy. Índice de verdor, no porcentaje de pasto."
+    },
+    "errores": []
+  },
+  "tumbaya": {
+    "comunidadId": "tumbaya",
+    "generadoEn": "2026-11-22T13:35:37.294Z",
+    "fuenteCache": true,
+    "meteorologia": {
+      "fuente": "NASA POWER",
+      "ultimoDiaConDato": "2026-11-19",
+      "demoraDeclarada": "2–3 días (meteorología)",
+      "climatologiaPeriodo": "January 2001 - December 2025",
+      "precipitacionMm30d": {
+        "observado": 92.15,
+        "climatologia": 51.41,
+        "unidad": "mm",
+        "porcentaje": 79.2,
+        "ventana": "21/10–19/11/2026 (30 días con dato)",
+        "diasConDato": 30
+      },
+      "temperaturaC7d": {
+        "mediaObservada": 15.19,
+        "climatologiaMes": 11.18,
+        "mesClimatologico": "NOV",
+        "ventana": "13/11–19/11"
+      },
+      "serie": [
+        {
+          "fecha": "2026-10-21",
+          "lluviaMm": 0.48,
+          "climaMm": 1.15,
+          "t2m": 13.55
+        },
+        {
+          "fecha": "2026-10-22",
+          "lluviaMm": 0.21,
+          "climaMm": 1.15,
+          "t2m": 15.03
+        },
+        {
+          "fecha": "2026-10-23",
+          "lluviaMm": 0.67,
+          "climaMm": 1.15,
+          "t2m": 14.71
+        },
+        {
+          "fecha": "2026-10-24",
+          "lluviaMm": 0.56,
+          "climaMm": 1.15,
+          "t2m": 12.79
+        },
+        {
+          "fecha": "2026-10-25",
+          "lluviaMm": 2.76,
+          "climaMm": 1.15,
+          "t2m": 8.48
+        },
+        {
+          "fecha": "2026-10-26",
+          "lluviaMm": 0.28,
+          "climaMm": 1.15,
+          "t2m": 10.74
+        },
+        {
+          "fecha": "2026-10-27",
+          "lluviaMm": 2.69,
+          "climaMm": 1.15,
+          "t2m": 10.27
+        },
+        {
+          "fecha": "2026-10-28",
+          "lluviaMm": 8.43,
+          "climaMm": 1.15,
+          "t2m": 7.5
+        },
+        {
+          "fecha": "2026-10-29",
+          "lluviaMm": 6.7,
+          "climaMm": 1.15,
+          "t2m": 7.55
+        },
+        {
+          "fecha": "2026-10-30",
+          "lluviaMm": 1.9,
+          "climaMm": 1.15,
+          "t2m": 9.42
+        },
+        {
+          "fecha": "2026-10-31",
+          "lluviaMm": 1.58,
+          "climaMm": 1.15,
+          "t2m": 11.01
+        },
+        {
+          "fecha": "2026-11-01",
+          "lluviaMm": 1.08,
+          "climaMm": 2.04,
+          "t2m": 12.58
+        },
+        {
+          "fecha": "2026-11-02",
+          "lluviaMm": 2.81,
+          "climaMm": 2.04,
+          "t2m": 13.89
+        },
+        {
+          "fecha": "2026-11-03",
+          "lluviaMm": 0.05,
+          "climaMm": 2.04,
+          "t2m": 15.34
+        },
+        {
+          "fecha": "2026-11-04",
+          "lluviaMm": 6.74,
+          "climaMm": 2.04,
+          "t2m": 15.21
+        },
+        {
+          "fecha": "2026-11-05",
+          "lluviaMm": 0.8,
+          "climaMm": 2.04,
+          "t2m": 14.42
+        },
+        {
+          "fecha": "2026-11-06",
+          "lluviaMm": 0.54,
+          "climaMm": 2.04,
+          "t2m": 16.92
+        },
+        {
+          "fecha": "2026-11-07",
+          "lluviaMm": 4.95,
+          "climaMm": 2.04,
+          "t2m": 11.88
+        },
+        {
+          "fecha": "2026-11-08",
+          "lluviaMm": 1.36,
+          "climaMm": 2.04,
+          "t2m": 9.63
+        },
+        {
+          "fecha": "2026-11-09",
+          "lluviaMm": 0.82,
+          "climaMm": 2.04,
+          "t2m": 11.86
+        },
+        {
+          "fecha": "2026-11-10",
+          "lluviaMm": 1.86,
+          "climaMm": 2.04,
+          "t2m": 15.51
+        },
+        {
+          "fecha": "2026-11-11",
+          "lluviaMm": 3.99,
+          "climaMm": 2.04,
+          "t2m": 13.15
+        },
+        {
+          "fecha": "2026-11-12",
+          "lluviaMm": 2.84,
+          "climaMm": 2.04,
+          "t2m": 14.12
+        },
+        {
+          "fecha": "2026-11-13",
+          "lluviaMm": 5.5,
+          "climaMm": 2.04,
+          "t2m": 14.5
+        },
+        {
+          "fecha": "2026-11-14",
+          "lluviaMm": 18.98,
+          "climaMm": 2.04,
+          "t2m": 13.62
+        },
+        {
+          "fecha": "2026-11-15",
+          "lluviaMm": 4.85,
+          "climaMm": 2.04,
+          "t2m": 14.9
+        },
+        {
+          "fecha": "2026-11-16",
+          "lluviaMm": 0.63,
+          "climaMm": 2.04,
+          "t2m": 15.85
+        },
+        {
+          "fecha": "2026-11-17",
+          "lluviaMm": 5.19,
+          "climaMm": 2.04,
+          "t2m": 15.63
+        },
+        {
+          "fecha": "2026-11-18",
+          "lluviaMm": 1.84,
+          "climaMm": 2.04,
+          "t2m": 15.56
+        },
+        {
+          "fecha": "2026-11-19",
+          "lluviaMm": 1.06,
+          "climaMm": 2.04,
+          "t2m": 16.28
+        }
+      ]
+    },
+    "ndvi": {
+      "fuente": "MODIS MOD13Q1 vía ORNL TESViS",
+      "ultimoComposite": {
+        "fecha": "2026-11-01",
+        "modisDate": "A2026305",
+        "ndvi": 0.198
+      },
+      "compositeAnterior": {
+        "fecha": "2026-10-16",
+        "modisDate": "A2026289",
+        "ndvi": 0.216
+      },
+      "compositeAnioAnterior": {
+        "fecha": "2025-11-01",
+        "modisDate": "A2025305",
+        "ndvi": 0.211
+      },
+      "aviso": "Producto compuesto de 16 días a 250 m: no es un dato de hoy. Índice de verdor, no porcentaje de pasto."
+    },
+    "errores": []
+  },
+  "volcan": {
+    "comunidadId": "volcan",
+    "generadoEn": "2026-11-22T13:35:40.039Z",
+    "fuenteCache": true,
+    "meteorologia": {
+      "fuente": "NASA POWER",
+      "ultimoDiaConDato": "2026-11-19",
+      "demoraDeclarada": "2–3 días (meteorología)",
+      "climatologiaPeriodo": "January 2001 - December 2025",
+      "precipitacionMm30d": {
+        "observado": 92.15,
+        "climatologia": 51.41,
+        "unidad": "mm",
+        "porcentaje": 79.2,
+        "ventana": "21/10–19/11/2026 (30 días con dato)",
+        "diasConDato": 30
+      },
+      "temperaturaC7d": {
+        "mediaObservada": 15.19,
+        "climatologiaMes": 11.18,
+        "mesClimatologico": "NOV",
+        "ventana": "13/11–19/11"
+      },
+      "serie": [
+        {
+          "fecha": "2026-10-21",
+          "lluviaMm": 0.48,
+          "climaMm": 1.15,
+          "t2m": 13.55
+        },
+        {
+          "fecha": "2026-10-22",
+          "lluviaMm": 0.21,
+          "climaMm": 1.15,
+          "t2m": 15.03
+        },
+        {
+          "fecha": "2026-10-23",
+          "lluviaMm": 0.67,
+          "climaMm": 1.15,
+          "t2m": 14.71
+        },
+        {
+          "fecha": "2026-10-24",
+          "lluviaMm": 0.56,
+          "climaMm": 1.15,
+          "t2m": 12.79
+        },
+        {
+          "fecha": "2026-10-25",
+          "lluviaMm": 2.76,
+          "climaMm": 1.15,
+          "t2m": 8.48
+        },
+        {
+          "fecha": "2026-10-26",
+          "lluviaMm": 0.28,
+          "climaMm": 1.15,
+          "t2m": 10.74
+        },
+        {
+          "fecha": "2026-10-27",
+          "lluviaMm": 2.69,
+          "climaMm": 1.15,
+          "t2m": 10.27
+        },
+        {
+          "fecha": "2026-10-28",
+          "lluviaMm": 8.43,
+          "climaMm": 1.15,
+          "t2m": 7.5
+        },
+        {
+          "fecha": "2026-10-29",
+          "lluviaMm": 6.7,
+          "climaMm": 1.15,
+          "t2m": 7.55
+        },
+        {
+          "fecha": "2026-10-30",
+          "lluviaMm": 1.9,
+          "climaMm": 1.15,
+          "t2m": 9.42
+        },
+        {
+          "fecha": "2026-10-31",
+          "lluviaMm": 1.58,
+          "climaMm": 1.15,
+          "t2m": 11.01
+        },
+        {
+          "fecha": "2026-11-01",
+          "lluviaMm": 1.08,
+          "climaMm": 2.04,
+          "t2m": 12.58
+        },
+        {
+          "fecha": "2026-11-02",
+          "lluviaMm": 2.81,
+          "climaMm": 2.04,
+          "t2m": 13.89
+        },
+        {
+          "fecha": "2026-11-03",
+          "lluviaMm": 0.05,
+          "climaMm": 2.04,
+          "t2m": 15.34
+        },
+        {
+          "fecha": "2026-11-04",
+          "lluviaMm": 6.74,
+          "climaMm": 2.04,
+          "t2m": 15.21
+        },
+        {
+          "fecha": "2026-11-05",
+          "lluviaMm": 0.8,
+          "climaMm": 2.04,
+          "t2m": 14.42
+        },
+        {
+          "fecha": "2026-11-06",
+          "lluviaMm": 0.54,
+          "climaMm": 2.04,
+          "t2m": 16.92
+        },
+        {
+          "fecha": "2026-11-07",
+          "lluviaMm": 4.95,
+          "climaMm": 2.04,
+          "t2m": 11.88
+        },
+        {
+          "fecha": "2026-11-08",
+          "lluviaMm": 1.36,
+          "climaMm": 2.04,
+          "t2m": 9.63
+        },
+        {
+          "fecha": "2026-11-09",
+          "lluviaMm": 0.82,
+          "climaMm": 2.04,
+          "t2m": 11.86
+        },
+        {
+          "fecha": "2026-11-10",
+          "lluviaMm": 1.86,
+          "climaMm": 2.04,
+          "t2m": 15.51
+        },
+        {
+          "fecha": "2026-11-11",
+          "lluviaMm": 3.99,
+          "climaMm": 2.04,
+          "t2m": 13.15
+        },
+        {
+          "fecha": "2026-11-12",
+          "lluviaMm": 2.84,
+          "climaMm": 2.04,
+          "t2m": 14.12
+        },
+        {
+          "fecha": "2026-11-13",
+          "lluviaMm": 5.5,
+          "climaMm": 2.04,
+          "t2m": 14.5
+        },
+        {
+          "fecha": "2026-11-14",
+          "lluviaMm": 18.98,
+          "climaMm": 2.04,
+          "t2m": 13.62
+        },
+        {
+          "fecha": "2026-11-15",
+          "lluviaMm": 4.85,
+          "climaMm": 2.04,
+          "t2m": 14.9
+        },
+        {
+          "fecha": "2026-11-16",
+          "lluviaMm": 0.63,
+          "climaMm": 2.04,
+          "t2m": 15.85
+        },
+        {
+          "fecha": "2026-11-17",
+          "lluviaMm": 5.19,
+          "climaMm": 2.04,
+          "t2m": 15.63
+        },
+        {
+          "fecha": "2026-11-18",
+          "lluviaMm": 1.84,
+          "climaMm": 2.04,
+          "t2m": 15.56
+        },
+        {
+          "fecha": "2026-11-19",
+          "lluviaMm": 1.06,
+          "climaMm": 2.04,
+          "t2m": 16.28
+        }
+      ]
+    },
+    "ndvi": {
+      "fuente": "MODIS MOD13Q1 vía ORNL TESViS",
+      "ultimoComposite": {
+        "fecha": "2026-11-01",
+        "modisDate": "A2026305",
+        "ndvi": 0.452
+      },
+      "compositeAnterior": {
+        "fecha": "2026-10-16",
+        "modisDate": "A2026289",
+        "ndvi": 0.398
+      },
+      "compositeAnioAnterior": {
+        "fecha": "2025-11-01",
+        "modisDate": "A2025305",
+        "ndvi": 0.216
+      },
+      "aviso": "Producto compuesto de 16 días a 250 m: no es un dato de hoy. Índice de verdor, no porcentaje de pasto."
+    },
+    "errores": []
+  }
+}

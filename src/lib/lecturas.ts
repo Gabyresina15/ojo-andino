@@ -1,0 +1,166 @@
+import type { Anomalia, CompositeNdvi, LecturaSatelital } from "./types";
+
+const POWER = "https://power.larc.nasa.gov/api/temporal";
+const ORNL = "https://modis.ornl.gov/rst/api/v1/MOD13Q1";
+const MESES = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+const FILL = -999;
+
+export async function fetchJson<T>(url: string, timeoutMs: number, init?: RequestInit): Promise<T> {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const r = await fetch(url, { ...init, signal: ctrl.signal, headers: { Accept: "application/json", ...(init?.headers ?? {}) } });
+    if (!r.ok) throw new Error(`HTTP ${r.status} en ${new URL(url).host}`);
+    return (await r.json()) as T;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+function ymd(d: Date): string {
+  return d.toISOString().slice(0, 10).replace(/-/g, "");
+}
+function isoFromYmd(s: string): string {
+  return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`;
+}
+function ddmm(iso: string): string {
+  return `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
+}
+const r1 = (n: number) => Math.round(n * 10) / 10;
+const r2 = (n: number) => Math.round(n * 100) / 100;
+const r3 = (n: number) => Math.round(n * 1000) / 1000;
+
+type PowerDaily = {
+  properties: { parameter: { PRECTOTCORR: Record<string, number>; T2M: Record<string, number> } };
+  header?: { fill_value?: number };
+};
+type PowerClim = {
+  properties: { parameter: { PRECTOTCORR: Record<string, number>; T2M: Record<string, number> } };
+  header?: { range?: string };
+};
+
+export async function leerMeteorologia(lat: number, lon: number, hoy = new Date()): Promise<NonNullable<LecturaSatelital["meteorologia"]>> {
+  const inicio = new Date(hoy.getTime() - 45 * 86400000);
+  const q = `community=AG&longitude=${lon}&latitude=${lat}&format=JSON`;
+  const [diario, clima] = await Promise.all([
+    fetchJson<PowerDaily>(`${POWER}/daily/point?parameters=PRECTOTCORR,T2M&${q}&start=${ymd(inicio)}&end=${ymd(hoy)}`, 6000),
+    fetchJson<PowerClim>(`${POWER}/climatology/point?parameters=PRECTOTCORR,T2M&${q}`, 6000),
+  ]);
+  const fill = diario.header?.fill_value ?? FILL;
+  const P = diario.properties.parameter.PRECTOTCORR;
+  const T = diario.properties.parameter.T2M;
+  const CP = clima.properties.parameter.PRECTOTCORR;
+  const CT = clima.properties.parameter.T2M;
+
+  const fechas = Object.keys(P).sort();
+  const validas = fechas.filter((f) => P[f] !== fill && P[f] > fill + 1);
+  if (validas.length < 7) throw new Error("NASA POWER devolvió muy pocos días con dato");
+
+  const ult30 = validas.slice(-30);
+  const climaDia = (f: string) => CP[MESES[Number(f.slice(4, 6)) - 1]];
+  const obs = ult30.reduce((s, f) => s + P[f], 0);
+  const clim = ult30.reduce((s, f) => s + climaDia(f), 0);
+  const ultimo = isoFromYmd(ult30[ult30.length - 1]);
+  const primero = isoFromYmd(ult30[0]);
+
+  const precip: Anomalia = {
+    observado: r2(obs),
+    climatologia: r2(clim),
+    unidad: "mm",
+    porcentaje: clim > 0 ? r1((obs / clim - 1) * 100) : null,
+    ventana: `${ddmm(primero)}–${ddmm(ultimo)}/${ultimo.slice(0, 4)} (${ult30.length} días con dato)`,
+    diasConDato: ult30.length,
+  };
+
+  const tVal = fechas.filter((f) => T[f] !== fill && T[f] > fill + 1).slice(-7);
+  const mesUlt = MESES[Number(ult30[ult30.length - 1].slice(4, 6)) - 1];
+  const tMedia = tVal.reduce((s, f) => s + T[f], 0) / Math.max(tVal.length, 1);
+
+  return {
+    fuente: "NASA POWER",
+    ultimoDiaConDato: ultimo,
+    demoraDeclarada: "2–3 días (meteorología)",
+    climatologiaPeriodo: clima.header?.range?.match(/\((.*?)\)/)?.[1] ?? "January 2001 - December 2025",
+    precipitacionMm30d: precip,
+    temperaturaC7d: {
+      mediaObservada: r2(tMedia),
+      climatologiaMes: CT[mesUlt],
+      mesClimatologico: mesUlt,
+      ventana: tVal.length ? `${ddmm(isoFromYmd(tVal[0]))}–${ddmm(isoFromYmd(tVal[tVal.length - 1]))}` : "sin dato",
+    },
+    serie: ult30.map((f) => ({
+      fecha: isoFromYmd(f),
+      lluviaMm: r2(P[f]),
+      climaMm: r2(climaDia(f)),
+      t2m: T[f] !== fill ? r2(T[f]) : null,
+    })),
+  };
+}
+
+type OrnlDates = { dates: { modis_date: string; calendar_date: string }[] };
+type OrnlSubset = { scale: string; subset: { modis_date: string; calendar_date: string; data: number[] }[] };
+
+export async function leerNdvi(lat: number, lon: number): Promise<NonNullable<LecturaSatelital["ndvi"]>> {
+  const pt = `latitude=${lat}&longitude=${lon}`;
+  const { dates } = await fetchJson<OrnlDates>(`${ORNL}/dates?${pt}`, 9000);
+  if (!dates?.length) throw new Error("ORNL sin fechas");
+  const last = dates[dates.length - 1];
+  const prev = dates[dates.length - 2];
+  const yearAgoCode = `A${Number(last.modis_date.slice(1, 5)) - 1}${last.modis_date.slice(5)}`;
+  const yearAgo = dates.find((d) => d.modis_date === yearAgoCode);
+
+  const sub = (a: string, b: string) =>
+    fetchJson<OrnlSubset>(`${ORNL}/subset?${pt}&startDate=${a}&endDate=${b}&kmAboveBelow=0&kmLeftRight=0&band=250m_16_days_NDVI`, 10000);
+
+  const [actual, anio] = await Promise.all([
+    sub(prev?.modis_date ?? last.modis_date, last.modis_date),
+    yearAgo ? sub(yearAgo.modis_date, yearAgo.modis_date).catch(() => null) : Promise.resolve(null),
+  ]);
+
+  const toComp = (s: OrnlSubset | null, code: string): CompositeNdvi | null => {
+    const item = s?.subset.find((x) => x.modis_date === code);
+    if (!item || item.data[0] === undefined || item.data[0] <= -2000) return null;
+    return { fecha: item.calendar_date, modisDate: item.modis_date, ndvi: r3(item.data[0] * Number(s!.scale || 0.0001)) };
+  };
+
+  const ultimo = toComp(actual, last.modis_date);
+  if (!ultimo) throw new Error("ORNL sin valor NDVI válido");
+  return {
+    fuente: "MODIS MOD13Q1 vía ORNL TESViS",
+    ultimoComposite: ultimo,
+    compositeAnterior: prev ? toComp(actual, prev.modis_date) : null,
+    compositeAnioAnterior: yearAgo ? toComp(anio, yearAgo.modis_date) : null,
+    aviso: "Producto compuesto de 16 días a 250 m: no es un dato de hoy. Índice de verdor, no porcentaje de pasto.",
+  };
+}
+
+export async function leerTodo(id: string, lat: number, lon: number): Promise<LecturaSatelital> {
+  const errores: string[] = [];
+  const [met, ndvi] = await Promise.all([
+    leerMeteorologia(lat, lon).catch((e: Error) => {
+      errores.push(`NASA POWER: ${e.message}`);
+      return null;
+    }),
+    leerNdvi(lat, lon).catch((e: Error) => {
+      errores.push(`ORNL MODIS: ${e.message}`);
+      return null;
+    }),
+  ]);
+  return {
+    comunidadId: id,
+    generadoEn: new Date().toISOString(),
+    fuenteCache: false,
+    meteorologia: met,
+    ndvi,
+    errores,
+  };
+}
+
+/** Clasificación determinista: la verdad la decide el dato, no el LLM. */
+export function estadoHidrico(l: LecturaSatelital): "deficit" | "normal" | "superavit_reciente" | "sin_dato" {
+  const p = l.meteorologia?.precipitacionMm30d.porcentaje;
+  if (p === null || p === undefined) return "sin_dato";
+  if (p <= -25) return "deficit";
+  if (p >= 25) return "superavit_reciente";
+  return "normal";
+}
