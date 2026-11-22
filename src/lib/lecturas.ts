@@ -156,11 +156,14 @@ export async function leerTodo(id: string, lat: number, lon: number): Promise<Le
   };
 }
 
+export const UMBRAL_DEFICIT_PCT = -25;
+export const UMBRAL_SUPERAVIT_PCT = 25;
+
 /** Clasificación determinista: la verdad la decide el dato, no el LLM. */
 export function estadoHidrico(l: LecturaSatelital): "deficit" | "normal" | "superavit_reciente" | "sin_dato" {
   const p = l.meteorologia?.precipitacionMm30d.porcentaje;
   if (p === null || p === undefined) return "sin_dato";
-  if (p <= -25) return "deficit";
-  if (p >= 25) return "superavit_reciente";
+  if (p <= UMBRAL_DEFICIT_PCT) return "deficit";
+  if (p >= UMBRAL_SUPERAVIT_PCT) return "superavit_reciente";
   return "normal";
 }

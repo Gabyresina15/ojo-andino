@@ -3,7 +3,7 @@ import { test } from "node:test";
 import cache from "../src/data/cache-lecturas.json";
 import { COMUNIDADES } from "../src/lib/comunidades";
 import { AlertaSchema, alertaDeterminista, generarAlerta, payloadUsuario, SYSTEM_PROMPT, validarNumeros } from "../src/lib/alerta";
-import { estadoHidrico } from "../src/lib/lecturas";
+import { estadoHidrico, UMBRAL_DEFICIT_PCT, UMBRAL_SUPERAVIT_PCT } from "../src/lib/lecturas";
 import type { LecturaSatelital } from "../src/lib/types";
 
 const lecturas = cache as Record<string, LecturaSatelital>;
@@ -17,6 +17,8 @@ function verificar(c: (typeof COMUNIDADES)[number], l: LecturaSatelital) {
     assert.equal(alerta.estado_hidrico, estadoHidrico(l));
     assert.ok(AlertaSchema.safeParse(alerta).success, JSON.stringify(alerta));
     assert.equal(payload.gatillo.estado, estadoHidrico(l));
+    assert.equal(payload.gatillo.umbral_deficit_pct, UMBRAL_DEFICIT_PCT);
+    assert.equal(payload.gatillo.umbral_superavit_pct, UMBRAL_SUPERAVIT_PCT);
     assert.equal(payload.gatillo.activado, ["deficit", "superavit_reciente"].includes(estadoHidrico(l)));
     assert.ok((modo === "parametrico" ? alerta.resumen_oral : alerta.nota_parametrica).includes(payload.recomendacion_base));
     assert.equal((alerta.resumen_oral.match(/% del total/g) ?? []).length, payload.patron_diario && estadoHidrico(l) !== "sin_dato" ? 1 : 0);
@@ -27,8 +29,15 @@ function verificar(c: (typeof COMUNIDADES)[number], l: LecturaSatelital) {
       assert.doesNotMatch(alerta.resumen_oral, /índice de verdor/);
     }
     if (modo === "parametrico") {
-      assert.match(alerta.resumen_oral, /Gatillo:/);
-      assert.match(alerta.nota_parametrica, /Gatillo/);
+      assert.match(alerta.resumen_oral, /Gatillo paramétrico/);
+      assert.match(alerta.nota_parametrica, /gatillo/i);
+      assert.doesNotMatch(alerta.resumen_oral + alerta.nota_parametrica, /verificá|revisá|cuidá|podés|tenés|fijate|avisá|priorizá|evitá|inspeccioná|registrá|monitoreá/i);
+      if (alerta.estado_hidrico !== "sin_dato") {
+        const umbral = alerta.estado_hidrico === "deficit" ? `${UMBRAL_DEFICIT_PCT} %`
+          : alerta.estado_hidrico === "normal" ? `±${UMBRAL_SUPERAVIT_PCT} %` : `+${UMBRAL_SUPERAVIT_PCT} %`;
+        assert.ok(alerta.resumen_oral.includes(umbral));
+        assert.ok(alerta.nota_parametrica.includes(umbral));
+      }
       assert.ok(!alerta.nota_parametrica.includes(payload.recomendacion_base));
       assert.doesNotMatch(alerta.resumen_oral, /Registrar inspección y necesidades/);
       for (const frase of alerta.nota_parametrica.split(/(?<=\.)\s+/)) {
@@ -49,7 +58,7 @@ for (const c of COMUNIDADES) {
 test("todos los estados y regiones, también sin serie o sin meteorología", () => {
   for (const region of ["puna", "quebrada"] as const) {
     const c = COMUNIDADES.find((c) => c.region === region)!;
-    for (const porcentaje of [-25, 0, 25, null]) {
+    for (const porcentaje of [UMBRAL_DEFICIT_PCT, 0, UMBRAL_SUPERAVIT_PCT, null]) {
       const l = structuredClone(lecturas[c.id]);
       l.meteorologia!.precipitacionMm30d.porcentaje = porcentaje;
       verificar(c, l);
@@ -71,6 +80,7 @@ test("el prompt conserva contrato, estructura y límites de evidencia", () => {
     "% de pasto", "SAR de SAOCOM", "USD/ARS", "instituciones", "convenios", "sensores",
     "estaciones", "NASA POWER", "MODIS MOD13Q1", "PRECTOTCORR",
     "normal / puna", "normal / quebrada", "sin_dato / puna", "sin_dato / quebrada",
+    "formal e impersonal, sin voseo", "El voseo se usa solo en modo comunidad",
   ]) assert.ok(SYSTEM_PROMPT.includes(regla), regla);
 });
 

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { AlertaRespuesta, Comunidad, LecturaSatelital } from "./types";
-import { estadoHidrico } from "./lecturas";
+import { estadoHidrico, UMBRAL_DEFICIT_PCT, UMBRAL_SUPERAVIT_PCT } from "./lecturas";
 
 export const AlertaSchema = z.object({
   resumen_oral: z.string().min(80).max(1600),
@@ -34,7 +34,7 @@ const JSON_SCHEMA = {
   },
 };
 
-export const SYSTEM_PROMPT = `Sos analista de riesgo hídrico de Ojo Andino para Puna y Quebrada de Jujuy. Escribí en castellano argentino, con vos, sin adornos turísticos ni burocracia vacía.
+export const SYSTEM_PROMPT = `Sos analista de riesgo hídrico de Ojo Andino para Puna y Quebrada de Jujuy. Escribí en castellano argentino, sin adornos turísticos ni burocracia vacía. En modo parametrico, el registro de resumen_oral y nota_parametrica es formal e impersonal, sin voseo. El voseo se usa solo en modo comunidad.
 
 Glosario del JSON de entrada:
 pueblo y region ubican el análisis; modo define destinatario; fecha_hoy_art no es la fecha de medición. contexto es contexto local, no evidencia de condiciones actuales ni autorización para citar instituciones.
@@ -147,8 +147,8 @@ export function payloadUsuario(c: Comunidad, l: LecturaSatelital, modo: "comunid
     fecha_hoy_art: new Date().toLocaleDateString("es-AR", { timeZone: "America/Argentina/Jujuy" }),
     estado_hidrico_calculado: estadoHidrico(l),
     gatillo: {
-      umbral_deficit_pct: -25,
-      umbral_superavit_pct: 25,
+      umbral_deficit_pct: UMBRAL_DEFICIT_PCT,
+      umbral_superavit_pct: UMBRAL_SUPERAVIT_PCT,
       estado: estadoHidrico(l),
       activado: estadoHidrico(l) === "deficit" || estadoHidrico(l) === "superavit_reciente",
     },
@@ -291,7 +291,7 @@ export function alertaDeterminista(c: Comunidad, l: LecturaSatelital, modo: "com
       ? `El índice de verdor pasó de ${fmt3(anterior.ndvi)} a ${fmt3(actual.ndvi)} (compuesto al ${actual.fecha}).`
       : `El índice de verdor es ${fmt3(actual.ndvi)} (compuesto al ${actual.fecha}).`);
   }
-  const riesgo = c.region === "puna"
+  const riesgoComunidad = c.region === "puna"
     ? est === "deficit"
       ? "Puede faltar forraje y agua en aguadas y vegas; verificá reservas y estado de la hacienda."
       : est === "superavit_reciente"
@@ -300,24 +300,36 @@ export function alertaDeterminista(c: Comunidad, l: LecturaSatelital, modo: "com
     : est === "superavit_reciente" || (patron != null && patron.concentracion_pico_pct >= 55)
       ? "Hay riesgo de escorrentía y corte de trazas, badenes y caminos; verificá accesos antes de trasladar hacienda o insumos, sin dar por comprobadas crecidas."
       : "Revisá drenajes, badenes y caminos antes de trasladar hacienda o insumos; no hay evidencia suficiente para afirmar cortes.";
+  const riesgoGobierno = c.region === "puna"
+    ? est === "deficit"
+      ? "Puede faltar forraje y agua en aguadas y vegas. Se recomienda verificar reservas y estado de la hacienda."
+      : est === "superavit_reciente"
+        ? "La lluvia puede recargar aguadas y vegas, pero no garantiza forraje disponible. Se recomienda proteger el rebrote antes de aumentar el pastoreo."
+        : "El balance de lluvia no permite asegurar la disponibilidad de agua y forraje. Se recomienda revisar aguadas, vegas y reservas."
+    : est === "superavit_reciente" || (patron != null && patron.concentracion_pico_pct >= 55)
+      ? "Existe riesgo de escorrentía y corte de trazas, badenes y caminos. Se recomienda verificar accesos antes de trasladar hacienda o insumos, sin dar por comprobadas crecidas."
+      : "Se recomienda revisar drenajes, badenes y caminos antes de trasladar hacienda o insumos; no hay evidencia suficiente para afirmar cortes.";
+  const riesgo = esComunidad ? riesgoComunidad : riesgoGobierno;
 
   const accion = esComunidad ? recomendacionComunidad(c, l) : recomendacionGobierno(c, l);
   const p = m?.precipitacionMm30d;
   const desvioRedondeado = p?.porcentaje != null ? r1(p.porcentaje) : 0;
   const desvio = `${desvioRedondeado >= 0 ? "+" : ""}${fmt1(desvioRedondeado)} %`;
+  const umbral = est === "deficit" ? `${UMBRAL_DEFICIT_PCT}` : `+${UMBRAL_SUPERAVIT_PCT}`;
+  const rango = `±${UMBRAL_SUPERAVIT_PCT}`;
   const gatillo = est === "sin_dato"
-    ? "Gatillo no evaluable: sin dato de lluvia."
+    ? "No es posible evaluar el gatillo por falta de datos de lluvia."
     : est === "normal"
-      ? `Gatillo no activado: desvío ${desvio} dentro de ±25 %.`
-      : `Gatillo de ${est === "deficit" ? "déficit" : "exceso hídrico"} activado: desvío ${desvio} frente al umbral de ${est === "deficit" ? "-25" : "+25"} %; señal del índice, no pago automático.`;
+      ? `El gatillo permanece inactivo: el desvío de ${desvio} se encuentra dentro del rango de ${rango} %.`
+      : `Se activa el gatillo de ${est === "deficit" ? "déficit" : "exceso hídrico"} por un desvío de ${desvio} frente al umbral de ${umbral} %; señal del índice, no pago automático.`;
   const verificacion = c.region === "puna"
     ? "Verificar en campo aguadas y reservas de forraje y dejar registro."
     : "Verificar drenajes y transitabilidad de badenes y dejar registro.";
   const gatilloOral = est === "sin_dato"
-    ? "Gatillo: no se puede evaluar sin dato de lluvia."
+    ? "Gatillo paramétrico no evaluable: sin dato de lluvia."
     : est === "normal"
-      ? `Gatillo: sin activación, con desvío ${desvio} dentro de ±25 %.`
-      : `Gatillo: de ${est === "deficit" ? "déficit" : "exceso hídrico"} activado (desvío ${desvio} frente a ${est === "deficit" ? "-25" : "+25"} %).`;
+      ? `Gatillo paramétrico no activado: desvío de ${desvio}, dentro del rango de ${rango} %.`
+      : `Gatillo paramétrico activado por ${est === "deficit" ? "déficit" : "exceso hídrico"}: desvío de ${desvio} frente al umbral de ${umbral} %.`;
   const nota = esComunidad
     ? accion
     : `${gatillo} ${verificacion}`;
