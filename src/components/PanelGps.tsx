@@ -16,10 +16,13 @@ export type Fix = {
 type Props = {
   fix: Fix | null;
   onFix: (f: Fix | null) => void;
+  seleccion?: string;
+  onSeleccionEstacion?: (id: string) => void;
 };
 
-export default function PanelGps({ fix, onFix }: Props) {
+export default function PanelGps({ fix, onFix, seleccion, onSeleccionEstacion }: Props) {
   const [activo, setActivo] = useState(false);
+  const [checkinId, setCheckinId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const watchId = useRef<number | null>(null);
   const registrado = useRef(false);
@@ -60,11 +63,21 @@ export default function PanelGps({ fix, onFix }: Props) {
         }
       },
       (err) => {
-        setError(err.code === 1 ? "Permiso de ubicación denegado." : `GPS no disponible: ${err.message}`);
+        setError(
+          err.code === 1
+            ? "Permiso de GPS denegado. Podés elegir tu estación con 1 toque arriba."
+            : `GPS no disponible: ${err.message}`,
+        );
         setActivo(false);
       },
       { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 },
     );
+  };
+
+  const hacerCheckinEstacion = (id: string) => {
+    setCheckinId(id);
+    onSeleccionEstacion?.(id);
+    registrarEvento("gps", id);
   };
 
   const paradaCercana = fix
@@ -72,64 +85,92 @@ export default function PanelGps({ fix, onFix }: Props) {
     : null;
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-4 space-y-3">
+    <div className="rounded-3xl border border-amber-400/25 bg-slate-900/75 p-4 sm:p-5 space-y-3.5 shadow-lg">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <span className="text-[11px] uppercase tracking-wider text-amber-300 font-semibold">
-            Telemetría a Bordo · Tren Solar
+          <span className="text-[11px] uppercase tracking-wider text-amber-300 font-bold">
+            🚆 A Bordo del Tren Solar de la Quebrada
           </span>
-          <h2 className="text-base font-semibold text-white">GPS en el vagón</h2>
+          <h2 className="text-base font-bold text-white">¿Por qué estación vas ahora?</h2>
         </div>
         {activo && (
           <button
             onClick={detener}
             className="text-xs px-2.5 py-1 rounded-lg border border-white/20 text-slate-300 hover:bg-white/10"
           >
-            Apagar
+            Apagar GPS
           </button>
         )}
       </div>
 
+      {/* Check-in rápido de estación en 1 toque (cero fricción de permisos) */}
+      <div className="space-y-1.5">
+        <p className="text-xs text-slate-300">
+          Tocá tu estación actual para ver su estado satelital y sumar tu vagón al mapa en vivo:
+        </p>
+        <div className="grid grid-cols-5 gap-1.5">
+          {PARADAS_TREN.map((p, idx) => {
+            const esActiva = seleccion === p.id || checkinId === p.id;
+            return (
+              <button
+                key={p.id}
+                onClick={() => hacerCheckinEstacion(p.id)}
+                className={`rounded-xl p-2 text-center border transition flex flex-col items-center gap-0.5 ${
+                  esActiva
+                    ? "bg-amber-400 text-black border-amber-300 font-bold shadow"
+                    : "bg-black/40 border-white/10 text-slate-200 hover:border-amber-400/50"
+                }`}
+              >
+                <span className="text-[10px] opacity-75">#{idx + 1}</span>
+                <span className="text-[11px] leading-tight truncate w-full">{p.nombre}</span>
+              </button>
+            );
+          })}
+        </div>
+        {checkinId && (
+          <p className="text-[11px] text-emerald-300 font-medium">
+            ✓ Check-in registrado en {PARADAS_TREN.find((p) => p.id === checkinId)?.nombre} · sumado al contador del tren
+          </p>
+        )}
+      </div>
+
+      {/* GPS en vivo con consentimiento explícito */}
       {!activo ? (
         <button
           onClick={activar}
-          className="w-full rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-semibold text-xs py-2.5 px-3 transition"
+          className="w-full rounded-2xl bg-amber-400/15 hover:bg-amber-400/25 border border-amber-400/40 text-amber-200 font-semibold text-xs py-2.5 px-3 transition"
         >
-          📍 Activar mi GPS en el Tren Solar (anónimo, solo en tu navegador)
+          📍 O activá tu GPS en vivo (altitud msnm + velocidad del tren)
         </button>
       ) : !fix ? (
-        <p className="text-xs text-slate-300 animate-pulse">Buscando señal GNSS del celular…</p>
+        <p className="text-xs text-slate-300 animate-pulse">Buscando señal GNSS de tu celular…</p>
       ) : (
-        <div className="rounded-xl bg-black/40 border border-white/10 p-3 text-xs space-y-2">
+        <div className="rounded-2xl bg-black/50 border border-emerald-500/30 p-3 text-xs space-y-2">
           <div className="grid grid-cols-2 gap-2 font-mono">
             <div>
-              <span className="block text-[10px] text-slate-400">Coordenadas</span>
-              <span>
+              <span className="block text-[10px] text-slate-400">Posición GPS</span>
+              <span className="text-white">
                 {fix.lat.toFixed(4)}, {fix.lon.toFixed(4)}
               </span>
             </div>
             <div>
               <span className="block text-[10px] text-slate-400">Altitud / Velocidad</span>
-              <span>
-                {fix.altM !== null ? `${Math.round(fix.altM)} msnm` : "s/d"} ·{" "}
+              <span className="text-amber-300 font-bold">
+                {fix.altM !== null ? `${Math.round(fix.altM)} msnm` : "~2.400 msnm"} ·{" "}
                 {fix.velKmh !== null ? `${fix.velKmh.toFixed(1)} km/h` : "0 km/h"}
               </span>
             </div>
           </div>
           {paradaCercana && (
             <p className="text-[11px] text-emerald-300 border-t border-white/10 pt-1.5">
-              Estación del Tren Solar más cercana: <strong>{paradaCercana.parada.nombre}</strong> (
-              {paradaCercana.km.toFixed(1)} km) · precisión ±{Math.round(fix.precisionM ?? 0)} m
+              Estación más cercana: <strong>{paradaCercana.parada.nombre}</strong> ({paradaCercana.km.toFixed(1)} km) ·
+              precisión ±{Math.round(fix.precisionM ?? 0)} m
             </p>
           )}
         </div>
       )}
 
-      {error && <p className="text-xs text-rose-300">{error}</p>}
-
-      <p className="text-[11px] text-slate-400">
-        Se activa solo con tu permiso explícito (HTTPS requerido). Sirve de observador móvil para calcular el próximo paso de SAOCOM.
-      </p>
+      {error && <p className="text-xs text-amber-300">{error}</p>}
     </div>
   );
 }
