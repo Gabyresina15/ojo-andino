@@ -72,7 +72,7 @@ export function descargarPdfExpediente(
 
   doc.setTextColor(30, 35, 45);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(8.5);
+  doc.setFontSize(8);
   doc.text(`EXPEDIENTE N°: ${expedienteNro}`, 18, y + 6.5);
   doc.text(`ÚLTIMO CORTE NASA POWER: ${m?.ultimoDiaConDato ?? "s/d"}`, 85, y + 6.5);
   doc.text(`EMISIÓN: ${fechaEmision} ART`, 145, y + 6.5);
@@ -180,17 +180,16 @@ export function descargarPdfExpediente(
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.5);
   doc.setTextColor(100, 108, 120);
-  doc.text(`Motor de análisis: ${motorTexto}`, 196, y, { align: "right" });
+  doc.text(`Motor de análisis: ${motorTexto}`, 14, y + 4);
 
-  y += 3;
+  y += 7;
+  doc.setFontSize(9);
   const lineasDictamen = doc.splitTextToSize(textoDictamen, 174);
   const altoDictamen = lineasDictamen.length * 4.5 + 7;
   doc.setFillColor(248, 249, 251);
   doc.setDrawColor(210, 216, 226);
   doc.roundedRect(14, y, 182, altoDictamen, 2, 2, "FD");
   doc.setTextColor(25, 30, 40);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
   doc.text(lineasDictamen, 18, y + 6);
 
   // 6. DIRECTIVA OPERATIVA PARA EL MINISTERIO Y DERIVACIÓN MUNICIPAL
@@ -202,18 +201,28 @@ export function descargarPdfExpediente(
 
   y += 3;
   const textoAccion = recomendacionGobierno(comunidad, lectura);
+  doc.setFontSize(8.8);
   const lineasAccion = doc.splitTextToSize(`Destinatario: ${jurisdiccion}. Acción recomendada: ${textoAccion}`, 174);
   const altoAccion = lineasAccion.length * 4.5 + 6;
   doc.setFillColor(254, 249, 238);
   doc.setDrawColor(245, 158, 11);
   doc.roundedRect(14, y, 182, altoAccion, 2, 2, "FD");
   doc.setTextColor(30, 30, 30);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(8.8);
   doc.text(lineasAccion, 18, y + 5.5);
 
   // 7. TABLA DE REGISTRO HISTÓRICO DÍA POR DÍA (30 DÍAS)
   y += altoAccion + 7;
+  const mitad = Math.ceil((m?.serie.length ?? 0) / 2);
+  const altoTabla = mitad > 0 ? 6 + mitad * 4.7 : 0;
+  const yFirmaMax = 276;
+  if (y + 3 + altoTabla + 14 > yFirmaMax) {
+    doc.addPage();
+    doc.setTextColor(100, 108, 120);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.text(`EXPEDIENTE N°: ${expedienteNro}`, 14, 14);
+    y = 23;
+  }
   doc.setTextColor(20, 25, 35);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
@@ -221,9 +230,7 @@ export function descargarPdfExpediente(
 
   y += 3;
   if (m && m.serie.length > 0) {
-    // Dividimos los 30 días en 2 columnas paralelas de 15 días cada una para que entre todo en 1 sola hoja A4 impecable
     const serieOrdenada = [...m.serie].reverse();
-    const mitad = Math.ceil(serieOrdenada.length / 2);
     const colIzq = serieOrdenada.slice(0, mitad);
     const colDer = serieOrdenada.slice(mitad);
 
@@ -275,11 +282,11 @@ export function descargarPdfExpediente(
 
     dibujarTablaMitad(14, colIzq);
     dibujarTablaMitad(107, colDer);
-    y += 6 + mitad * 4.7 + 8;
+    y += altoTabla + 8;
   }
 
   // 8. PIE DE FIRMA Y AUDITORÍA PARA EXPEDIENTE
-  const yFirma = Math.min(276, Math.max(y + 6, 265));
+  const yFirma = Math.max(y + 6, 265);
   doc.setDrawColor(180, 186, 198);
   doc.line(14, yFirma, 82, yFirma);
   doc.line(128, yFirma, 196, yFirma);
