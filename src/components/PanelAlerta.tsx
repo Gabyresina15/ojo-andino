@@ -1,20 +1,20 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import type { AlertaRespuesta, Comunidad, LecturaSatelital } from "@/lib/types";
 import { alertaDeterminista, payloadUsuario, recomendacionGobierno, validarNumeros } from "@/lib/alerta";
 import { estadoHidrico } from "@/lib/lecturas";
+import { ChakanaIcon } from "./AndeanMotifs";
 
 type Props = {
   comunidad: Comunidad;
   lectura: LecturaSatelital | null;
-  modo: "comunidad" | "parametrico";
 };
 
-const BARRAS_EQ = [30, 65, 45, 90, 55, 100, 72, 40, 85, 60, 95, 50];
 const fmt1 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
-const JURISDICCION: Record<string, string> = {
+export const JURISDICCION_MUNICIPAL: Record<string, string> = {
   "susques": "Comisión Municipal de Susques",
   "abra-pampa": "Municipalidad de Abra Pampa",
   "la-quiaca": "Municipalidad de La Quiaca",
@@ -27,136 +27,55 @@ const JURISDICCION: Record<string, string> = {
   "volcan": "Comisión Municipal de Volcán",
 };
 
-export default function PanelAlerta({ comunidad, lectura, modo }: Props) {
+export default function PanelAlerta({ comunidad, lectura }: Props) {
   const [alertaGrok, setAlertaGrok] = useState<AlertaRespuesta | null>(null);
   const [cargando, setCargando] = useState(false);
-  const [audioCargando, setAudioCargando] = useState(false);
-  const [reproduciendo, setReproduciendo] = useState(false);
-  const [vozFallback, setVozFallback] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [copiado, setCopiado] = useState(false);
 
   const alertaBase = useMemo<AlertaRespuesta | null>(() => {
     if (!lectura) return null;
-    const det = alertaDeterminista(comunidad, lectura, modo);
-    const payload = payloadUsuario(comunidad, lectura, modo);
+    const det = alertaDeterminista(comunidad, lectura, "comunidad");
+    const payload = payloadUsuario(comunidad, lectura, "comunidad");
     const v = validarNumeros(`${det.resumen_oral} ${det.nota_parametrica}`, payload);
     return {
       comunidadId: comunidad.id,
-      modo,
+      modo: "comunidad",
       ...det,
       origen: "determinista",
       modelo: null,
       validacion: { ...v, estadoCorregido: false, motivoFallback: null },
       generadoEn: lectura.generadoEn,
     };
-  }, [comunidad, lectura, modo]);
+  }, [comunidad, lectura]);
+
+  // Al entrar a una jurisdicción, solicita automáticamente a Grok AI el dictamen oficial actualizado en background
+  useEffect(() => {
+    if (!lectura) return;
+    let cancelado = false;
+    setCargando(true);
+    fetch("/api/alerta", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: comunidad.id, modo: "comunidad", lectura }),
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: AlertaRespuesta | null) => {
+        if (!cancelado && data) setAlertaGrok(data);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelado) setCargando(false);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [comunidad.id, lectura]);
 
   const alerta = alertaGrok ?? alertaBase;
   const m = lectura?.meteorologia;
   const ndvi = lectura?.ndvi;
   const est = lectura ? estadoHidrico(lectura) : "sin_dato";
-  const jurisdiccion = JURISDICCION[comunidad.id] ?? `Municipio de ${comunidad.nombre}`;
-
-  useEffect(
-    () => () => {
-      audioRef.current?.pause();
-      if (typeof window !== "undefined" && "speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
-      }
-    },
-    [],
-  );
-
-  const avisarToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3000);
-  };
-
-  const detenerAudio = () => {
-    audioRef.current?.pause();
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-    }
-    setReproduciendo(false);
-  };
-
-  const generarConGrok = async () => {
-    if (!lectura) return;
-    setCargando(true);
-    setError(null);
-    try {
-      const r = await fetch("/api/alerta", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: comunidad.id, modo, lectura }),
-      });
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      const data = (await r.json()) as AlertaRespuesta;
-      setAlertaGrok(data);
-      avisarToast("✓ Parte oficial redactado con Grok AI");
-    } catch {
-      setError("Mostrando parte oficial generado con datos locales.");
-    } finally {
-      setCargando(false);
-    }
-  };
-
-  const reproducirFallbackNavegador = (texto: string) => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-    setVozFallback(true);
-    const u = new SpeechSynthesisUtterance(texto);
-    u.lang = "es-MX";
-    u.rate = 0.95;
-    const voces = window.speechSynthesis.getVoices();
-    const es = voces.find((v) => v.lang.toLowerCase().startsWith("es"));
-    if (es) u.voice = es;
-    u.onend = () => setReproduciendo(false);
-    u.onerror = () => setReproduciendo(false);
-    window.speechSynthesis.cancel();
-    setReproduciendo(true);
-    window.speechSynthesis.speak(u);
-  };
-
-  const escuchar = async () => {
-    if (!alerta) return;
-    if (reproduciendo) {
-      detenerAudio();
-      return;
-    }
-    setAudioCargando(true);
-    setVozFallback(false);
-    try {
-      const r = await fetch("/api/tts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: alerta.resumen_oral }),
-      });
-      if (!r.ok) throw new Error(`TTS HTTP ${r.status}`);
-      const blob = await r.blob();
-      const url = URL.createObjectURL(blob);
-      if (audioRef.current) audioRef.current.pause();
-      const a = new Audio(url);
-      audioRef.current = a;
-      a.onended = () => setReproduciendo(false);
-      a.onerror = () => setReproduciendo(false);
-      setReproduciendo(true);
-      await a.play();
-    } catch {
-      reproducirFallbackNavegador(alerta.resumen_oral);
-    } finally {
-      setAudioCargando(false);
-    }
-  };
-
-  const whatsappUrl = alerta
-    ? `https://wa.me/?text=${encodeURIComponent(
-        `*Parte Hídrico y Territorial · ${jurisdiccion}*\n\n${alerta.resumen_oral}\n\n_${alerta.fuentes}_\n\nTablero Jujuy: ${
-          typeof window !== "undefined" ? `${window.location.origin}/?c=${comunidad.id}` : ""
-        }`,
-      )}`
-    : "#";
+  const jurisdiccion = JURISDICCION_MUNICIPAL[comunidad.id] ?? `Municipio de ${comunidad.nombre}`;
 
   const diagnostico =
     est === "deficit"
@@ -179,7 +98,7 @@ export default function PanelAlerta({ comunidad, lectura, modo }: Props) {
               colorCaja: "border-[#F59E0B]/50 bg-[#F59E0B]/15 text-[#F4F1EA]",
             };
 
-  const accionDirecta = lectura ? recomendacionGobierno(comunidad, lectura) : "Cargando evaluación satelital…";
+  const accionDirecta = lectura ? recomendacionGobierno(comunidad, lectura) : "Evaluando datos satelitales…";
 
   const nivelVerdor = !ndvi
     ? "Sin lectura"
@@ -189,11 +108,22 @@ export default function PanelAlerta({ comunidad, lectura, modo }: Props) {
         ? "Bajo (inicio de rebrote)"
         : "Bueno (cobertura activa)";
 
+  const copiarLinkExpediente = async () => {
+    const url = `${window.location.origin}/municipio/${comunidad.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2500);
+    } catch {
+      // ignore
+    }
+  };
+
   return (
     <div className="amc-surface-elevated rounded-3xl p-5 sm:p-7 space-y-5 shadow-2xl relative overflow-hidden">
       <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#D95D39] via-[#F59E0B] to-[#10B981]" />
 
-      {/* Encabezado Municipal / Provincial */}
+      {/* Encabezado de la Jurisdicción Municipal */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
@@ -209,27 +139,12 @@ export default function PanelAlerta({ comunidad, lectura, modo }: Props) {
             </span>
           </h2>
           <p className="text-sm sm:text-base font-medium text-[#F4F1EA]/95">
-            🏛️ <strong>Decisión sugerida para Provincia / Municipio:</strong> {accionDirecta}
+            🏛️ <strong>Acción de Gobierno recomendada:</strong> {accionDirecta}
           </p>
         </div>
-
-        <button
-          onClick={generarConGrok}
-          disabled={!lectura || cargando}
-          className="min-h-[44px] rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 disabled:opacity-50 text-[#F4F1EA] font-medium text-xs px-3.5 py-2 transition cursor-pointer flex items-center gap-1.5"
-        >
-          <span className={cargando ? "animate-spin text-[#F59E0B]" : "text-[#F59E0B]"}>✨</span>
-          <span>
-            {cargando
-              ? "Redactando con Grok AI…"
-              : alerta?.origen === "grok"
-                ? "Actualizar parte con Grok AI"
-                : "Redactar parte con Grok AI"}
-          </span>
-        </button>
       </div>
 
-      {/* 3 Indicadores claros para gestión municipal */}
+      {/* 3 Indicadores clave de la jurisdicción */}
       {m && (
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="rounded-2xl bg-[#0B0D10]/80 border border-white/10 p-4">
@@ -250,8 +165,8 @@ export default function PanelAlerta({ comunidad, lectura, modo }: Props) {
             <div className="text-xs text-[#9CA3AF] mt-1">
               {ndvi?.compositeAnioAnterior
                 ? ndvi.ultimoComposite.ndvi >= ndvi.compositeAnioAnterior.ndvi
-                  ? "Índice superior o igual a noviembre 2025"
-                  : "Índice inferior a noviembre 2025"
+                  ? "Igual o superior a noviembre 2025"
+                  : "Inferior a noviembre 2025"
                 : "Relevamiento satelital cada 16 días"}
             </div>
           </div>
@@ -268,79 +183,44 @@ export default function PanelAlerta({ comunidad, lectura, modo }: Props) {
         </div>
       )}
 
-      {toast && (
-        <div role="status" className="rounded-xl border border-[#10B981]/50 bg-[#10B981]/15 px-3.5 py-2 text-xs text-[#10B981]">
-          {toast}
-        </div>
-      )}
-      {error && <p className="text-xs text-[#F59E0B]">{error}</p>}
-
-      {/* Parte Oficial para el Comisionado Municipal o Equipo Territorial */}
+      {/* Dictamen Técnico Oficial + Acceso al Expediente Histórico y PDF */}
       {alerta && (
         <div className="space-y-4">
           <div className="rounded-2xl bg-[#0B0D10]/90 border border-white/10 p-4 sm:p-5 space-y-2.5">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-xs font-bold text-[#F59E0B]">
-                📋 Parte oficial para enviar a {jurisdiccion}:
+              <span className="text-xs font-bold text-[#F59E0B] flex items-center gap-1.5">
+                <ChakanaIcon className="h-3.5 w-3.5 text-[#D95D39]" />
+                <span>Dictamen Técnico Oficial · {jurisdiccion}</span>
               </span>
-              <div className="flex items-center gap-2">
-                {reproduciendo && (
-                  <div className="flex items-end gap-0.5 h-4 px-1.5">
-                    {BARRAS_EQ.map((h, i) => (
-                      <span
-                        key={i}
-                        className="w-1 rounded-full bg-[#F59E0B] amc-eq-bar"
-                        style={{ height: `${h}%`, animationDelay: `${i * 0.06}s` }}
-                      />
-                    ))}
-                  </div>
-                )}
-                <span className="text-[11px] text-[#10B981]">
-                  ✓ Verificado ({alerta.origen === "grok" ? "Grok AI" : "Datos NASA/MODIS"})
-                </span>
-              </div>
+              <span className="text-[11px] text-[#10B981]">
+                {cargando
+                  ? "● Actualizando redacción con Grok AI…"
+                  : `✓ Datos verificados (${alerta.origen === "grok" ? "Grok AI" : "NASA POWER / MODIS"})`}
+              </span>
             </div>
 
-            <p className="text-sm sm:text-base leading-relaxed text-[#F4F1EA]">“{alerta.resumen_oral}”</p>
+            <p className="text-sm sm:text-base leading-relaxed text-[#F4F1EA]">{alerta.resumen_oral}</p>
 
             <div className="text-[11px] text-[#9CA3AF] pt-1">{alerta.fuentes}</div>
-
-            {vozFallback && (
-              <span className="inline-block text-[11px] text-[#F59E0B]">
-                Reproduciendo con sintetizador local del dispositivo
-              </span>
-            )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <button
-              onClick={escuchar}
-              disabled={audioCargando}
-              className={`min-h-[50px] rounded-2xl font-bold text-sm px-5 py-3.5 transition flex items-center justify-center gap-2.5 shadow-lg cursor-pointer ${
-                reproduciendo
-                  ? "bg-[#F59E0B] text-black hover:bg-[#F59E0B]/90"
-                  : "bg-[#D95D39] text-[#F4F1EA] hover:bg-[#D95D39]/90"
-              }`}
+          {/* Botones de Expediente Histórico + Link Directo */}
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
+            <Link
+              href={`/municipio/${comunidad.id}`}
+              className="min-h-[50px] rounded-2xl bg-[#D95D39] hover:bg-[#D95D39]/90 text-[#F4F1EA] font-bold text-sm px-5 py-3.5 transition flex items-center justify-center gap-2.5 shadow-lg"
             >
-              <span className="text-lg">{audioCargando ? "⏳" : reproduciendo ? "⏹" : "🔊"}</span>
-              <span>
-                {audioCargando
-                  ? "Generando audio del parte…"
-                  : reproduciendo
-                    ? "Detener audio"
-                    : "Escuchar parte oficial en voz alta"}
-              </span>
-            </button>
+              <span>📂</span>
+              <span>Abrir Registro Histórico Completo e Informe PDF de {comunidad.nombre} →</span>
+            </Link>
 
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="min-h-[50px] rounded-2xl bg-[#10B981] hover:bg-[#10B981]/90 text-[#0B0D10] font-bold text-sm px-5 py-3.5 transition flex items-center justify-center gap-2.5 shadow-lg"
+            <button
+              onClick={copiarLinkExpediente}
+              className="min-h-[50px] rounded-2xl bg-white/5 hover:bg-white/10 border border-white/15 text-[#F4F1EA] font-semibold text-xs px-4 py-3.5 transition cursor-pointer flex items-center justify-center gap-2"
             >
-              <span className="text-lg">📲</span>
-              <span>Enviar parte por WhatsApp al Municipio</span>
-            </a>
+              <span>🔗</span>
+              <span>{copiado ? "✓ Link copiado" : "Copiar link del municipio"}</span>
+            </button>
           </div>
         </div>
       )}

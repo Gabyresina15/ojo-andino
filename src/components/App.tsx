@@ -209,7 +209,7 @@ export default function App() {
             </div>
           </div>
 
-          <PanelAlerta key={seleccion} comunidad={comunidad} lectura={lectura} modo="comunidad" />
+          <PanelAlerta key={seleccion} comunidad={comunidad} lectura={lectura} />
         </section>
 
         {/* BLOQUE INFERIOR: 3 PESTAÑAS DE GESTIÓN (Con la Tabla de los 10 Municipios abierta por defecto) */}

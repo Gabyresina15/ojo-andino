@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import type { Comunidad, LecturaSatelital } from "@/lib/types";
 import { COMUNIDADES } from "@/lib/comunidades";
 import { lecturaCacheada } from "@/lib/cache";
@@ -148,37 +149,6 @@ function GraficoLluvia({ serie }: { serie: DiaSerie[] }) {
   );
 }
 
-function descargarCsv(comunidad: Comunidad, lectura: LecturaSatelital) {
-  const m = lectura.meteorologia;
-  if (!m) return;
-  const encabezados = [
-    "localidad",
-    "jurisdiccion_municipal",
-    "fecha",
-    "lluvia_caida_mm",
-    "lluvia_normal_historica_mm",
-    "temperatura_media_c",
-  ];
-  const filas = m.serie.map((d) =>
-    [
-      `"${comunidad.nombre}"`,
-      `"${ORGANISMO_POR_ID[comunidad.id] ?? comunidad.nombre}"`,
-      d.fecha,
-      d.lluviaMm ?? "",
-      d.climaMm ?? "",
-      d.t2m ?? "",
-    ].join(","),
-  );
-  const csv = [encabezados.join(","), ...filas].join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `parte-hidrico-${comunidad.id}-${m.ultimoDiaConDato}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
 export default function PanelDatos({ comunidad, lectura, modo, onSeleccion }: Props) {
   if (!lectura) {
     return (
@@ -193,13 +163,22 @@ export default function PanelDatos({ comunidad, lectura, modo, onSeleccion }: Pr
   if (modo === "comunidad") {
     return (
       <div className="amc-surface rounded-2xl p-5 space-y-4">
-        <div>
-          <h3 className="font-display text-base sm:text-lg font-bold text-[#F4F1EA]">
-            Historial diario de lluvias en {comunidad.nombre} (últimos 30 días)
-          </h3>
-          <p className="text-xs text-[#9CA3AF]">
-            Comparación entre la lluvia caída este mes y el promedio histórico de la NASA (2001–2025).
-          </p>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 className="font-display text-base sm:text-lg font-bold text-[#F4F1EA]">
+              Historial diario de lluvias en {comunidad.nombre} (últimos 30 días)
+            </h3>
+            <p className="text-xs text-[#9CA3AF]">
+              Comparación entre la lluvia caída este mes y el promedio histórico de la NASA (2001–2025).
+            </p>
+          </div>
+          <Link
+            href={`/municipio/${comunidad.id}`}
+            className="min-h-[40px] inline-flex items-center gap-1.5 rounded-xl bg-[#F59E0B] hover:bg-[#F59E0B]/90 text-[#0B0D10] font-bold text-xs px-3.5 py-2 transition"
+          >
+            <span>📄</span>
+            <span>Ver Expediente Completo e Informe PDF →</span>
+          </Link>
         </div>
         {m && m.serie.length > 1 ? (
           <GraficoLluvia serie={m.serie} />
@@ -245,18 +224,17 @@ export default function PanelDatos({ comunidad, lectura, modo, onSeleccion }: Pr
             Priorización de los 10 Municipios y Comisiones Municipales
           </h3>
           <p className="text-xs text-[#9CA3AF] mt-0.5">
-            Ordenado automáticamente desde la jurisdicción con mayor déficit de agua hasta la de mayor lluvia acumulada. Hacé
-            clic en cualquier municipio para ver su parte oficial y enviarlo por WhatsApp.
+            Ordenado automáticamente desde la jurisdicción con mayor déficit de agua hasta la de mayor lluvia acumulada. Cada
+            municipio tiene su propio expediente histórico e informe PDF.
           </p>
         </div>
-        {m && (
-          <button
-            onClick={() => descargarCsv(comunidad, lectura)}
-            className="min-h-[44px] rounded-xl bg-[#F59E0B] hover:bg-[#F59E0B]/90 text-[#0B0D10] font-bold text-xs px-4 py-2.5 transition shadow cursor-pointer"
-          >
-            📥 Descargar Planilla CSV ({comunidad.nombre})
-          </button>
-        )}
+        <Link
+          href={`/municipio/${comunidad.id}`}
+          className="min-h-[44px] inline-flex items-center gap-2 rounded-xl bg-[#F59E0B] hover:bg-[#F59E0B]/90 text-[#0B0D10] font-bold text-xs px-4 py-2.5 transition shadow"
+        >
+          <span>📄</span>
+          <span>Informe PDF e Historial de {comunidad.nombre} →</span>
+        </Link>
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-white/10 bg-[#0B0D10]/90">
@@ -268,7 +246,8 @@ export default function PanelDatos({ comunidad, lectura, modo, onSeleccion }: Pr
               <th className="py-3 px-3">Llovió (30d)</th>
               <th className="py-3 px-3">Promedio normal</th>
               <th className="py-3 px-3">Diagnóstico</th>
-              <th className="py-3 px-3">Acción recomendada para Provincia / Municipio</th>
+              <th className="py-3 px-3">Acción recomendada</th>
+              <th className="py-3 px-3">Expediente e Historial</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/10">
@@ -307,6 +286,14 @@ export default function PanelDatos({ comunidad, lectura, modo, onSeleccion }: Pr
                     </span>
                   </td>
                   <td className="py-3 px-3 text-[#F4F1EA]/90">{r.accion}</td>
+                  <td className="py-3 px-3" onClick={(e) => e.stopPropagation()}>
+                    <Link
+                      href={`/municipio/${r.comunidad.id}`}
+                      className="inline-flex items-center gap-1 rounded-lg border border-[#F59E0B]/40 bg-[#F59E0B]/10 hover:bg-[#F59E0B]/20 px-2.5 py-1 text-[11px] font-bold text-[#F59E0B] transition whitespace-nowrap"
+                    >
+                      📂 Ver Historial / PDF →
+                    </Link>
+                  </td>
                 </tr>
               );
             })}
