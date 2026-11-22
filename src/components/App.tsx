@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { COMUNIDADES, CENTRO_JUJUY, getComunidad } from "@/lib/comunidades";
 import type { LecturaSatelital } from "@/lib/types";
 import { lecturaCacheada } from "@/lib/cache";
+import { lecturaMasReciente } from "@/lib/lectura-reciente";
 import { simularPriorizacion } from "@/lib/priorizacion";
 import SimuladorPriorizacion from "./SimuladorPriorizacion";
 import RadarOrbital, { type RadarSnapshot } from "./RadarOrbital";
@@ -73,7 +74,7 @@ export default function App() {
 
   const cacheada = useMemo(() => {
     const local = montado ? leerLocal(seleccion) : null;
-    return local ? { ...local, fuenteCache: true } : lecturaCacheada(seleccion);
+    return lecturaMasReciente(local, lecturaCacheada(seleccion));
   }, [seleccion, montado]);
   const lectura = vivas[seleccion] ?? cacheada;
   const cargando = terminada !== seleccion;
@@ -112,7 +113,7 @@ export default function App() {
       const local = montado ? leerLocal(comunidad.id) : null;
       return {
         comunidad,
-        lectura: vivas[comunidad.id] ?? (local ? { ...local, fuenteCache: true } : lecturaCacheada(comunidad.id)),
+        lectura: vivas[comunidad.id] ?? lecturaMasReciente(local, lecturaCacheada(comunidad.id)),
       };
     }),
     [vivas, montado],

@@ -3,6 +3,7 @@ import { test } from "node:test";
 import { lecturaCacheada } from "../src/lib/cache";
 import { COMUNIDADES } from "../src/lib/comunidades";
 import { estadoHidrico } from "../src/lib/lecturas";
+import { lecturaMasReciente } from "../src/lib/lectura-reciente";
 import { presupuestoRedirigido, simularPriorizacion, type NodoPriorizacion } from "../src/lib/priorizacion";
 
 function nodo(id: string, porcentaje: number | null): NodoPriorizacion {
@@ -10,6 +11,18 @@ function nodo(id: string, porcentaje: number | null): NodoPriorizacion {
   lectura.meteorologia!.precipitacionMm30d.porcentaje = porcentaje;
   return { comunidad: { id, nombre: id }, lectura };
 }
+
+test("elige la lectura por último día y luego por generación", () => {
+  const cache = lecturaCacheada("susques")!;
+  const local = structuredClone(cache);
+  local.meteorologia!.ultimoDiaConDato = "2000-01-01";
+  local.generadoEn = "2099-01-01T00:00:00Z";
+  assert.equal(lecturaMasReciente(local, cache), cache);
+  local.meteorologia!.ultimoDiaConDato = cache.meteorologia!.ultimoDiaConDato;
+  assert.equal(lecturaMasReciente(local, cache)?.generadoEn, local.generadoEn);
+  assert.equal(lecturaMasReciente(null, cache), cache);
+  assert.equal(lecturaMasReciente(null, null), null);
+});
 
 test("calcula presupuesto en centavos sin deriva de punto flotante", () => {
   assert.equal(presupuestoRedirigido(3, 0.05), 0.15);
