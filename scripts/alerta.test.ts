@@ -1,0 +1,91 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import cache from "../src/data/cache-lecturas.json";
+import { COMUNIDADES } from "../src/lib/comunidades";
+import { AlertaSchema, alertaDeterminista, generarAlerta, payloadUsuario, SYSTEM_PROMPT, validarNumeros } from "../src/lib/alerta";
+import { estadoHidrico } from "../src/lib/lecturas";
+import type { LecturaSatelital } from "../src/lib/types";
+
+const lecturas = cache as Record<string, LecturaSatelital>;
+const modos = ["comunidad", "parametrico"] as const;
+
+function verificar(c: (typeof COMUNIDADES)[number], l: LecturaSatelital) {
+  for (const modo of modos) {
+    const alerta = alertaDeterminista(c, l, modo);
+    const payload = payloadUsuario(c, l, modo);
+    assert.deepEqual(validarNumeros(`${alerta.resumen_oral} ${alerta.nota_parametrica} ${alerta.fuentes}`, payload).noVerificados, []);
+    assert.equal(alerta.estado_hidrico, estadoHidrico(l));
+    assert.ok(AlertaSchema.safeParse(alerta).success, JSON.stringify(alerta));
+    assert.equal(payload.gatillo.estado, estadoHidrico(l));
+    assert.equal(payload.gatillo.activado, ["deficit", "superavit_reciente"].includes(estadoHidrico(l)));
+    assert.ok(alerta.nota_parametrica.includes(payload.recomendacion_base));
+    if (modo === "parametrico") {
+      for (const etiqueta of ["Diagnóstico:", "Riesgo operativo:", "Recomendación:"]) {
+        assert.ok(alerta.resumen_oral.includes(etiqueta));
+      }
+    }
+    assert.doesNotMatch(alerta.resumen_oral + alerta.nota_parametrica, /% de pasto|porcentaje de past|\bSAR\b|SAOCOM|MOD13Q1|PRECTOTCORR|[*#\n]/i);
+  }
+}
+
+for (const c of COMUNIDADES) {
+  test(`salida determinista de ${c.nombre} en ambos modos`, () => verificar(c, lecturas[c.id]));
+}
+
+test("todos los estados y regiones, también sin serie o sin meteorología", () => {
+  for (const region of ["puna", "quebrada"] as const) {
+    const c = COMUNIDADES.find((c) => c.region === region)!;
+    for (const porcentaje of [-25, 0, 25, null]) {
+      const l = structuredClone(lecturas[c.id]);
+      l.meteorologia!.precipitacionMm30d.porcentaje = porcentaje;
+      verificar(c, l);
+      l.meteorologia!.serie = [];
+      verificar(c, l);
+    }
+    verificar(c, { ...lecturas[c.id], meteorologia: null, ndvi: null });
+  }
+});
+
+test("el prompt conserva contrato, estructura y límites de evidencia", () => {
+  for (const regla of [
+    "Dictamen de Decisión Logística y Gatillo Paramétrico", "Diagnóstico:", "Riesgo operativo:",
+    "Recomendación:", "estado_hidrico === estado_hidrico_calculado", "recomendacion_base",
+    "números solo literalmente presentes en el payload", "sin markdown", "TTS", "WhatsApp",
+    "% de pasto", "SAR de SAOCOM", "USD/ARS", "instituciones", "convenios", "sensores",
+    "estaciones", "NASA POWER", "MODIS MOD13Q1", "PRECTOTCORR",
+    "normal / puna", "normal / quebrada", "sin_dato / puna", "sin_dato / quebrada",
+  ]) assert.ok(SYSTEM_PROMPT.includes(regla), regla);
+});
+
+test("Grok válido conserva fuentes deterministas y número inventado fuerza fallback", async (t) => {
+  const key = process.env.XAI_API_KEY;
+  process.env.XAI_API_KEY = "dummy-test-key";
+  t.after(() => {
+    if (key === undefined) delete process.env.XAI_API_KEY;
+    else process.env.XAI_API_KEY = key;
+  });
+  for (const [i, inventado] of [false, true].entries()) {
+    const c = COMUNIDADES[i];
+    const l = lecturas[c.id];
+    const det = alertaDeterminista(c, l, "parametrico");
+    let llamadas = 0;
+    t.mock.method(globalThis, "fetch", async () => {
+      llamadas++;
+      return new Response(JSON.stringify({
+        choices: [{ message: { content: JSON.stringify({
+          ...det,
+          resumen_oral: det.resumen_oral + (inventado ? " Costo de 987654321 pesos." : ""),
+          fuentes: "NASA POWER y MODIS",
+        }) } }],
+      }), { status: 200 });
+    });
+    const alerta = await generarAlerta(c, l, "parametrico");
+    assert.equal(alerta.origen, inventado ? "determinista" : "grok");
+    assert.equal(alerta.fuentes, det.fuentes);
+    assert.equal(alerta.resumen_oral, det.resumen_oral);
+    assert.equal(llamadas, inventado ? 2 : 1);
+    if (inventado) assert.match(alerta.validacion.motivoFallback!, /987654321/);
+    else assert.equal(alerta.validacion.motivoFallback, null);
+    t.mock.restoreAll();
+  }
+});
