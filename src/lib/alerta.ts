@@ -371,6 +371,7 @@ async function ejecutarGeneracion(
         modo,
         ...parsed.data,
         nota_parametrica: notaFinal,
+        fuentes: det.fuentes,
         estado_hidrico: estadoReal,
         origen: "grok",
         modelo,
