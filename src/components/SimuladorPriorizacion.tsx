@@ -33,8 +33,30 @@ export default function SimuladorPriorizacion({ nodos, onSeleccion }: { nodos: N
         <p className="text-sm text-[#9CA3AF]">En el reparto uniforme, {resultado.fletesSinEmergencia} fletes irían a zonas sin emergencia hídrica según lluvia 30d. Reserva provincial: {resultado.reservaProvincial} fletes.</p>
         {costoValido && <p className="text-sm mt-1">Presupuesto redirigido: <strong>$ {numero(resultado.fletesReasignados * Number(costo))} pesos</strong>. No es un ahorro neto: se mantiene el presupuesto de los viajes reasignados.</p>}
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[600px] text-sm text-left">
+      <ul className="space-y-3 sm:hidden" aria-label="Fletes por municipio antes y después de priorizar">
+        {resultado.filas.map((fila) => (
+          <li key={fila.id} className="rounded-xl border border-white/15 p-3 space-y-2 text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <button className="underline underline-offset-4 cursor-pointer" onClick={() => onSeleccion(fila.id)}>
+                {fila.nombre}
+              </button>
+              <span style={{ color: colores[fila.estado] }}>{etiquetas[fila.estado]}</span>
+            </div>
+            <p className="text-xs text-[#9CA3AF]">
+              Lluvia 30d: {fila.porcentaje === null ? "Sin dato" : `${fila.porcentaje > 0 ? "+" : ""}${numero(fila.porcentaje)}%`}
+            </p>
+            <p className="text-xs text-[#9CA3AF]">Reparto uniforme → priorizado (delta)</p>
+            <p className="font-bold">
+              {fila.baseline} → {fila.priorizado}{" "}
+              <span style={{ color: colores[fila.estado] }}>
+                ({fila.delta > 0 ? "+" : fila.delta < 0 ? "−" : ""}{Math.abs(fila.delta)})
+              </span>{" "}fletes
+            </p>
+          </li>
+        ))}
+      </ul>
+      <div className="hidden sm:block">
+        <table className="w-full text-sm text-left">
           <caption className="sr-only">Fletes por municipio antes y después de priorizar</caption>
           <thead className="text-xs text-[#9CA3AF] border-b border-white/15"><tr><th className="py-2">Municipio / lluvia 30d</th><th>Estado</th><th>Reparto uniforme</th><th>Reparto priorizado</th><th>Delta</th></tr></thead>
           <tbody>{resultado.filas.map((f) => <tr key={f.id} className="border-b border-white/10">
