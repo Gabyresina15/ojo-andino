@@ -177,8 +177,8 @@ export default function PanelGps({ fix, onFix, seleccion, onSeleccionEstacion }:
             <div>
               <span className="block text-[10px] text-[#9CA3AF]">ALTITUD / VELOCIDAD</span>
               <span className="text-[#F59E0B] font-bold">
-                {fix.altM !== null ? `${Math.round(fix.altM)} msnm` : "~2.400 msnm"} ·{" "}
-                {fix.velKmh !== null ? `${fix.velKmh.toFixed(1)} km/h` : "0.0 km/h"}
+                {fix.altM !== null ? `${Math.round(fix.altM)} msnm` : "s/d"} ·{" "}
+                {fix.velKmh !== null ? `${fix.velKmh.toFixed(1)} km/h` : "s/d"}
               </span>
             </div>
           </div>

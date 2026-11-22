@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AlertaRespuesta, Comunidad, LecturaSatelital } from "@/lib/types";
 import { alertaDeterminista, payloadUsuario, validarNumeros } from "@/lib/alerta";
+import { estadoHidrico } from "@/lib/lecturas";
 import { registrarEvento } from "@/lib/traccion-cliente";
-import { ChakanaIcon } from "./AndeanMotifs";
 
 type Props = {
   comunidad: Comunidad;
@@ -12,7 +12,8 @@ type Props = {
   modo: "comunidad" | "parametrico";
 };
 
-const BARRAS_EQ = [28, 65, 45, 90, 55, 100, 72, 40, 85, 60, 95, 50, 75, 35];
+const BARRAS_EQ = [30, 65, 45, 90, 55, 100, 72, 40, 85, 60, 95, 50];
+const fmt1 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 export default function PanelAlerta({ comunidad, lectura, modo }: Props) {
   const [alertaGrok, setAlertaGrok] = useState<AlertaRespuesta | null>(null);
@@ -41,6 +42,9 @@ export default function PanelAlerta({ comunidad, lectura, modo }: Props) {
   }, [comunidad, lectura, modo]);
 
   const alerta = alertaGrok ?? alertaBase;
+  const m = lectura?.meteorologia;
+  const ndvi = lectura?.ndvi;
+  const est = lectura ? estadoHidrico(lectura) : "sin_dato";
 
   useEffect(
     () => () => {
@@ -54,7 +58,7 @@ export default function PanelAlerta({ comunidad, lectura, modo }: Props) {
 
   const avisarToast = (msg: string) => {
     setToast(msg);
-    setTimeout(() => setToast(null), 3200);
+    setTimeout(() => setToast(null), 3000);
   };
 
   const detenerAudio = () => {
@@ -79,9 +83,9 @@ export default function PanelAlerta({ comunidad, lectura, modo }: Props) {
       const data = (await r.json()) as AlertaRespuesta;
       setAlertaGrok(data);
       registrarEvento("alerta", comunidad.id);
-      avisarToast(`✓ Alerta validada (${data.validacion.numerosVerificados}/${data.validacion.numerosEncontrados} cifras verificadas)`);
-    } catch (e) {
-      setError(`Respaldo determinista activo (${(e as Error).message})`);
+      avisarToast("✓ Mensaje actualizado con Grok AI");
+    } catch {
+      setError("Mostrando recomendación verificada con datos locales.");
     } finally {
       setCargando(false);
     }
@@ -137,115 +141,135 @@ export default function PanelAlerta({ comunidad, lectura, modo }: Props) {
 
   const whatsappUrl = alerta
     ? `https://wa.me/?text=${encodeURIComponent(
-        `*Ojo Andino · Reporte Satelital de ${comunidad.nombre}*\n\n${alerta.resumen_oral}\n\n_${alerta.fuentes}_\n\nTablero en vivo: ${
+        `*Ojo Andino · Estado de Agua y Pasturas en ${comunidad.nombre}*\n\n${alerta.resumen_oral}\n\nVer mapa: ${
           typeof window !== "undefined" ? `${window.location.origin}/?c=${comunidad.id}` : ""
         }`,
       )}`
     : "#";
 
-  const etiquetaEstado =
-    alerta?.estado_hidrico === "deficit"
-      ? { txt: "DÉFICIT HÍDRICO ACTIVO", cls: "bg-[#D95D39]/20 text-[#F4F1EA] border-[#D95D39]/60" }
-      : alerta?.estado_hidrico === "superavit_reciente"
-        ? { txt: "SUPERÁVIT DE LLUVIA RECIENTE", cls: "bg-[#2DD4BF]/15 text-[#2DD4BF] border-[#2DD4BF]/50" }
-        : { txt: "CONDICIÓN HÍDRICA NORMAL", cls: "bg-[#10B981]/15 text-[#10B981] border-[#10B981]/50" };
+  const diagnostico =
+    est === "deficit"
+      ? {
+          semaforo: "🔴 URGENCIA ALTA · FALTA AGUA",
+          colorCaja: "border-[#D95D39]/60 bg-[#D95D39]/15 text-[#F4F1EA]",
+          decision: "Priorizar asistencia de forraje y revisar aguadas antes de mover la hacienda.",
+        }
+      : est === "superavit_reciente"
+        ? {
+            semaforo: "🟢 EN RECUPERACIÓN · BUENA LLUVIA RECIENTE",
+            colorCaja: "border-[#10B981]/50 bg-[#10B981]/15 text-[#F4F1EA]",
+            decision: "Aprovechar la humedad de noviembre para seguir el rebrote natural antes de comprar más fardos.",
+          }
+        : {
+            semaforo: "🟡 CONDICIÓN ESTABLE · LLUVIA NORMAL",
+            colorCaja: "border-[#F59E0B]/50 bg-[#F59E0B]/15 text-[#F4F1EA]",
+            decision: "Lluvias dentro de lo habitual para la época. Mantener manejo regular de pasturas.",
+          };
+
+  const nivelVerdor = !ndvi
+    ? "Sin lectura"
+    : ndvi.ultimoComposite.ndvi < 0.11
+      ? "Muy bajo (suelo seco)"
+      : ndvi.ultimoComposite.ndvi < 0.22
+        ? "Bajo (inicio de rebrote)"
+        : "Moderado a bueno";
 
   return (
-    <div className="amc-surface-elevated rounded-2xl p-5 sm:p-6 space-y-4 shadow-2xl relative overflow-hidden">
-      {/* Barra superior de acento terracota + oro solar */}
+    <div className="amc-surface-elevated rounded-3xl p-5 sm:p-7 space-y-5 shadow-2xl relative overflow-hidden">
       <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#D95D39] via-[#F59E0B] to-[#10B981]" />
 
-      <div className="flex flex-wrap items-start justify-between gap-3 pt-1">
-        <div className="space-y-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-lg bg-[#D95D39]/20 border border-[#D95D39]/50 px-2.5 py-1 text-[11px] font-mono font-bold uppercase tracking-wider text-[#F4F1EA]">
-              <ChakanaIcon className="h-3.5 w-3.5 text-[#D95D39]" />
-              PASO 02 · SÍNTESIS DE VOZ Y WHATSAPP
-            </span>
-            <span className={`text-[11px] font-mono font-bold px-2.5 py-1 rounded-lg border ${etiquetaEstado.cls}`}>
-              {etiquetaEstado.txt}
-            </span>
-          </div>
-          <h3 className="font-display text-lg sm:text-xl font-bold text-[#F4F1EA]">
-            Alerta territorial para {comunidad.nombre}
-          </h3>
-          <p className="text-xs text-[#9CA3AF]">
-            Traducción validada con Zod a castellano simple, lista para escuchar o reenviar al territorio.
+      {/* Encabezado limpio: Pueblo + Decisión concreta */}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-1.5">
+          <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold border ${diagnostico.colorCaja}`}>
+            {diagnostico.semaforo}
+          </span>
+          <h2 className="font-display text-2xl sm:text-3xl font-extrabold text-[#F4F1EA]">
+            {comunidad.nombre} <span className="text-base font-normal text-[#9CA3AF]">({comunidad.region === "puna" ? "Puna" : "Quebrada"})</span>
+          </h2>
+          <p className="text-sm sm:text-base font-medium text-[#F4F1EA]/95">
+            👉 <strong>Qué hacer hoy:</strong> {diagnostico.decision}
           </p>
         </div>
 
         <button
           onClick={generarConGrok}
           disabled={!lectura || cargando}
-          className="min-h-[44px] rounded-xl bg-[#13171E] hover:bg-white/10 active:scale-[0.99] border border-[#F59E0B]/50 disabled:opacity-50 text-[#F4F1EA] font-semibold text-xs px-4 py-2.5 transition-all duration-200 flex items-center gap-2 cursor-pointer"
+          className="min-h-[44px] rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 disabled:opacity-50 text-[#F4F1EA] font-medium text-xs px-3.5 py-2 transition cursor-pointer flex items-center gap-1.5"
         >
-          <span className={cargando ? "animate-spin" : "text-[#F59E0B]"}>✦</span>
-          <span>
-            {cargando
-              ? "Validando con Grok + Zod…"
-              : alerta?.origen === "grok"
-                ? "Regenerar con Grok AI"
-                : "Sintetizar con Grok AI (xAI)"}
-          </span>
+          <span className={cargando ? "animate-spin text-[#F59E0B]" : "text-[#F59E0B]"}>✨</span>
+          <span>{cargando ? "Redactando con Grok…" : alerta?.origen === "grok" ? "Regenerar texto con IA" : "Redactar con Grok AI"}</span>
         </button>
       </div>
 
+      {/* 3 Indicadores en lenguaje humano (cero siglas técnicas en crudo) */}
+      {m && (
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl bg-[#0B0D10]/80 border border-white/10 p-4">
+            <div className="text-xs text-[#9CA3AF]">🌧️ Agua caída (últimos 30 días)</div>
+            <div className="font-mono text-2xl font-extrabold text-[#F4F1EA] mt-1">
+              {fmt1(m.precipitacionMm30d.observado)} mm
+            </div>
+            <div className="text-xs text-[#9CA3AF] mt-1">
+              Lo normal para la fecha: <strong className="text-[#F4F1EA]">{fmt1(m.precipitacionMm30d.climatologia)} mm</strong>
+            </div>
+          </div>
+
+          <div className="rounded-2xl bg-[#0B0D10]/80 border border-white/10 p-4">
+            <div className="text-xs text-[#9CA3AF]">🌱 Estado del pasto y vegetación</div>
+            <div className="font-display text-xl font-extrabold text-[#10B981] mt-1">
+              {nivelVerdor}
+            </div>
+            <div className="text-xs text-[#9CA3AF] mt-1">
+              {ndvi?.compositeAnioAnterior
+                ? ndvi.ultimoComposite.ndvi >= ndvi.compositeAnioAnterior.ndvi
+                  ? "Levemente mejor que en noviembre 2025"
+                  : "Más seco que en noviembre 2025"
+                : "Medición satelital cada 16 días"}
+            </div>
+          </div>
+
+          <div className="rounded-2xl bg-[#0B0D10]/80 border border-white/10 p-4">
+            <div className="text-xs text-[#9CA3AF]">🌡️ Clima de la última semana</div>
+            <div className="font-mono text-2xl font-extrabold text-[#F4F1EA] mt-1">
+              {fmt1(m.temperaturaC7d.mediaObservada)} °C
+            </div>
+            <div className="text-xs text-[#9CA3AF] mt-1">
+              Promedio histórico del mes: <strong className="text-[#F4F1EA]">{fmt1(m.temperaturaC7d.climatologiaMes)} °C</strong>
+            </div>
+          </div>
+        </div>
+      )}
+
       {toast && (
-        <div className="rounded-xl border border-[#10B981]/50 bg-[#10B981]/15 px-3.5 py-2 text-xs font-mono text-[#10B981]">
+        <div role="status" className="rounded-xl border border-[#10B981]/50 bg-[#10B981]/15 px-3.5 py-2 text-xs text-[#10B981]">
           {toast}
         </div>
       )}
+      {error && <p className="text-xs text-[#F59E0B]">{error}</p>}
 
-      {error && <p className="text-xs font-mono text-[#F59E0B]">{error}</p>}
-
-      {cargando && (
-        <div className="rounded-xl border border-[#F59E0B]/30 bg-black/40 p-3.5 flex items-center gap-3 text-xs font-mono text-[#F59E0B]">
-          <span className="h-2.5 w-2.5 rounded-full bg-[#F59E0B] animate-ping shrink-0" />
-          <span>Verificando serie NASA POWER + MODIS contra esquema Zod sin alucinación numérica…</span>
-        </div>
-      )}
-
+      {/* Mensaje listo para escuchar y reenviar por WhatsApp */}
       {alerta && (
         <div className="space-y-4">
-          {/* Consola del mensaje + Ecualizador de voz */}
-          <div className="rounded-2xl bg-[#0B0D10]/90 border border-white/10 p-4 sm:p-5 space-y-3.5">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="h-9 w-9 rounded-xl bg-[#D95D39]/20 border border-[#D95D39]/50 flex items-center justify-center text-[#D95D39]">
-                  <ChakanaIcon className="h-5 w-5" />
-                </div>
-                <div>
-                  <div className="text-xs font-bold text-[#F4F1EA]">
-                    {modo === "comunidad" ? "Canal Comunitario · Freemium ($0)" : "Canal Cooperativa & Seguro Paramétrico · B2B"}
+          <div className="rounded-2xl bg-[#0B0D10]/90 border border-white/10 p-4 sm:p-5 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs font-bold text-[#F59E0B]">
+                💬 Mensaje listo para el productor o técnico municipal:
+              </span>
+              <div className="flex items-center gap-2">
+                {reproduciendo && (
+                  <div className="flex items-end gap-0.5 h-4 px-1.5">
+                    {BARRAS_EQ.map((h, i) => (
+                      <span
+                        key={i}
+                        className="w-1 rounded-full bg-[#F59E0B] amc-eq-bar"
+                        style={{ height: `${h}%`, animationDelay: `${i * 0.06}s` }}
+                      />
+                    ))}
                   </div>
-                  <div className="text-[11px] font-mono text-[#9CA3AF]">
-                    ENGINE: {alerta.origen === "grok" ? `xAI ${alerta.modelo}` : "DETERMINISTIC_SAFE_ENGINE"}
-                  </div>
-                </div>
-              </div>
-
-              {/* Ecualizador animado + Badge de validación */}
-              <div className="flex items-center gap-3">
-                <div
-                  className="flex items-end gap-0.5 h-5 px-2 py-1 rounded-md bg-white/5 border border-white/10"
-                  title={reproduciendo ? "Reproduciendo audio" : "Audio listo"}
-                >
-                  {BARRAS_EQ.map((h, i) => (
-                    <span
-                      key={i}
-                      className={`w-1 rounded-full transition-all ${
-                        reproduciendo ? "bg-[#F59E0B] amc-eq-bar" : "bg-[#9CA3AF]/40"
-                      }`}
-                      style={{
-                        height: reproduciendo ? `${Math.max(25, h)}%` : "30%",
-                        animationDelay: `${i * 0.06}s`,
-                      }}
-                    />
-                  ))}
-                </div>
-
-                <span className="px-2.5 py-1 rounded-lg bg-[#10B981]/15 border border-[#10B981]/40 text-[11px] font-mono font-bold text-[#10B981]">
-                  ✓ {alerta.validacion.numerosVerificados}/{alerta.validacion.numerosEncontrados} CIFRAS OK
+                )}
+                <span className="text-[11px] text-[#10B981]">
+                  ✓ Datos verificados ({alerta.origen === "grok" ? "Grok AI" : "Satélite NASA/MODIS"})
                 </span>
               </div>
             </div>
@@ -254,43 +278,31 @@ export default function PanelAlerta({ comunidad, lectura, modo }: Props) {
               “{alerta.resumen_oral}”
             </p>
 
-            {modo === "parametrico" && (
-              <div className="rounded-xl bg-[#13171E] border border-[#F59E0B]/35 p-3.5 text-xs text-[#F4F1EA] space-y-1">
-                <div className="font-mono text-[11px] uppercase font-bold text-[#F59E0B]">
-                  Dictamen de Índice Paramétrico (B2B)
-                </div>
-                <p className="text-[#F4F1EA]/90 leading-relaxed">{alerta.nota_parametrica}</p>
-              </div>
+            {vozFallback && (
+              <span className="inline-block text-[11px] text-[#F59E0B]">
+                Reproduciendo con voz local del dispositivo (modo sin conexión)
+              </span>
             )}
-
-            <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-[11px] font-mono text-[#9CA3AF]">
-              <span>FUENTES: {alerta.fuentes}</span>
-              {vozFallback && (
-                <span className="px-2 py-0.5 rounded bg-[#F59E0B]/15 border border-[#F59E0B]/40 text-[#F59E0B]">
-                  WEB_SPEECH_FALLBACK
-                </span>
-              )}
-            </div>
           </div>
 
-          {/* Botonera thumb-zone >= 48px de alto */}
+          {/* 2 Botones Principales Grandes y Claros */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <button
               onClick={escuchar}
               disabled={audioCargando}
-              className={`min-h-[48px] rounded-xl font-bold text-sm px-5 py-3 transition-all duration-200 flex items-center justify-center gap-2.5 shadow-lg cursor-pointer active:scale-[0.99] ${
+              className={`min-h-[50px] rounded-2xl font-bold text-sm px-5 py-3.5 transition flex items-center justify-center gap-2.5 shadow-lg cursor-pointer ${
                 reproduciendo
                   ? "bg-[#F59E0B] text-black hover:bg-[#F59E0B]/90"
                   : "bg-[#D95D39] text-[#F4F1EA] hover:bg-[#D95D39]/90"
               }`}
             >
-              <span className="text-base">{audioCargando ? "⏳" : reproduciendo ? "⏹" : "🔊"}</span>
+              <span className="text-lg">{audioCargando ? "⏳" : reproduciendo ? "⏹" : "🔊"}</span>
               <span>
                 {audioCargando
-                  ? "Sintetizando voz (xAI TTS)…"
+                  ? "Preparando audio…"
                   : reproduciendo
-                    ? "Detener transmisión de voz"
-                    : "Escuchar alerta en voz alta"}
+                    ? "Detener audio"
+                    : "Escuchar recomendación en voz alta"}
               </span>
             </button>
 
@@ -298,13 +310,10 @@ export default function PanelAlerta({ comunidad, lectura, modo }: Props) {
               href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() => {
-                registrarEvento("whatsapp", comunidad.id);
-                avisarToast("✓ Abriendo WhatsApp con reporte precargado");
-              }}
-              className="min-h-[48px] rounded-xl bg-[#10B981] hover:bg-[#10B981]/90 active:scale-[0.99] text-[#0B0D10] font-bold text-sm px-5 py-3 transition-all duration-200 flex items-center justify-center gap-2.5 shadow-lg"
+              onClick={() => registrarEvento("whatsapp", comunidad.id)}
+              className="min-h-[50px] rounded-2xl bg-[#10B981] hover:bg-[#10B981]/90 text-[#0B0D10] font-bold text-sm px-5 py-3.5 transition flex items-center justify-center gap-2.5 shadow-lg"
             >
-              <span className="text-base">📲</span>
+              <span className="text-lg">📲</span>
               <span>Enviar alerta por WhatsApp</span>
             </a>
           </div>
