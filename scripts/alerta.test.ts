@@ -18,8 +18,21 @@ function verificar(c: (typeof COMUNIDADES)[number], l: LecturaSatelital) {
     assert.ok(AlertaSchema.safeParse(alerta).success, JSON.stringify(alerta));
     assert.equal(payload.gatillo.estado, estadoHidrico(l));
     assert.equal(payload.gatillo.activado, ["deficit", "superavit_reciente"].includes(estadoHidrico(l)));
-    assert.ok(alerta.nota_parametrica.includes(payload.recomendacion_base));
+    assert.ok((modo === "parametrico" ? alerta.resumen_oral : alerta.nota_parametrica).includes(payload.recomendacion_base));
+    assert.equal((alerta.resumen_oral.match(/% del total/g) ?? []).length, payload.patron_diario && estadoHidrico(l) !== "sin_dato" ? 1 : 0);
+    if (l.ndvi) {
+      assert.equal((alerta.resumen_oral.match(/índice de verdor/g) ?? []).length, 1);
+      assert.ok(alerta.resumen_oral.includes(l.ndvi.ultimoComposite.fecha));
+    } else {
+      assert.doesNotMatch(alerta.resumen_oral, /índice de verdor/);
+    }
     if (modo === "parametrico") {
+      assert.match(alerta.nota_parametrica, /Gatillo/);
+      assert.ok(!alerta.nota_parametrica.includes(payload.recomendacion_base));
+      assert.doesNotMatch(alerta.resumen_oral, /Registrar inspección y necesidades/);
+      for (const frase of alerta.nota_parametrica.split(/(?<=\.)\s+/)) {
+        assert.ok(!alerta.resumen_oral.includes(frase), frase);
+      }
       for (const etiqueta of ["Diagnóstico:", "Riesgo operativo:", "Recomendación:"]) {
         assert.ok(alerta.resumen_oral.includes(etiqueta));
       }
@@ -43,6 +56,9 @@ test("todos los estados y regiones, también sin serie o sin meteorología", () 
       verificar(c, l);
     }
     verificar(c, { ...lecturas[c.id], meteorologia: null, ndvi: null });
+    const sinAnterior = structuredClone(lecturas[c.id]);
+    sinAnterior.ndvi!.compositeAnterior = null;
+    verificar(c, sinAnterior);
   }
 });
 

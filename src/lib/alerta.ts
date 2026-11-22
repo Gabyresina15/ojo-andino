@@ -223,6 +223,7 @@ export function validarNumeros(texto: string, payload: unknown) {
 }
 
 const fmt1 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const fmt3 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
 
 export function recomendacionGobierno(c: Comunidad, l: LecturaSatelital): string {
   const est = estadoHidrico(l);
@@ -274,15 +275,22 @@ export function alertaDeterminista(c: Comunidad, l: LecturaSatelital, modo: "com
       partes.push(`En ${c.nombre} la lluvia acumulada ${balance}.`);
     }
     if (patron) {
-      partes.push(`Hubo ${patron.dias_secos} días sin lluvia de 1 mm o más y una racha seca máxima de ${patron.racha_seca_maxima_dias} días; el pico diario concentró ${patron.concentracion_pico_pct} % del total.`);
+      partes.push(`Hubo ${patron.dias_secos} días sin lluvia de 1 mm o más y una racha seca máxima de ${patron.racha_seca_maxima_dias} días.`);
       if (!(est === "superavit_reciente" && c.region === "quebrada")) {
-        partes.push(`El pico fue de ${fmt1(patron.pico_maximo_mm)} mm el ${patron.pico_maximo_dia}, con ${fmt1(patron.lluvia_ultimos_7d_mm)} mm en la última semana.`);
+        partes.push(`El pico fue de ${fmt1(patron.pico_maximo_mm)} mm el ${patron.pico_maximo_dia} (${patron.concentracion_pico_pct} % del total en un solo día), con ${fmt1(patron.lluvia_ultimos_7d_mm)} mm en la última semana.`);
       }
     }
     const delta = r1(m.temperaturaC7d.mediaObservada - m.temperaturaC7d.climatologiaMes);
     partes.push(`La temperatura estuvo ${fmt1(Math.abs(delta))} °C ${delta >= 0 ? "por encima" : "por debajo"} de la referencia.`);
   }
   if (!patron) partes.push("Sin serie diaria suficiente para evaluar rachas y concentración.");
+  if (l.ndvi) {
+    const actual = l.ndvi.ultimoComposite;
+    const anterior = l.ndvi.compositeAnterior;
+    partes.push(anterior
+      ? `El índice de verdor pasó de ${fmt3(anterior.ndvi)} a ${fmt3(actual.ndvi)} (compuesto al ${actual.fecha}).`
+      : `El índice de verdor es ${fmt3(actual.ndvi)} (compuesto al ${actual.fecha}).`);
+  }
   const riesgo = c.region === "puna"
     ? est === "deficit"
       ? "Puede faltar forraje y agua en aguadas y vegas; verificá reservas y estado de la hacienda."
@@ -296,17 +304,28 @@ export function alertaDeterminista(c: Comunidad, l: LecturaSatelital, modo: "com
   const accion = esComunidad ? recomendacionComunidad(c, l) : recomendacionGobierno(c, l);
   const p = m?.precipitacionMm30d;
   const desvioRedondeado = p?.porcentaje != null ? r1(p.porcentaje) : 0;
+  const desvio = `${desvioRedondeado >= 0 ? "+" : ""}${fmt1(desvioRedondeado)} %`;
+  const gatillo = est === "sin_dato"
+    ? "Gatillo no evaluable: sin dato de lluvia."
+    : est === "normal"
+      ? `Gatillo no activado: desvío ${desvio} dentro de ±25 %.`
+      : `Gatillo de ${est === "deficit" ? "déficit" : "exceso hídrico"} activado: desvío ${desvio} frente al umbral de ${est === "deficit" ? "-25" : "+25"} %; señal del índice, no pago automático.`;
+  const verificacion = c.region === "puna"
+    ? "Verificar en campo aguadas y reservas de forraje y dejar registro."
+    : "Verificar drenajes y transitabilidad de badenes y dejar registro.";
   const nota = esComunidad
     ? accion
-    : `Gatillo ${est === "sin_dato" ? "no evaluable" : est === "normal" ? "no activado" : "activado como señal del índice, no como pago automático"}. ${accion} Registrar necesidades y resultado de la inspección.`;
+    : `${gatillo} ${verificacion}`;
 
   return {
     resumen_oral: esComunidad
       ? `${partes.join(" ")} ${riesgo}`
-      : `Diagnóstico: ${partes.join(" ")} Riesgo operativo: ${riesgo} Recomendación: ${accion} Registrar inspección y necesidades antes de ejecutar el operativo.`,
+      : `Diagnóstico: ${partes.join(" ")} Riesgo operativo: ${riesgo} Recomendación: ${accion}`,
     estado_hidrico: est,
     nota_parametrica: p && est !== "sin_dato"
-      ? `${nota} (Ventana: ${p.ventana}, desvío ${desvioRedondeado >= 0 ? "+" : ""}${fmt1(desvioRedondeado)} % vs serie 2001–2025).`
+      ? esComunidad
+        ? `${nota} (Ventana: ${p.ventana}, desvío ${desvio} vs serie 2001–2025).`
+        : `${nota} (Ventana: ${p.ventana}).`
       : nota,
     fuentes: `NASA POWER (corte ${m?.ultimoDiaConDato ?? "s/d"}, demora oficial 2–3 días) y MODIS MOD13Q1 (compuesto 16 días al ${l.ndvi?.ultimoComposite.fecha ?? "s/d"}).`,
   };
