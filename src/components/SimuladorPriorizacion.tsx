@@ -30,7 +30,7 @@ export default function SimuladorPriorizacion({ nodos, onSeleccion }: { nodos: N
       </div>
       <div className="rounded-xl border border-[#10B981]/30 bg-[#10B981]/5 p-3">
         <p className="font-bold text-[#10B981]">{resultado.fletesReasignados} de {fletes} fletes pasan de municipios recuperados{destinos ? ` a ${destinos}` : " a destinos con déficit (sin destinos actuales)"}.</p>
-        <p className="text-sm text-[#9CA3AF]">En el reparto uniforme, {resultado.fletesSinEmergencia} fletes irían a zonas sin emergencia hídrica según lluvia 30d. Reserva provincial: {resultado.reservaProvincial} fletes.</p>
+        <p className="text-sm text-[#9CA3AF]">En el reparto uniforme, {resultado.fletesARecuperados} fletes irían a municipios recuperados con superávit reciente de lluvia (30d). Reserva provincial: {resultado.reservaProvincial} fletes.</p>
         {costoValido && <p className="text-sm mt-1">Presupuesto redirigido: <strong>$ {numero(resultado.fletesReasignados * Number(costo))} pesos</strong>. No es un ahorro neto: se mantiene el presupuesto de los viajes reasignados.</p>}
       </div>
       <ul className="space-y-3 sm:hidden" aria-label="Fletes por municipio antes y después de priorizar">

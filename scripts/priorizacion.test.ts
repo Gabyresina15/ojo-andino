@@ -19,6 +19,7 @@ test("conserva enteros, libera recuperados y preserva normal y sin dato", () => 
     assert.equal(r.filas.reduce((s, f) => s + f.priorizado, 0) + r.reservaProvincial, total);
     assert.ok(r.filas.every((f) => Number.isInteger(f.priorizado)));
     assert.equal(r.filas[0].priorizado, 0);
+    assert.equal(r.fletesARecuperados, r.filas[0].baseline);
     for (const i of [2, 3]) assert.equal(r.filas[i].priorizado, r.filas[i].baseline);
   }
   assert.deepEqual(simularPriorizacion(nodos, 5).filas.map((f) => f.baseline), [2, 1, 1, 1]);
@@ -28,6 +29,7 @@ test("sin déficit lo liberado queda en reserva; dato ausente no recupera", () =
   const r = simularPriorizacion([nodo("a", 70), { comunidad: { id: "b", nombre: "b" }, lectura: null }], 9);
   assert.equal(r.reservaProvincial, 5);
   assert.equal(r.fletesReasignados, 0);
+  assert.equal(r.fletesARecuperados, 5);
   assert.equal(r.filas[1].priorizado, 4);
   assert.equal(r.porcentajeReasignable, 100);
 });
@@ -40,6 +42,7 @@ test("distribuye proporcionalmente con restos deterministas", () => {
 
 test("vacío, cero y entradas inválidas", () => {
   assert.equal(simularPriorizacion([], 7).reservaProvincial, 7);
+  assert.equal(simularPriorizacion([], 7).fletesARecuperados, 0);
   assert.equal(simularPriorizacion([nodo("a", null)], 0).porcentajeReasignable, 0);
   for (const n of [-1, 1.5, NaN, Infinity]) assert.throws(() => simularPriorizacion([], n), RangeError);
 });

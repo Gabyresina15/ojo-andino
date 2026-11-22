@@ -25,7 +25,7 @@ export type ResultadoPriorizacion = {
   nodosRecuperados: number;
   porcentajeReasignable: number;
   fletesReasignados: number;
-  fletesSinEmergencia: number;
+  fletesARecuperados: number;
   reservaProvincial: number;
 };
 
@@ -92,7 +92,7 @@ export function simularPriorizacion(
     nodosRecuperados: recuperados.length,
     porcentajeReasignable: conDato ? recuperados.length / conDato * 100 : 0,
     fletesReasignados: deficit.length ? liberados : 0,
-    fletesSinEmergencia: liberados,
+    fletesARecuperados: liberados,
     reservaProvincial: nodos.length ? (deficit.length ? 0 : liberados) : fletesTotales,
   };
 }
