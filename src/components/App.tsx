@@ -5,6 +5,8 @@ import dynamic from "next/dynamic";
 import { COMUNIDADES, CENTRO_JUJUY, getComunidad } from "@/lib/comunidades";
 import type { LecturaSatelital } from "@/lib/types";
 import { lecturaCacheada } from "@/lib/cache";
+import { simularPriorizacion } from "@/lib/priorizacion";
+import SimuladorPriorizacion from "./SimuladorPriorizacion";
 import RadarOrbital, { type RadarSnapshot } from "./RadarOrbital";
 import PanelDatos from "./PanelDatos";
 import PanelAlerta from "./PanelAlerta";
@@ -105,6 +107,8 @@ export default function App() {
 
   const pueblosPuna = COMUNIDADES.filter((c) => c.region === "puna");
   const pueblosQuebrada = COMUNIDADES.filter((c) => c.region === "quebrada");
+  const nodosPuna = pueblosPuna.map((comunidad) => ({ comunidad, lectura: vivas[comunidad.id] ?? lecturaCacheada(comunidad.id) }));
+  const priorizacion = simularPriorizacion(nodosPuna, 40);
 
   return (
     <div className="min-h-screen amc-grid-bg text-[#F4F1EA]">
@@ -196,13 +200,15 @@ export default function App() {
 
             <div className="amc-surface rounded-2xl p-3.5 text-left border border-[#F59E0B]/30">
               <div className="text-[11px] font-mono uppercase text-[#F59E0B] font-bold">🚚 Eficiencia Logística Puna</div>
-              <div className="font-display text-xl font-extrabold text-[#F59E0B] mt-0.5">75% fletes reasignables</div>
+              <div className="font-display text-xl font-extrabold text-[#F59E0B] mt-0.5">{priorizacion.porcentajeReasignable.toLocaleString("es-AR", { maximumFractionDigits: 1 })}% fletes reasignables</div>
               <div className="text-xs text-[#9CA3AF] mt-0.5">
-                3 de 4 nodos puneños hoy sin emergencia; concentrar envío en Susques
+                {priorizacion.nodosRecuperados} de {priorizacion.nodosConDato} nodos puneños con dato recuperados; priorizá los destinos con déficit
               </div>
             </div>
           </div>
         </section>
+
+        <SimuladorPriorizacion nodos={nodosPuna} onSeleccion={setSeleccion} />
 
         {/* BLOQUE PRINCIPAL: MAPA DE LAS 10 JURISDICCIONES + PARTE OFICIAL DE LA JURISDICCIÓN SELECCIONADA */}
         <section className="grid gap-5 lg:grid-cols-[400px_1fr] items-start">
