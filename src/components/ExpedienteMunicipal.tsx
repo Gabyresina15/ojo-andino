@@ -9,6 +9,7 @@ import { alertaDeterminista, payloadUsuario, recomendacionGobierno, validarNumer
 import { descargarPdfExpediente } from "@/lib/pdf-expediente";
 import { JURISDICCION_MUNICIPAL } from "./PanelAlerta";
 import { ChakanaIcon } from "./AndeanMotifs";
+import CompartirParteOficial from "./CompartirParteOficial";
 
 const fmt1 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const fmt2 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -108,6 +109,7 @@ export default function ExpedienteMunicipal({ comunidad }: { comunidad: Comunida
               <span>📄</span>
               <span>Descargar Anexo Oficial (.PDF)</span>
             </button>
+            <CompartirParteOficial comunidad={comunidad} lectura={lectura} />
           </div>
         </div>
       </header>

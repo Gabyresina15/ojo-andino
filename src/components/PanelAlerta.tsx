@@ -14,6 +14,7 @@ import {
 import { estadoHidrico } from "@/lib/lecturas";
 import { descargarPdfExpediente } from "@/lib/pdf-expediente";
 import { ChakanaIcon } from "./AndeanMotifs";
+import CompartirParteOficial from "./CompartirParteOficial";
 
 type Props = {
   comunidad: Comunidad;
@@ -346,8 +347,7 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
             <div className="text-[11px] text-[#9CA3AF] pt-1">{alerta.fuentes}</div>
           </div>
 
-          {/* 3 Acciones de Comando Provincial -> Derivación Municipal */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             <button
               onClick={() => lectura && descargarPdfExpediente(comunidad, lectura, alerta)}
               disabled={!lectura}
@@ -366,6 +366,8 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
               <span>📨</span>
               <span>Derivar Orden al Municipio</span>
             </a>
+
+            <CompartirParteOficial comunidad={comunidad} lectura={lectura} />
 
             <Link
               href={`/municipio/${comunidad.id}`}
