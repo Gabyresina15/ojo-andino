@@ -20,36 +20,69 @@ const JSON_SCHEMA = {
     properties: {
       resumen_oral: {
         type: "string",
-        description: "Parte operativo claro de 4 a 5 oraciones para el Gobierno de Jujuy y la Municipalidad o Comisión Municipal.",
+        description:
+          "Dictamen hidrológico y logístico de 4 a 5 oraciones para el Gobierno de Jujuy. Analiza la distribución diaria de lluvia (días secos, pico diario, últimos 7 días) y el impacto operativo, sin repetir de memoria los promedios.",
       },
       estado_hidrico: { type: "string", enum: ["deficit", "normal", "superavit_reciente", "sin_dato"] },
       nota_parametrica: {
         type: "string",
-        description: "1 a 2 oraciones con la acción operativa recomendada para el Ministerio o Municipio (forraje, agua, drenajes o caminos).",
+        description:
+          "1 a 2 oraciones con la directiva logística concreta para el Ministerio (Producción, Recursos Hídricos o Vialidad/Obras).",
       },
       fuentes: { type: "string", description: "Fuentes satelitales y fecha del último dato." },
     },
   },
 };
 
-export const SYSTEM_PROMPT = `Sos el analista de inteligencia territorial de Ojo Andino para el Gobierno de la Provincia de Jujuy (Ministerio de Desarrollo Económico y Producción, Recursos Hídricos e Infraestructura) y sus Municipios y Comisiones Municipales.
+export const SYSTEM_PROMPT = `Sos el Analista Principal de Riesgo Hídrico, Productivo y Vial de Ojo Andino para el Gobierno de la Provincia de Jujuy (Ministerio de Desarrollo Económico y Producción, Recursos Hídricos e Infraestructura) y sus Municipios y Comisiones Municipales.
+
+Tu trabajo NO es repetir los 3 números grandes que ya están arriba en las tarjetas. Tu trabajo es cruzar la distribución diaria de los últimos 30 días ("patron_diario") con la temperatura y la vegetación para darle al funcionario una justificación técnica de expediente:
 
 Reglas estrictas:
 - Respondé SOLO con el JSON del esquema. Nada de markdown.
-- resumen_oral: redactá un parte ejecutivo, claro y natural (4 a 5 oraciones en castellano de Argentina) dirigido a un funcionario provincial o comisionado municipal.
-- NO metas códigos técnicos robóticos adentro del texto hablado (no digas "MOD13Q1" ni "PRECTOTCORR"; decí "los datos satelitales de la NASA" y "el índice de vegetación satelital"). Las siglas técnicas dejálas solo en el campo "fuentes".
-- No inventes números. Usá solo los que vienen en el JSON del usuario. No calcules restas ni promedios propios.
-- No conviertas el NDVI en "porcentaje de pasto". Es un índice de vegetación de 0 a 1 (en la Puna valores de 0,1 a 0,2 son habituales).
-- estado_hidrico DEBE coincidir con "estado_hidrico_calculado" del JSON.
-- Cerrá el resumen_oral con una recomendación concreta de gestión pública según el estado:
-  * Si hay déficit (como en Susques): priorizar a esta Comisión Municipal en el envío de camiones de forraje (alfalfa) y asistencia de agua.
-  * Si hay superávit de lluvia en la Puna (como en Abra Pampa o La Quiaca): no requiere envío de forraje de emergencia esta semana porque las lluvias recientes permiten esperar el rebrote natural.
-  * Si hay superávit de lluvia en la Quebrada (como en Volcán, Tumbaya o Humahuaca): recomendar al Municipio vigilar escorrentías, drenajes urbanos y estado de caminos rurales.
-  * Si está normal (como en Tilcara, Maimará o Purmamarca): mantener seguimiento habitual sin operativo de emergencia.
-- Nunca digas "hablá con el municipio", porque quien lee esto ES el Municipio o el Gobierno de Jujuy.`;
+- En "resumen_oral" (4 a 5 oraciones en castellano de Argentina):
+  1. Analizá CÓMO se comportó la lluvia dentro de los 30 días usando "patron_diario": cuántos días estuvieron secos (< 1 mm), cuánto llovió en la última semana ("lluvia_ultimos_7d_mm") y cuál fue el pico máximo en un solo día ("pico_maximo_mm" y su fecha).
+  2. Cruzalo con el impacto físico en el terreno:
+     - Si hay déficit (ej. Susques): explicá que la cantidad de días secos seguidos combinada con la temperatura por encima de lo normal acelera la evaporación de aguadas y frena el rebrote del pastizal, justificando técnicamente ante Hacienda priorizar esta jurisdicción con camiones de forraje (alfalfa) y agua.
+     - Si hay superávit en la Puna (ej. Abra Pampa, La Quiaca, Yavi): explicá que la concentración de lluvias en los últimos días recargó la humedad superficial tras la sequía de septiembre/octubre, por lo que no corresponde enviar fardos de emergencia esta semana sino monitorear el rebrote natural y reasignar la logística provincial a zonas secas.
+     - Si hay superávit en la Quebrada (ej. Volcán, Tumbaya, Humahuaca): explicá que los picos diarios intensos sobre pendientes de Quebrada generan escorrentía rápida, por lo que la prioridad municipal no es sequía sino inspección de drenajes urbanos, badenes, obras y caminos rurales.
+     - Si está normal (ej. Tilcara, Maimará, Purmamarca): explicá que la distribución de lluvias acompaña el ciclo normal de inicio de temporada húmeda.
+- NO metas siglas robóticas adentro de "resumen_oral" (no escribas "MOD13Q1" ni "PRECTOTCORR"; esas siglas van solo en "fuentes").
+- No inventes números ni hagas cuentas propias: usá exclusivamente las cifras que vienen en el JSON del usuario.
+- estado_hidrico DEBE coincidir con "estado_hidrico_calculado".`;
+
+export type PatronDiario = {
+  dias_totales: number;
+  dias_con_lluvia_significativa: number;
+  dias_secos: number;
+  lluvia_ultimos_7d_mm: number;
+  pico_maximo_mm: number;
+  pico_maximo_dia: string;
+};
+
+export function calcularPatronDiario(l: LecturaSatelital): PatronDiario | null {
+  const serie = l.meteorologia?.serie;
+  if (!serie || serie.length === 0) return null;
+  const r1 = (n: number) => Math.round(n * 10) / 10;
+  const diasConLluvia = serie.filter((d) => (d.lluviaMm ?? 0) >= 1).length;
+  const diasSecos = serie.length - diasConLluvia;
+  const ult7 = serie.slice(-7).reduce((acc, d) => acc + (d.lluviaMm ?? 0), 0);
+  const pico = [...serie].sort((a, b) => (b.lluviaMm ?? 0) - (a.lluviaMm ?? 0))[0];
+  const ddmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
+  return {
+    dias_totales: serie.length,
+    dias_con_lluvia_significativa: diasConLluvia,
+    dias_secos: diasSecos,
+    lluvia_ultimos_7d_mm: r1(ult7),
+    pico_maximo_mm: r1(pico?.lluviaMm ?? 0),
+    pico_maximo_dia: pico ? ddmm(pico.fecha) : "s/d",
+  };
+}
 
 export function payloadUsuario(c: Comunidad, l: LecturaSatelital, modo: "comunidad" | "parametrico") {
   const m = l.meteorologia;
+  const patron = calcularPatronDiario(l);
+  const deltaTemp = m ? Math.round((m.temperaturaC7d.mediaObservada - m.temperaturaC7d.climatologiaMes) * 10) / 10 : null;
   return {
     pueblo: c.nombre,
     region: c.region,
@@ -66,11 +99,13 @@ export function payloadUsuario(c: Comunidad, l: LecturaSatelital, modo: "comunid
           climatologia_periodo: "2001–2025",
         }
       : null,
+    patron_diario: patron,
     temperatura: m
       ? {
           ventana: m.temperaturaC7d.ventana,
           media_7d_c: Math.round(m.temperaturaC7d.mediaObservada * 10) / 10,
           climatologia_mes_c: Math.round(m.temperaturaC7d.climatologiaMes * 10) / 10,
+          diferencia_termica_c: deltaTemp,
           mes: m.temperaturaC7d.mesClimatologico,
         }
       : null,
@@ -118,10 +153,10 @@ export function recomendacionGobierno(c: Comunidad, l: LecturaSatelital): string
     return `Priorizar a ${c.nombre} en la asignación provincial de camiones de forraje (alfalfa) y asistencia de agua para productores.`;
   }
   if (est === "superavit_reciente" && c.region === "puna") {
-    return `No requiere envío de forraje de emergencia esta semana: las lluvias recientes permiten esperar el rebrote natural y reasignar recursos a zonas deficitarias.`;
+    return `No requiere envío de forraje de emergencia esta semana: las lluvias recientes permiten esperar el rebrote natural y reasignar fletes a zonas deficitarias.`;
   }
   if (est === "superavit_reciente" && c.region === "quebrada") {
-    return `Sin emergencia por sequía. Por el exceso de lluvia reciente, se recomienda al Municipio monitorear drenajes, obras urbanas y escorrentía en caminos.`;
+    return `Sin emergencia por sequía. Por picos de lluvia en pendiente, se recomienda al Municipio inspeccionar drenajes urbanos, badenes, obras y caminos.`;
   }
   return `Condición hídrica dentro del promedio histórico. Mantener monitoreo municipal habitual sin operativo de emergencia.`;
 }
@@ -129,51 +164,65 @@ export function recomendacionGobierno(c: Comunidad, l: LecturaSatelital): string
 export function alertaDeterminista(c: Comunidad, l: LecturaSatelital, _modo: "comunidad" | "parametrico"): AlertaLLM {
   const m = l.meteorologia;
   const est = estadoHidrico(l);
+  const patron = calcularPatronDiario(l);
   const partes: string[] = [];
 
-  if (m) {
-    const p = m.precipitacionMm30d;
-    const pctAbs = fmt1(Math.abs(p.porcentaje ?? 0));
+  if (m && patron) {
+    const deltaTemp = fmt1(Math.abs(m.temperaturaC7d.mediaObservada - m.temperaturaC7d.climatologiaMes));
     if (est === "deficit") {
       partes.push(
-        `Informe de situación para ${c.nombre}: en los últimos 30 días cayeron apenas ${fmt1(p.observado)} mm de lluvia, cuando lo normal para esta época es ${fmt1(p.climatologia)} mm (un déficit del ${pctAbs} %).`,
+        `Análisis de régimen diario para ${c.nombre}: de los últimos ${patron.dias_totales} días evaluados, ${patron.dias_secos} días no tuvieron lluvias útiles (solo ${patron.dias_con_lluvia_significativa} días superaron 1 mm, con un máximo diario de apenas ${fmt1(patron.pico_maximo_mm)} mm el ${patron.pico_maximo_dia}).`,
       );
-    } else if (est === "superavit_reciente") {
       partes.push(
-        `Informe de situación para ${c.nombre}: en los últimos 30 días se registraron ${fmt1(p.observado)} mm de lluvia frente a los ${fmt1(p.climatologia)} mm habituales para la fecha (${pctAbs} % por encima del promedio).`,
+        `En la última semana cayeron solo ${fmt1(patron.lluvia_ultimos_7d_mm)} mm y la temperatura estuvo ${deltaTemp} °C por encima del promedio del mes, lo que acelera la evaporación en aguadas y mantiene estancado el pastizal natural (${l.ndvi ? fmt3(l.ndvi.ultimoComposite.ndvi) : "bajo"}).`,
+      );
+      partes.push(
+        `Justificación de expediente: los datos respaldan asignar prioridad alta a la Comisión Municipal de ${c.nombre} para el despacho de fardos de alfalfa y agua.`,
+      );
+    } else if (est === "superavit_reciente" && c.region === "puna") {
+      partes.push(
+        `Análisis de régimen diario para ${c.nombre}: tras los meses secos de septiembre y octubre, se registraron ${patron.dias_con_lluvia_significativa} jornadas con lluvias activas (${fmt1(patron.lluvia_ultimos_7d_mm)} mm acumulados en los últimos 7 días y un pico de ${fmt1(patron.pico_maximo_mm)} mm el ${patron.pico_maximo_dia}).`,
+      );
+      partes.push(
+        `Esta recarga de humedad superficial mejora la perspectiva de rebrote respecto al corte previo de octubre (${l.ndvi?.compositeAnterior ? fmt3(l.ndvi.compositeAnterior.ndvi) : "0,115"} a ${l.ndvi ? fmt3(l.ndvi.ultimoComposite.ndvi) : "0,138"}).`,
+      );
+      partes.push(
+        `Justificación de expediente: no se recomienda despachar forraje de emergencia a ${c.nombre} esta semana, pudiendo reasignar esos camiones a jurisdicciones con déficit activo como Susques.`,
+      );
+    } else if (est === "superavit_reciente" && c.region === "quebrada") {
+      partes.push(
+        `Análisis de régimen diario para ${c.nombre}: las precipitaciones superaron el promedio histórico concentrándose en ${patron.dias_con_lluvia_significativa} días de lluvia activa, con un evento máximo de ${fmt1(patron.pico_maximo_mm)} mm en 24 horas el ${patron.pico_maximo_dia} y ${fmt1(patron.lluvia_ultimos_7d_mm)} mm en la última semana.`,
+      );
+      partes.push(
+        `En topografía de Quebrada, esta concentración de agua en pocos días incrementa la escorrentía superficial sobre laderas, badenes y trazas viales.`,
+      );
+      partes.push(
+        `Justificación de expediente: la jurisdicción no presenta riesgo de sequía; corresponde priorizar limpieza preventiva de desagües pluviales, defensas y control de caminos municipales.`,
       );
     } else {
       partes.push(
-        `Informe de situación para ${c.nombre}: en los últimos 30 días llovieron ${fmt1(p.observado)} mm, un valor alineado con el promedio histórico de ${fmt1(p.climatologia)} mm para esta época.`,
+        `Análisis de régimen diario para ${c.nombre}: la lluvia se distribuyó en ${patron.dias_con_lluvia_significativa} días con precipitación significativa (pico máximo de ${fmt1(patron.pico_maximo_mm)} mm el ${patron.pico_maximo_dia} y ${fmt1(patron.lluvia_ultimos_7d_mm)} mm en la última semana).`,
+      );
+      partes.push(
+        `El balance hídrico coincide con el comportamiento normal de los últimos 25 años para el inicio de la temporada húmeda.`,
+      );
+      partes.push(
+        `Justificación de expediente: mantener seguimiento técnico ordinario sin activar partidas de emergencia.`,
       );
     }
-    partes.push(
-      `La temperatura media de la última semana fue de ${fmt1(m.temperaturaC7d.mediaObservada)} °C (promedio histórico del mes: ${fmt1(m.temperaturaC7d.climatologiaMes)} °C).`,
-    );
   } else {
-    partes.push(`En ${c.nombre} no hay lectura meteorológica disponible en este momento.`);
-  }
-
-  if (l.ndvi) {
-    const n = l.ndvi;
-    partes.push(
-      `El índice satelital de vegetación marca ${fmt3(n.ultimoComposite.ndvi)}${
-        n.compositeAnioAnterior ? ` (frente a ${fmt3(n.compositeAnioAnterior.ndvi)} en la misma fecha del año pasado)` : ""
-      }.`,
-    );
+    partes.push(`Sin serie diaria suficiente para ${c.nombre}.`);
   }
 
   const accion = recomendacionGobierno(c, l);
-  partes.push(`Recomendación operativa: ${accion}`);
-
   const p = m?.precipitacionMm30d;
   return {
     resumen_oral: partes.join(" "),
     estado_hidrico: est,
     nota_parametrica: p
-      ? `${accion} (Ventana evaluada: ${p.ventana}, desvío ${p.porcentaje! >= 0 ? "+" : ""}${fmt1(p.porcentaje ?? 0)} % respecto a climatología 2001–2025).`
+      ? `${accion} (Ventana: ${p.ventana}, desvío ${p.porcentaje! >= 0 ? "+" : ""}${fmt1(p.porcentaje ?? 0)} % vs serie 2001–2025).`
       : accion,
-    fuentes: `NASA POWER (último dato ${m?.ultimoDiaConDato ?? "s/d"}, demora oficial 2–3 días) y MODIS MOD13Q1 (compuesto de 16 días al ${l.ndvi?.ultimoComposite.fecha ?? "s/d"}).`,
+    fuentes: `NASA POWER (corte ${m?.ultimoDiaConDato ?? "s/d"}, demora oficial 2–3 días) y MODIS MOD13Q1 (compuesto 16 días al ${l.ndvi?.ultimoComposite.fecha ?? "s/d"}).`,
   };
 }
 

@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { AlertaRespuesta, Comunidad, LecturaSatelital } from "@/lib/types";
 import { alertaDeterminista, payloadUsuario, recomendacionGobierno, validarNumeros } from "@/lib/alerta";
 import { estadoHidrico } from "@/lib/lecturas";
+import { descargarPdfExpediente } from "@/lib/pdf-expediente";
 import { ChakanaIcon } from "./AndeanMotifs";
 
 type Props = {
@@ -30,7 +31,6 @@ export const JURISDICCION_MUNICIPAL: Record<string, string> = {
 export default function PanelAlerta({ comunidad, lectura }: Props) {
   const [alertaGrok, setAlertaGrok] = useState<AlertaRespuesta | null>(null);
   const [cargando, setCargando] = useState(false);
-  const [copiado, setCopiado] = useState(false);
 
   const alertaBase = useMemo<AlertaRespuesta | null>(() => {
     if (!lectura) return null;
@@ -48,7 +48,6 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
     };
   }, [comunidad, lectura]);
 
-  // Al entrar a una jurisdicción, solicita automáticamente a Grok AI el dictamen oficial actualizado en background
   useEffect(() => {
     if (!lectura) return;
     let cancelado = false;
@@ -76,6 +75,7 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
   const ndvi = lectura?.ndvi;
   const est = lectura ? estadoHidrico(lectura) : "sin_dato";
   const jurisdiccion = JURISDICCION_MUNICIPAL[comunidad.id] ?? `Municipio de ${comunidad.nombre}`;
+  const expedienteNro = `EXP-JUJ-2026-${comunidad.id.toUpperCase()}`;
 
   const diagnostico =
     est === "deficit"
@@ -108,16 +108,13 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
         ? "Bajo (inicio de rebrote)"
         : "Bueno (cobertura activa)";
 
-  const copiarLinkExpediente = async () => {
-    const url = `${window.location.origin}/municipio/${comunidad.id}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopiado(true);
-      setTimeout(() => setCopiado(false), 2500);
-    } catch {
-      // ignore
-    }
-  };
+  const urlDerivacion = alerta
+    ? `https://wa.me/?text=${encodeURIComponent(
+        `*GOBIERNO DE JUJUY · DERIVACIÓN DE EXPEDIENTE ${expedienteNro}*\n*Destino:* ${jurisdiccion}\n\n*Directiva Provincial:* ${accionDirecta}\n\n*Dictamen Técnico:* ${alerta.resumen_oral}\n\n*Expediente completo y serie histórica:* ${
+          typeof window !== "undefined" ? `${window.location.origin}/municipio/${comunidad.id}` : ""
+        }`,
+      )}`
+    : "#";
 
   return (
     <div className="amc-surface-elevated rounded-3xl p-5 sm:p-7 space-y-5 shadow-2xl relative overflow-hidden">
@@ -130,7 +127,9 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
             <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold border ${diagnostico.colorCaja}`}>
               {diagnostico.semaforo}
             </span>
-            <span className="text-xs font-medium text-[#9CA3AF]">{jurisdiccion}</span>
+            <span className="font-mono text-xs text-[#9CA3AF]">
+              {expedienteNro} · {jurisdiccion}
+            </span>
           </div>
           <h2 className="font-display text-2xl sm:text-3xl font-extrabold text-[#F4F1EA]">
             {comunidad.nombre}{" "}
@@ -139,12 +138,12 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
             </span>
           </h2>
           <p className="text-sm sm:text-base font-medium text-[#F4F1EA]/95">
-            🏛️ <strong>Acción de Gobierno recomendada:</strong> {accionDirecta}
+            🏛️ <strong>Directiva Provincial → Municipio:</strong> {accionDirecta}
           </p>
         </div>
       </div>
 
-      {/* 3 Indicadores clave de la jurisdicción */}
+      {/* 3 Indicadores resumen */}
       {m && (
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="rounded-2xl bg-[#0B0D10]/80 border border-white/10 p-4">
@@ -183,19 +182,19 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
         </div>
       )}
 
-      {/* Dictamen Técnico Oficial + Acceso al Expediente Histórico y PDF */}
+      {/* Dictamen Hidrológico (No repite los 3 números: analiza la serie de 30 días y justifica el expediente) */}
       {alerta && (
         <div className="space-y-4">
           <div className="rounded-2xl bg-[#0B0D10]/90 border border-white/10 p-4 sm:p-5 space-y-2.5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-xs font-bold text-[#F59E0B] flex items-center gap-1.5">
                 <ChakanaIcon className="h-3.5 w-3.5 text-[#D95D39]" />
-                <span>Dictamen Técnico Oficial · {jurisdiccion}</span>
+                <span>Dictamen Hidrológico y Justificación de Expediente (Análisis de Serie Diaria)</span>
               </span>
               <span className="text-[11px] text-[#10B981]">
                 {cargando
-                  ? "● Actualizando redacción con Grok AI…"
-                  : `✓ Datos verificados (${alerta.origen === "grok" ? "Grok AI" : "NASA POWER / MODIS"})`}
+                  ? "● Analizando distribución de 30 días con Grok AI…"
+                  : `✓ Validado con Zod (${alerta.origen === "grok" ? "Grok AI" : "Motor Hidrológico"})`}
               </span>
             </div>
 
@@ -204,23 +203,34 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
             <div className="text-[11px] text-[#9CA3AF] pt-1">{alerta.fuentes}</div>
           </div>
 
-          {/* Botones de Expediente Histórico + Link Directo */}
-          <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
+          {/* 3 Acciones de Comando Provincial -> Derivación Municipal */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <button
+              onClick={() => lectura && descargarPdfExpediente(comunidad, lectura, alerta)}
+              disabled={!lectura}
+              className="min-h-[48px] rounded-2xl bg-[#F59E0B] hover:bg-[#F59E0B]/90 text-[#0B0D10] font-bold text-xs px-4 py-3 transition flex items-center justify-center gap-2 shadow-lg cursor-pointer"
+            >
+              <span>📄</span>
+              <span>Descargar Anexo Oficial (.PDF)</span>
+            </button>
+
+            <a
+              href={urlDerivacion}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="min-h-[48px] rounded-2xl bg-[#10B981] hover:bg-[#10B981]/90 text-[#0B0D10] font-bold text-xs px-4 py-3 transition flex items-center justify-center gap-2 shadow-lg"
+            >
+              <span>📨</span>
+              <span>Derivar Orden al Municipio</span>
+            </a>
+
             <Link
               href={`/municipio/${comunidad.id}`}
-              className="min-h-[50px] rounded-2xl bg-[#D95D39] hover:bg-[#D95D39]/90 text-[#F4F1EA] font-bold text-sm px-5 py-3.5 transition flex items-center justify-center gap-2.5 shadow-lg"
+              className="min-h-[48px] rounded-2xl bg-[#D95D39] hover:bg-[#D95D39]/90 text-[#F4F1EA] font-bold text-xs px-4 py-3 transition flex items-center justify-center gap-2 shadow-lg"
             >
               <span>📂</span>
-              <span>Abrir Registro Histórico Completo e Informe PDF de {comunidad.nombre} →</span>
+              <span>Ver Historial Completo (30 días) →</span>
             </Link>
-
-            <button
-              onClick={copiarLinkExpediente}
-              className="min-h-[50px] rounded-2xl bg-white/5 hover:bg-white/10 border border-white/15 text-[#F4F1EA] font-semibold text-xs px-4 py-3.5 transition cursor-pointer flex items-center justify-center gap-2"
-            >
-              <span>🔗</span>
-              <span>{copiado ? "✓ Link copiado" : "Copiar link del municipio"}</span>
-            </button>
           </div>
         </div>
       )}

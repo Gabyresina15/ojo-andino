@@ -6,6 +6,7 @@ import type { Comunidad, LecturaSatelital } from "@/lib/types";
 import { COMUNIDADES } from "@/lib/comunidades";
 import { lecturaCacheada } from "@/lib/cache";
 import { estadoHidrico } from "@/lib/lecturas";
+import { descargarPdfExpediente } from "@/lib/pdf-expediente";
 
 type Props = {
   comunidad: Comunidad;
@@ -172,13 +173,13 @@ export default function PanelDatos({ comunidad, lectura, modo, onSeleccion }: Pr
               Comparación entre la lluvia caída este mes y el promedio histórico de la NASA (2001–2025).
             </p>
           </div>
-          <Link
-            href={`/municipio/${comunidad.id}`}
-            className="min-h-[40px] inline-flex items-center gap-1.5 rounded-xl bg-[#F59E0B] hover:bg-[#F59E0B]/90 text-[#0B0D10] font-bold text-xs px-3.5 py-2 transition"
+          <button
+            onClick={() => descargarPdfExpediente(comunidad, lectura)}
+            className="min-h-[40px] inline-flex items-center gap-1.5 rounded-xl bg-[#F59E0B] hover:bg-[#F59E0B]/90 text-[#0B0D10] font-bold text-xs px-3.5 py-2 transition cursor-pointer"
           >
             <span>📄</span>
-            <span>Ver Expediente Completo e Informe PDF →</span>
-          </Link>
+            <span>Descargar Dictamen Oficial (.PDF)</span>
+          </button>
         </div>
         {m && m.serie.length > 1 ? (
           <GraficoLluvia serie={m.serie} />
@@ -204,6 +205,7 @@ export default function PanelDatos({ comunidad, lectura, modo, onSeleccion }: Pr
 
     return {
       comunidad: c,
+      lectura: l,
       organismo: ORGANISMO_POR_ID[c.id] ?? `Municipio de ${c.nombre}`,
       obs: p?.observado ?? 0,
       clim: p?.climatologia ?? 0,
@@ -215,39 +217,30 @@ export default function PanelDatos({ comunidad, lectura, modo, onSeleccion }: Pr
 
   return (
     <div className="amc-surface rounded-2xl p-5 sm:p-6 space-y-4 shadow-xl">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <span className="text-[11px] uppercase tracking-wider font-bold text-[#F59E0B]">
-            🏛️ Tablero Provincial de Asignación de Recursos · Gobierno de Jujuy
-          </span>
-          <h3 className="font-display text-lg sm:text-xl font-bold text-[#F4F1EA]">
-            Priorización de los 10 Municipios y Comisiones Municipales
-          </h3>
-          <p className="text-xs text-[#9CA3AF] mt-0.5">
-            Ordenado automáticamente desde la jurisdicción con mayor déficit de agua hasta la de mayor lluvia acumulada. Cada
-            municipio tiene su propio expediente histórico e informe PDF.
-          </p>
-        </div>
-        <Link
-          href={`/municipio/${comunidad.id}`}
-          className="min-h-[44px] inline-flex items-center gap-2 rounded-xl bg-[#F59E0B] hover:bg-[#F59E0B]/90 text-[#0B0D10] font-bold text-xs px-4 py-2.5 transition shadow"
-        >
-          <span>📄</span>
-          <span>Informe PDF e Historial de {comunidad.nombre} →</span>
-        </Link>
+      <div>
+        <span className="text-[11px] uppercase tracking-wider font-bold text-[#F59E0B]">
+          🏛️ Tablero Provincial de Asignación de Recursos · Gobierno de Jujuy
+        </span>
+        <h3 className="font-display text-lg sm:text-xl font-bold text-[#F4F1EA]">
+          Priorización de los 10 Municipios y Comisiones Municipales
+        </h3>
+        <p className="text-xs text-[#9CA3AF] mt-0.5">
+          Ordenado automáticamente desde la jurisdicción con mayor déficit de agua hasta la de mayor lluvia acumulada.
+          Descargá el anexo oficial en PDF o abrí el registro histórico de cada municipio.
+        </p>
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-white/10 bg-[#0B0D10]/90">
         <table className="w-full text-left text-xs">
           <thead className="border-b border-white/10 text-[11px] text-[#9CA3AF] bg-white/5">
             <tr>
-              <th className="py-3 px-3">Prioridad / Localidad</th>
-              <th className="py-3 px-3">Jurisdicción Municipal</th>
-              <th className="py-3 px-3">Llovió (30d)</th>
-              <th className="py-3 px-3">Promedio normal</th>
-              <th className="py-3 px-3">Diagnóstico</th>
-              <th className="py-3 px-3">Acción recomendada</th>
-              <th className="py-3 px-3">Expediente e Historial</th>
+              <th className="py-3 px-3 whitespace-nowrap">Prioridad / Localidad</th>
+              <th className="py-3 px-3 whitespace-nowrap">Jurisdicción Municipal</th>
+              <th className="py-3 px-3 whitespace-nowrap">Llovió (30d)</th>
+              <th className="py-3 px-3 whitespace-nowrap">Promedio normal</th>
+              <th className="py-3 px-3 whitespace-nowrap">Diagnóstico</th>
+              <th className="py-3 px-3">Acción recomendada para Provincia / Municipio</th>
+              <th className="py-3 px-3 whitespace-nowrap text-right">Expediente Oficial</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/10">
@@ -261,16 +254,16 @@ export default function PanelDatos({ comunidad, lectura, modo, onSeleccion }: Pr
                     esActual ? "bg-[#D95D39]/20 font-bold" : "hover:bg-white/5"
                   }`}
                 >
-                  <td className="py-3 px-3 text-[#F4F1EA]">
+                  <td className="py-3 px-3 text-[#F4F1EA] whitespace-nowrap">
                     <span className="font-mono text-[#9CA3AF] mr-1.5">#{idx + 1}</span>
                     {r.comunidad.nombre}
                   </td>
-                  <td className="py-3 px-3 text-[#9CA3AF]">{r.organismo}</td>
-                  <td className="py-3 px-3 font-mono text-[#F4F1EA]">{fmt1(r.obs)} mm</td>
-                  <td className="py-3 px-3 font-mono text-[#9CA3AF]">{fmt1(r.clim)} mm</td>
-                  <td className="py-3 px-3">
+                  <td className="py-3 px-3 text-[#9CA3AF] whitespace-nowrap">{r.organismo}</td>
+                  <td className="py-3 px-3 font-mono text-[#F4F1EA] whitespace-nowrap">{fmt1(r.obs)} mm</td>
+                  <td className="py-3 px-3 font-mono text-[#9CA3AF] whitespace-nowrap">{fmt1(r.clim)} mm</td>
+                  <td className="py-3 px-3 whitespace-nowrap">
                     <span
-                      className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold whitespace-nowrap ${
                         r.estado === "deficit"
                           ? "bg-[#D95D39]/25 text-[#F4F1EA] border border-[#D95D39]/50"
                           : r.estado === "superavit_reciente"
@@ -286,13 +279,22 @@ export default function PanelDatos({ comunidad, lectura, modo, onSeleccion }: Pr
                     </span>
                   </td>
                   <td className="py-3 px-3 text-[#F4F1EA]/90">{r.accion}</td>
-                  <td className="py-3 px-3" onClick={(e) => e.stopPropagation()}>
-                    <Link
-                      href={`/municipio/${r.comunidad.id}`}
-                      className="inline-flex items-center gap-1 rounded-lg border border-[#F59E0B]/40 bg-[#F59E0B]/10 hover:bg-[#F59E0B]/20 px-2.5 py-1 text-[11px] font-bold text-[#F59E0B] transition whitespace-nowrap"
-                    >
-                      📂 Ver Historial / PDF →
-                    </Link>
+                  <td className="py-3 px-3 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
+                    <div className="inline-flex items-center gap-1.5">
+                      <button
+                        onClick={() => r.lectura && descargarPdfExpediente(r.comunidad, r.lectura)}
+                        className="inline-flex items-center gap-1 rounded-lg bg-[#F59E0B] hover:bg-[#F59E0B]/90 px-2.5 py-1.5 text-[11px] font-bold text-[#0B0D10] transition cursor-pointer"
+                        title={`Descargar anexo oficial en PDF de ${r.comunidad.nombre}`}
+                      >
+                        📄 Bajar PDF
+                      </button>
+                      <Link
+                        href={`/municipio/${r.comunidad.id}`}
+                        className="inline-flex items-center gap-1 rounded-lg border border-white/15 bg-white/5 hover:bg-white/10 px-2.5 py-1.5 text-[11px] font-semibold text-[#F4F1EA] transition"
+                      >
+                        📂 Historial →
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               );

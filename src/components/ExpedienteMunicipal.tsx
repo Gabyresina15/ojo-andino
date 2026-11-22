@@ -6,6 +6,7 @@ import type { AlertaRespuesta, Comunidad, LecturaSatelital } from "@/lib/types";
 import { lecturaCacheada } from "@/lib/cache";
 import { estadoHidrico } from "@/lib/lecturas";
 import { alertaDeterminista, payloadUsuario, recomendacionGobierno, validarNumeros } from "@/lib/alerta";
+import { descargarPdfExpediente } from "@/lib/pdf-expediente";
 import { JURISDICCION_MUNICIPAL } from "./PanelAlerta";
 import { ChakanaIcon } from "./AndeanMotifs";
 
@@ -100,11 +101,12 @@ export default function ExpedienteMunicipal({ comunidad }: { comunidad: Comunida
               {copiado ? "✓ Link del expediente copiado" : "🔗 Copiar link de este registro"}
             </button>
             <button
-              onClick={() => window.print()}
+              onClick={() => lectura && descargarPdfExpediente(comunidad, lectura, alerta)}
+              disabled={!lectura}
               className="min-h-[42px] rounded-xl bg-[#F59E0B] hover:bg-[#F59E0B]/90 px-4 py-2 text-xs font-bold text-[#0B0D10] transition shadow cursor-pointer flex items-center gap-2"
             >
               <span>📄</span>
-              <span>Descargar / Imprimir Informe Oficial en PDF</span>
+              <span>Descargar Anexo Oficial (.PDF)</span>
             </button>
           </div>
         </div>
