@@ -3,13 +3,20 @@ import { test } from "node:test";
 import { lecturaCacheada } from "../src/lib/cache";
 import { COMUNIDADES } from "../src/lib/comunidades";
 import { estadoHidrico } from "../src/lib/lecturas";
-import { simularPriorizacion, type NodoPriorizacion } from "../src/lib/priorizacion";
+import { presupuestoRedirigido, simularPriorizacion, type NodoPriorizacion } from "../src/lib/priorizacion";
 
 function nodo(id: string, porcentaje: number | null): NodoPriorizacion {
   const lectura = structuredClone(lecturaCacheada("susques")!);
   lectura.meteorologia!.precipitacionMm30d.porcentaje = porcentaje;
   return { comunidad: { id, nombre: id }, lectura };
 }
+
+test("calcula presupuesto en centavos sin deriva de punto flotante", () => {
+  assert.equal(presupuestoRedirigido(3, 0.05), 0.15);
+  assert.equal(presupuestoRedirigido(3, 0.1), 0.3);
+  assert.equal(presupuestoRedirigido(0, 150000), 0);
+  assert.equal(presupuestoRedirigido(30, 150000), 4500000);
+});
 
 test("conserva enteros, libera recuperados y preserva normal y sin dato", () => {
   const nodos = [nodo("a", 80), nodo("b", -80), nodo("c", null), nodo("d", 0)];

@@ -1,11 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { simularPriorizacion, type NodoPriorizacion } from "@/lib/priorizacion";
+import { presupuestoRedirigido, simularPriorizacion, type NodoPriorizacion } from "@/lib/priorizacion";
 
 const etiquetas = { deficit: "Déficit", normal: "Normal", superavit_reciente: "Recuperada", sin_dato: "Sin dato" };
 const colores = { deficit: "#D95D39", normal: "#F59E0B", superavit_reciente: "#10B981", sin_dato: "#9CA3AF" };
 const numero = (n: number) => n.toLocaleString("es-AR", { maximumFractionDigits: 1 });
+const moneda = new Intl.NumberFormat("es-AR", {
+  style: "currency",
+  currency: "ARS",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
 
 export default function SimuladorPriorizacion({ nodos, onSeleccion }: { nodos: NodoPriorizacion[]; onSeleccion: (id: string) => void }) {
   const [fletes, setFletes] = useState(40);
@@ -31,7 +37,7 @@ export default function SimuladorPriorizacion({ nodos, onSeleccion }: { nodos: N
       <div className="rounded-xl border border-[#10B981]/30 bg-[#10B981]/5 p-3">
         <p className="font-bold text-[#10B981]">{resultado.fletesReasignados} de {fletes} fletes pasan de municipios recuperados{destinos ? ` a ${destinos}` : " a destinos con déficit (sin destinos actuales)"}.</p>
         <p className="text-sm text-[#9CA3AF]">En el reparto uniforme, {resultado.fletesARecuperados} fletes irían a municipios recuperados con superávit reciente de lluvia (30d). Reserva provincial: {resultado.reservaProvincial} fletes.</p>
-        {costoValido && <p className="text-sm mt-1">Presupuesto redirigido: <strong>$ {numero(resultado.fletesReasignados * Number(costo))} pesos</strong>. No es un ahorro neto: se mantiene el presupuesto de los viajes reasignados.</p>}
+        {costoValido && <p className="text-sm mt-1">Presupuesto redirigido: <strong>{moneda.format(presupuestoRedirigido(resultado.fletesReasignados, Number(costo)))}</strong>. No es un ahorro neto: se mantiene el presupuesto de los viajes reasignados.</p>}
       </div>
       <ul className="space-y-3 sm:hidden" aria-label="Fletes por municipio antes y después de priorizar">
         {resultado.filas.map((fila) => (

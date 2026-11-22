@@ -29,6 +29,11 @@ export type ResultadoPriorizacion = {
   reservaProvincial: number;
 };
 
+export function presupuestoRedirigido(fletes: number, costoPorFlete: number): number {
+  const costoEnCentavos = Math.round((costoPorFlete + Number.EPSILON) * 100);
+  return fletes * costoEnCentavos / 100;
+}
+
 function repartirPorRestosMayores(pesos: number[], total: number): number[] {
   const pesoTotal = pesos.reduce((suma, peso) => suma + peso, 0);
   const cuotas = pesos.map((peso, indice) => {
