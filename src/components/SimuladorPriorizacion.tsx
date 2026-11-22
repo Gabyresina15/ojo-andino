@@ -22,7 +22,7 @@ export default function SimuladorPriorizacion({ nodos, onSeleccion }: { nodos: N
   const fletesInvalidos = leerFletes(textoFletes) === null;
   const costoInvalido = costo !== "" && leerCosto(costo) === null;
   const resultado = simularPriorizacion(nodos, fletes);
-  const destinos = resultado.filas.filter((f) => f.delta > 0).map((f) => f.nombre).join(", ");
+  const destinos = resultado.filas.filter((f) => f.estado === "deficit").map((f) => f.nombre).join(", ");
   return (
     <section aria-labelledby="simulador-titulo" className="amc-surface rounded-2xl p-4 sm:p-5 space-y-4">
       <div>
@@ -55,7 +55,13 @@ export default function SimuladorPriorizacion({ nodos, onSeleccion }: { nodos: N
         </label>
       </div>
       <div className="rounded-xl border border-[#10B981]/30 bg-[#10B981]/5 p-3">
-        <p className="font-bold text-[#10B981]">{resultado.fletesReasignados} de {fletes} fletes pasan de municipios recuperados{destinos ? ` a ${destinos}` : " a destinos con déficit (sin destinos actuales)"}.</p>
+        <p className="font-bold text-[#10B981]">
+          {textoFletes === "" || fletes === 0
+            ? "Cargá la cantidad de fletes disponibles para simular el reparto."
+            : destinos
+              ? `${resultado.fletesReasignados} de ${fletes} fletes pasan de municipios recuperados a ${destinos}.`
+              : `Sin municipios con déficit: ${resultado.reservaProvincial} fletes quedan en reserva provincial.`}
+        </p>
         <p className="text-sm text-[#9CA3AF]">En el reparto uniforme, {resultado.fletesARecuperados} fletes irían a municipios recuperados con superávit reciente de lluvia (30d). Reserva provincial: {resultado.reservaProvincial} fletes.</p>
         {ultimoCosto !== null && <p className="text-sm mt-1">Presupuesto redirigido: <strong>{moneda.format(presupuestoRedirigido(resultado.fletesReasignados, ultimoCosto))}</strong>. No es un ahorro neto: se mantiene el presupuesto de los viajes reasignados.</p>}
       </div>
