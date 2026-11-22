@@ -5,7 +5,7 @@ import { estadoHidrico } from "./lecturas";
 export const AlertaSchema = z.object({
   resumen_oral: z.string().min(80).max(1200),
   estado_hidrico: z.enum(["deficit", "normal", "superavit_reciente", "sin_dato"]),
-  nota_parametrica: z.string().min(20).max(700),
+  nota_parametrica: z.string().max(700),
   fuentes: z.string().min(5).max(300),
 });
 export type AlertaLLM = z.infer<typeof AlertaSchema>;
@@ -153,9 +153,9 @@ export function alertaDeterminista(c: Comunidad, l: LecturaSatelital, modo: "com
 async function llamarGrok(payload: unknown, conSchema: boolean): Promise<{ data: unknown; modelo: string }> {
   const key = process.env.XAI_API_KEY;
   if (!key) throw new Error("Falta XAI_API_KEY");
-  const modelo = process.env.XAI_MODEL || "grok-4.7";
+  const modelo = process.env.XAI_MODEL || "grok-4.20-0309-non-reasoning";
   const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), 15000);
+  const t = setTimeout(() => ctrl.abort(), 25000);
   try {
     const r = await fetch("https://api.x.ai/v1/chat/completions", {
       method: "POST",
@@ -195,7 +195,9 @@ export async function generarAlerta(c: Comunidad, l: LecturaSatelital, modo: "co
         motivo = `Zod rechazó la salida: ${parsed.error.issues[0]?.message}`;
         continue;
       }
-      const v = validarNumeros(`${parsed.data.resumen_oral} ${parsed.data.nota_parametrica}`, payload);
+      const det = alertaDeterminista(c, l, modo);
+      const notaFinal = parsed.data.nota_parametrica.trim().length >= 20 ? parsed.data.nota_parametrica : det.nota_parametrica;
+      const v = validarNumeros(`${parsed.data.resumen_oral} ${notaFinal}`, payload);
       if (v.noVerificados.length > 0) {
         motivo = `Grok usó números que no están en la fuente: ${v.noVerificados.join(", ")}`;
         continue;
@@ -205,6 +207,7 @@ export async function generarAlerta(c: Comunidad, l: LecturaSatelital, modo: "co
         comunidadId: c.id,
         modo,
         ...parsed.data,
+        nota_parametrica: notaFinal,
         estado_hidrico: estadoReal,
         origen: "grok",
         modelo,

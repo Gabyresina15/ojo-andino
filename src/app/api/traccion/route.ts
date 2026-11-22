@@ -8,7 +8,10 @@ export const dynamic = "force-dynamic";
  * Si faltan las env vars, responde { habilitado: false } y la UI oculta el contador.
  */
 const URL_SB = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const KEY_SB = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const KEY_SB =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
 const Evento = z.object({
   tipo: z.enum(["vista", "alerta", "whatsapp", "gps", "audio"]),
