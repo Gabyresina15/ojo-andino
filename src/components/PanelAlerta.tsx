@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AlertaRespuesta, Comunidad, LecturaSatelital } from "@/lib/types";
 import { registrarEvento } from "@/lib/traccion-cliente";
 
@@ -17,6 +17,15 @@ export default function PanelAlerta({ comunidad, lectura, modo }: Props) {
   const [vozFallback, setVozFallback] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Al cambiar de localidad o modo el panel se remonta: cortar el audio en curso.
+  useEffect(
+    () => () => {
+      audioRef.current?.pause();
+      if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+    },
+    [],
+  );
 
   const generar = async () => {
     if (!lectura) return;
