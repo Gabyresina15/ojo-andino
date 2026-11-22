@@ -6,7 +6,7 @@ import type { Comunidad, LecturaSatelital } from "@/lib/types";
 import { COMUNIDADES } from "@/lib/comunidades";
 import { lecturaCacheada } from "@/lib/cache";
 import { estadoHidrico } from "@/lib/lecturas";
-import { descargarPdfExpediente } from "@/lib/pdf-expediente";
+import { descargarPdfExpediente, descargarPdfProvincialConsolidado } from "@/lib/pdf-expediente";
 
 type Props = {
   comunidad: Comunidad;
@@ -217,17 +217,27 @@ export default function PanelDatos({ comunidad, lectura, modo, onSeleccion }: Pr
 
   return (
     <div className="amc-surface rounded-2xl p-5 sm:p-6 space-y-4 shadow-xl">
-      <div>
-        <span className="text-[11px] uppercase tracking-wider font-bold text-[#F59E0B]">
-          🏛️ Tablero Provincial de Asignación de Recursos · Gobierno de Jujuy
-        </span>
-        <h3 className="font-display text-lg sm:text-xl font-bold text-[#F4F1EA]">
-          Priorización de los 10 Municipios y Comisiones Municipales
-        </h3>
-        <p className="text-xs text-[#9CA3AF] mt-0.5">
-          Ordenado automáticamente desde la jurisdicción con mayor déficit de agua hasta la de mayor lluvia acumulada.
-          Descargá el anexo oficial en PDF o abrí el registro histórico de cada municipio.
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <span className="text-[11px] uppercase tracking-wider font-bold text-[#F59E0B]">
+            🏛️ Tablero Provincial de Asignación de Recursos · Gobierno de Jujuy
+          </span>
+          <h3 className="font-display text-lg sm:text-xl font-bold text-[#F4F1EA]">
+            Priorización de los 10 Municipios y Comisiones Municipales
+          </h3>
+          <p className="text-xs text-[#9CA3AF] mt-0.5">
+            Ordenado automáticamente desde la jurisdicción con mayor déficit de agua hasta la de mayor lluvia acumulada.
+            Descargá el parte provincial consolidado en PDF o el expediente individual de cada municipio.
+          </p>
+        </div>
+
+        <button
+          onClick={() => descargarPdfProvincialConsolidado()}
+          className="min-h-[44px] inline-flex items-center gap-2 rounded-xl bg-[#F59E0B] hover:bg-[#F59E0B]/90 text-[#0B0D10] font-bold text-xs px-4 py-2.5 transition shadow cursor-pointer"
+        >
+          <span>📄</span>
+          <span>Descargar Parte Provincial Consolidado (10 Municipios .PDF)</span>
+        </button>
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-white/10 bg-[#0B0D10]/90">

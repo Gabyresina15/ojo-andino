@@ -144,18 +144,64 @@ export default function App() {
 
       <main className="mx-auto max-w-6xl px-4 py-6 space-y-6">
         {/* ENCABEZADO ENFOCADO 100% EN GESTIÓN PÚBLICA Y MUNICIPAL DE JUJUY */}
-        <section className="max-w-3xl space-y-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#D95D39]/20 border border-[#D95D39]/50 px-3 py-1 text-xs font-bold text-[#F4F1EA]">
-            🏛️ Para el Gobierno de Jujuy, Municipios y Comisiones Municipales
-          </span>
-          <h2 className="font-display text-2xl sm:text-4xl font-extrabold tracking-tight text-[#F4F1EA]">
-            ¿Dónde priorizar agua, forraje y obras hídricas hoy en Jujuy?
-          </h2>
-          <p className="text-sm sm:text-base text-[#9CA3AF] leading-relaxed">
-            Traduce datos satelitales de lluvia y vegetación en un{" "}
-            <strong className="text-[#F4F1EA]">parte oficial por municipio</strong> para decidir dónde enviar camiones de
-            forraje y agua en la Puna o dónde vigilar drenajes y caminos por exceso de lluvia en la Quebrada.
-          </p>
+        <section className="space-y-4">
+          <div className="max-w-3xl space-y-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#D95D39]/20 border border-[#D95D39]/50 px-3 py-1 text-xs font-bold text-[#F4F1EA]">
+              🏛️ Para el Gobierno de Jujuy, Municipios y Comisiones Municipales
+            </span>
+            <h2 className="font-display text-2xl sm:text-4xl font-extrabold tracking-tight text-[#F4F1EA]">
+              ¿Dónde priorizar agua, forraje y obras hídricas hoy en Jujuy?
+            </h2>
+            <p className="text-sm sm:text-base text-[#9CA3AF] leading-relaxed">
+              Traduce datos satelitales de lluvia y vegetación en un{" "}
+              <strong className="text-[#F4F1EA]">expediente oficial auditable por municipio</strong> para decidir dónde enviar
+              camiones de forraje y agua en la Puna o dónde vigilar drenajes y caminos por exceso de lluvia en la Quebrada.
+            </p>
+          </div>
+
+          {/* TIRA EJECUTIVA PROVINCIAL (4 KPIs de Impacto Presupuestario y Territorial) */}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <button
+              onClick={() => setSeleccion("susques")}
+              className="amc-surface rounded-2xl p-3.5 text-left border hover:border-[#D95D39]/60 transition cursor-pointer"
+            >
+              <div className="text-[11px] font-mono uppercase text-[#D95D39] font-bold">🔴 Emergencia Forrajera Hoy</div>
+              <div className="font-display text-xl font-extrabold text-[#F4F1EA] mt-0.5">1 de 10 municipios</div>
+              <div className="text-xs text-[#9CA3AF] mt-0.5">
+                <strong className="text-[#F4F1EA]">Susques (-78,9%)</strong> · 27 de 30 días secos
+              </div>
+            </button>
+
+            <button
+              onClick={() => setSeleccion("volcan")}
+              className="amc-surface rounded-2xl p-3.5 text-left border hover:border-[#2DD4BF]/60 transition cursor-pointer"
+            >
+              <div className="text-[11px] font-mono uppercase text-[#2DD4BF] font-bold">🚧 Alerta Vial / Drenajes</div>
+              <div className="font-display text-xl font-extrabold text-[#F4F1EA] mt-0.5">3 de 10 municipios</div>
+              <div className="text-xs text-[#9CA3AF] mt-0.5">
+                <strong className="text-[#F4F1EA]">Volcán, Tumbaya, Humahuaca</strong> · lluvias altas
+              </div>
+            </button>
+
+            <button
+              onClick={() => setSeleccion("abra-pampa")}
+              className="amc-surface rounded-2xl p-3.5 text-left border hover:border-[#10B981]/60 transition cursor-pointer"
+            >
+              <div className="text-[11px] font-mono uppercase text-[#10B981] font-bold">🌱 Puna Recuperada en Nov</div>
+              <div className="font-display text-xl font-extrabold text-[#F4F1EA] mt-0.5">3 de 10 municipios</div>
+              <div className="text-xs text-[#9CA3AF] mt-0.5">
+                <strong className="text-[#F4F1EA]">Abra Pampa, La Quiaca, Yavi</strong> · &gt;+87% lluvia
+              </div>
+            </button>
+
+            <div className="amc-surface rounded-2xl p-3.5 text-left border border-[#F59E0B]/30">
+              <div className="text-[11px] font-mono uppercase text-[#F59E0B] font-bold">🚚 Eficiencia Logística Puna</div>
+              <div className="font-display text-xl font-extrabold text-[#F59E0B] mt-0.5">75% fletes reasignables</div>
+              <div className="text-xs text-[#9CA3AF] mt-0.5">
+                3 de 4 nodos puneños hoy sin emergencia; concentrar envío en Susques
+              </div>
+            </div>
+          </div>
         </section>
 
         {/* BLOQUE PRINCIPAL: MAPA DE LAS 10 JURISDICCIONES + PARTE OFICIAL DE LA JURISDICCIÓN SELECCIONADA */}
@@ -168,6 +214,22 @@ export default function App() {
 
             <div className="h-[260px] sm:h-[300px]">
               <Mapa seleccion={seleccion} onSeleccion={setSeleccion} fix={null} radar={radar} />
+            </div>
+
+            {/* Leyenda cromática del Semáforo en el Mapa */}
+            <div className="px-3.5 py-2 border-t border-white/10 bg-[#0B0D10]/90 flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#9CA3AF]">
+              <span className="inline-flex items-center gap-1">
+                <span className="h-2.5 w-2.5 rounded-full bg-[#D95D39]" /> Déficit (Forraje)
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <span className="h-2.5 w-2.5 rounded-full bg-[#F59E0B]" /> Normal
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <span className="h-2.5 w-2.5 rounded-full bg-[#10B981]" /> Puna recuperada
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <span className="h-2.5 w-2.5 rounded-full bg-[#2DD4BF]" /> Quebrada (Drenajes)
+              </span>
             </div>
 
             <div className="p-3.5 border-t border-white/10 space-y-2.5 bg-[#0B0D10]/70">

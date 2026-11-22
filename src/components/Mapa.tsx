@@ -2,6 +2,8 @@
 
 import { CircleMarker, MapContainer, Polyline, TileLayer, Tooltip } from "react-leaflet";
 import { COMUNIDADES, PARADAS_TREN } from "@/lib/comunidades";
+import { lecturaCacheada } from "@/lib/cache";
+import { estadoHidrico } from "@/lib/lecturas";
 import type { Fix } from "./PanelGps";
 import type { RadarSnapshot } from "./RadarOrbital";
 
@@ -13,6 +15,7 @@ type Props = {
 };
 
 const TRAZA_TREN: [number, number][] = PARADAS_TREN.map((p) => [p.lat, p.lon]);
+const fmt1 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 export default function Mapa({ seleccion, onSeleccion, fix, radar }: Props) {
   return (
@@ -22,12 +25,12 @@ export default function Mapa({ seleccion, onSeleccion, fix, radar }: Props) {
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
 
-      {/* Corredor del Tren Solar: Volcán -> Tumbaya -> Purmamarca -> Maimará -> Tilcara */}
-      <Polyline positions={TRAZA_TREN} pathOptions={{ color: "#fbbf24", weight: 3, dashArray: "6 6", opacity: 0.85 }} />
+      {/* Corredor ferroviario Quebrada */}
+      <Polyline positions={TRAZA_TREN} pathOptions={{ color: "#F59E0B", weight: 2.5, dashArray: "6 6", opacity: 0.75 }} />
 
       {/* Próxima pasada orbital de SAOCOM si cae en la región */}
       {radar?.proxima?.traza.length ? (
-        <Polyline positions={radar.proxima.traza} pathOptions={{ color: "#38bdf8", weight: 2, opacity: 0.7 }} />
+        <Polyline positions={radar.proxima.traza} pathOptions={{ color: "#2DD4BF", weight: 2, opacity: 0.7 }} />
       ) : null}
 
       {/* Posición en vivo de SAOCOM 1A/1B */}
@@ -36,7 +39,7 @@ export default function Mapa({ seleccion, onSeleccion, fix, radar }: Props) {
           key={s.norad}
           center={[s.lat, s.lon]}
           radius={6}
-          pathOptions={{ color: "#38bdf8", fillColor: "#0284c7", fillOpacity: 0.9, weight: 2 }}
+          pathOptions={{ color: "#2DD4BF", fillColor: "#0284c7", fillOpacity: 0.9, weight: 2 }}
         >
           <Tooltip direction="top">
             🛰️ {s.nombre} ({s.altKm.toFixed(0)} km alt)
@@ -44,7 +47,6 @@ export default function Mapa({ seleccion, onSeleccion, fix, radar }: Props) {
         </CircleMarker>
       ))}
 
-      {/* GPS del celular a bordo */}
       {fix && (
         <CircleMarker
           center={[fix.lat, fix.lon]}
@@ -52,30 +54,42 @@ export default function Mapa({ seleccion, onSeleccion, fix, radar }: Props) {
           pathOptions={{ color: "#ffffff", fillColor: "#10b981", fillOpacity: 1, weight: 2 }}
         >
           <Tooltip direction="top" permanent>
-            🚆 Tu GPS
+            📍 Posición GPS
           </Tooltip>
         </CircleMarker>
       )}
 
-      {/* 10 Comunidades y paradas */}
+      {/* 10 Jurisdicciones Municipales coloreadas por su Semáforo Hídrico Real */}
       {COMUNIDADES.map((c) => {
         const activa = c.id === seleccion;
+        const l = lecturaCacheada(c.id);
+        const est = l ? estadoHidrico(l) : "normal";
+        const pct = l?.meteorologia?.precipitacionMm30d.porcentaje ?? 0;
+
+        const paleta =
+          est === "deficit"
+            ? { fill: "#D95D39", stroke: "#FCA5A5", label: "Déficit · Priorizar forraje" }
+            : est === "superavit_reciente" && c.region === "quebrada"
+              ? { fill: "#2DD4BF", stroke: "#99F6E4", label: "Lluvias altas · Vigilar drenajes" }
+              : est === "superavit_reciente"
+                ? { fill: "#10B981", stroke: "#6EE7B7", label: "En recuperación hídrica" }
+                : { fill: "#F59E0B", stroke: "#FDE68A", label: "Rango normal" };
+
         return (
           <CircleMarker
             key={c.id}
             center={[c.lat, c.lon]}
-            radius={activa ? 10 : c.paradaTren ? 7 : 6}
+            radius={activa ? 11 : est === "deficit" ? 9 : 7}
             pathOptions={{
-              color: activa ? "#ffffff" : c.paradaTren ? "#fbbf24" : "#34d399",
-              fillColor: activa ? "#f59e0b" : c.paradaTren ? "#f59e0b" : "#059669",
-              fillOpacity: 0.9,
-              weight: activa ? 3 : 1.5,
+              color: activa ? "#F4F1EA" : paleta.stroke,
+              fillColor: paleta.fill,
+              fillOpacity: 0.95,
+              weight: activa ? 3 : est === "deficit" ? 2.5 : 1.5,
             }}
             eventHandlers={{ click: () => onSeleccion(c.id) }}
           >
             <Tooltip direction="top">
-              {c.paradaTren ? "🚆 " : ""}
-              {c.nombre} ({c.region})
+              <strong>{c.nombre}</strong> ({ pct >= 0 ? "+" : ""}{fmt1(pct)}%) · {paleta.label}
             </Tooltip>
           </CircleMarker>
         );

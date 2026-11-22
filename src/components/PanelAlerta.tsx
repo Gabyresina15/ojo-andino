@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type { AlertaRespuesta, Comunidad, LecturaSatelital } from "@/lib/types";
 import {
@@ -21,6 +21,7 @@ type Props = {
 };
 
 const fmt1 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const BARRAS_EQ = [35, 75, 50, 95, 60, 100, 70, 45, 85, 55];
 
 export const JURISDICCION_MUNICIPAL: Record<string, string> = {
   "susques": "Comisión Municipal de Susques",
@@ -39,6 +40,9 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
   const [modoDictamen, setModoDictamen] = useState<"parametrico" | "comunidad">("parametrico");
   const [alertaGrok, setAlertaGrok] = useState<AlertaRespuesta | null>(null);
   const [cargando, setCargando] = useState(false);
+  const [audioCargando, setAudioCargando] = useState(false);
+  const [reproduciendo, setReproduciendo] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const alertaBase = useMemo<AlertaRespuesta | null>(() => {
     if (!lectura) return null;
@@ -56,7 +60,26 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
     };
   }, [comunidad, lectura, modoDictamen]);
 
+  useEffect(
+    () => () => {
+      audioRef.current?.pause();
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+    },
+    [],
+  );
+
+  const detenerAudio = () => {
+    audioRef.current?.pause();
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+    setReproduciendo(false);
+  };
+
   useEffect(() => {
+    detenerAudio();
     if (!lectura) return;
     let cancelado = false;
     setAlertaGrok(null);
@@ -86,6 +109,48 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
   const est = lectura ? estadoHidrico(lectura) : "sin_dato";
   const jurisdiccion = JURISDICCION_MUNICIPAL[comunidad.id] ?? `Municipio de ${comunidad.nombre}`;
   const expedienteNro = `EXP-JUJ-2026-${comunidad.id.toUpperCase()}`;
+
+  const escucharVoz = async () => {
+    if (!alerta) return;
+    if (reproduciendo) {
+      detenerAudio();
+      return;
+    }
+    setAudioCargando(true);
+    try {
+      const r = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: alerta.resumen_oral }),
+      });
+      if (!r.ok) throw new Error(`TTS HTTP ${r.status}`);
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      if (audioRef.current) audioRef.current.pause();
+      const a = new Audio(url);
+      audioRef.current = a;
+      a.onended = () => setReproduciendo(false);
+      a.onerror = () => setReproduciendo(false);
+      setReproduciendo(true);
+      await a.play();
+    } catch {
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        const u = new SpeechSynthesisUtterance(alerta.resumen_oral);
+        u.lang = "es-MX";
+        u.rate = 0.95;
+        const voces = window.speechSynthesis.getVoices();
+        const es = voces.find((v) => v.lang.toLowerCase().startsWith("es"));
+        if (es) u.voice = es;
+        u.onend = () => setReproduciendo(false);
+        u.onerror = () => setReproduciendo(false);
+        window.speechSynthesis.cancel();
+        setReproduciendo(true);
+        window.speechSynthesis.speak(u);
+      }
+    } finally {
+      setAudioCargando(false);
+    }
+  };
 
   const diagnostico =
     est === "deficit"
@@ -202,7 +267,7 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
         </div>
       )}
 
-      {/* Dictamen Hidrológico con Switch Gobierno vs Productor + Badge Firewall Numérico */}
+      {/* Dictamen Hidrológico con Switch Gobierno vs Productor + Audio xAI TTS + Firewall Numérico */}
       {alerta && (
         <div className="space-y-4">
           <div className="rounded-2xl bg-[#0B0D10]/90 border border-white/10 p-4 sm:p-5 space-y-3">
@@ -231,25 +296,48 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
               </div>
 
               <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                <button
+                  onClick={escucharVoz}
+                  disabled={audioCargando}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border font-bold transition cursor-pointer ${
+                    reproduciendo
+                      ? "bg-[#F59E0B] text-[#0B0D10] border-[#F59E0B]"
+                      : "bg-white/5 hover:bg-white/10 text-[#F4F1EA] border-white/15"
+                  }`}
+                >
+                  {reproduciendo ? (
+                    <span className="inline-flex items-end gap-0.5 h-3">
+                      {BARRAS_EQ.slice(0, 4).map((h, i) => (
+                        <span
+                          key={i}
+                          className="w-0.5 bg-[#0B0D10] amc-eq-bar"
+                          style={{ height: `${h}%`, animationDelay: `${i * 0.08}s` }}
+                        />
+                      ))}
+                    </span>
+                  ) : (
+                    <span>🔊</span>
+                  )}
+                  <span>{audioCargando ? "Voz xAI…" : reproduciendo ? "Detener voz" : "Escuchar (Voz xAI)"}</span>
+                </button>
+
                 <span className="font-mono px-2.5 py-1 rounded-lg bg-[#10B981]/15 border border-[#10B981]/40 text-[#10B981] font-bold">
                   ✓ {alerta.validacion.numerosVerificados}/{alerta.validacion.numerosEncontrados} cifras verificadas (Zod)
-                </span>
-                <span className="text-[#9CA3AF]">
-                  {cargando
-                    ? "● Analizando con Grok AI…"
-                    : alerta.origen === "grok"
-                      ? `Grok AI (${alerta.modelo})`
-                      : "Motor Hidrológico"}
                 </span>
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 text-xs font-bold text-[#F59E0B]">
-              <ChakanaIcon className="h-3.5 w-3.5 text-[#D95D39]" />
-              <span>
-                {modoDictamen === "parametrico"
-                  ? "Justificación Técnica de Expediente (Régimen de 30 días, racha seca y concentración)"
-                  : "Traducción directa para productores y familias de la jurisdicción"}
+            <div className="flex items-center justify-between gap-2 text-xs">
+              <span className="font-bold text-[#F59E0B] flex items-center gap-1.5">
+                <ChakanaIcon className="h-3.5 w-3.5 text-[#D95D39]" />
+                <span>
+                  {modoDictamen === "parametrico"
+                    ? "Justificación Técnica de Expediente (Régimen de 30 días, racha seca y concentración)"
+                    : "Traducción directa en voz y texto para productores de la jurisdicción"}
+                </span>
+              </span>
+              <span className="text-[11px] text-[#9CA3AF]">
+                {cargando ? "● Analizando con Grok AI…" : alerta.origen === "grok" ? `Grok AI (${alerta.modelo})` : "Motor Hidrológico"}
               </span>
             </div>
 

@@ -1,5 +1,7 @@
 import { jsPDF } from "jspdf";
 import type { AlertaRespuesta, Comunidad, LecturaSatelital } from "./types";
+import { COMUNIDADES } from "./comunidades";
+import { lecturaCacheada } from "./cache";
 import { alertaDeterminista, calcularPatronDiario, recomendacionGobierno } from "./alerta";
 import { estadoHidrico } from "./lecturas";
 
@@ -298,4 +300,134 @@ export function descargarPdfExpediente(
   );
 
   doc.save(`Expediente-Jujuy-${comunidad.id}-${m?.ultimoDiaConDato ?? "2026-11-22"}.pdf`);
+}
+
+export function descargarPdfProvincialConsolidado() {
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const fechaEmision = new Date().toLocaleString("es-AR", { timeZone: "America/Argentina/Jujuy" });
+
+  doc.setFillColor(11, 13, 16);
+  doc.rect(0, 0, 210, 32, "F");
+  doc.setFillColor(245, 158, 11);
+  doc.rect(0, 32, 210, 1.8, "F");
+
+  doc.setTextColor(245, 158, 11);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8.5);
+  doc.text("GOBIERNO DE LA PROVINCIA DE JUJUY · SISTEMA SATELITAL OJO ANDINO", 14, 11);
+
+  doc.setTextColor(244, 241, 234);
+  doc.setFontSize(14.5);
+  doc.text("PARTE PROVINCIAL CONSOLIDADO · 10 JURISDICCIONES MUNICIPALES", 14, 19);
+
+  doc.setTextColor(180, 186, 196);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.5);
+  doc.text(
+    `Emisión: ${fechaEmision} ART  |  Fuentes: NASA POWER (climatología 2001–2025) y MODIS MOD13Q1 250m`,
+    14,
+    26,
+  );
+
+  const filas = COMUNIDADES.map((c) => {
+    const l = lecturaCacheada(c.id);
+    const p = l?.meteorologia?.precipitacionMm30d;
+    const pat = l ? calcularPatronDiario(l) : null;
+    const est = l ? estadoHidrico(l) : "normal";
+    return {
+      c,
+      jurisdiccion: JURISDICCION[c.id] ?? c.nombre,
+      obs: p?.observado ?? 0,
+      clim: p?.climatologia ?? 0,
+      pct: p?.porcentaje ?? 0,
+      rachaSeca: pat?.racha_seca_maxima_dias ?? 0,
+      pico24h: pat?.pico_maximo_mm ?? 0,
+      ndvi: l?.ndvi?.ultimoComposite.ndvi ?? 0,
+      est,
+      accion: l ? recomendacionGobierno(c, l) : "",
+    };
+  }).sort((a, b) => a.pct - b.pct);
+
+  let y = 40;
+  doc.setFillColor(248, 249, 251);
+  doc.setDrawColor(215, 220, 228);
+  doc.roundedRect(14, y, 182, 16, 2, 2, "FD");
+  doc.setTextColor(25, 30, 40);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8.5);
+  doc.text("SÍNTESIS EJECUTIVA PARA ASIGNACIÓN PRESUPUESTARIA Y LOGÍSTICA:", 18, y + 6);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.text(
+    "1 jurisdicción en Déficit Crítico de Forraje/Agua (Susques -78,9%)  |  3 en Rango Normal  |  3 Puna Recuperada  |  3 Quebrada en Alerta Vial/Drenajes.",
+    18,
+    y + 12,
+  );
+
+  y = 62;
+  doc.setFillColor(25, 32, 44);
+  doc.rect(14, y, 182, 7, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7.2);
+  doc.text("#  LOCALIDAD / JURISDICCIÓN", 16, y + 4.8);
+  doc.text("REGIÓN", 70, y + 4.8);
+  doc.text("LLUVIA 30D", 90, y + 4.8);
+  doc.text("NORMAL", 110, y + 4.8);
+  doc.text("DESVÍO", 128, y + 4.8);
+  doc.text("RACHA SECA", 146, y + 4.8);
+  doc.text("PICO 24H", 166, y + 4.8);
+  doc.text("NDVI", 183, y + 4.8);
+
+  filas.forEach((f, idx) => {
+    const fy = y + 7 + idx * 16;
+    if (idx % 2 === 0) {
+      doc.setFillColor(247, 249, 251);
+      doc.rect(14, fy, 182, 16, "F");
+    }
+    doc.setDrawColor(225, 230, 238);
+    doc.rect(14, fy, 182, 16, "S");
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(20, 25, 35);
+    doc.text(`#${idx + 1} ${f.c.nombre}`, 16, fy + 5.2);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(95, 102, 114);
+    doc.text(f.jurisdiccion, 16, fy + 9.5);
+
+    doc.setFontSize(7.5);
+    doc.setTextColor(40, 45, 55);
+    doc.text(f.c.region.toUpperCase(), 70, fy + 5.5);
+    doc.text(`${fmt1(f.obs)} mm`, 90, fy + 5.5);
+    doc.text(`${fmt1(f.clim)} mm`, 110, fy + 5.5);
+
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(f.pct <= -25 ? 200 : 16, f.pct <= -25 ? 55 : 130, f.pct <= -25 ? 40 : 90);
+    doc.text(`${f.pct >= 0 ? "+" : ""}${fmt1(f.pct)}%`, 128, fy + 5.5);
+
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(40, 45, 55);
+    doc.text(`${f.rachaSeca} días`, 146, fy + 5.5);
+    doc.text(`${fmt1(f.pico24h)} mm`, 166, fy + 5.5);
+    doc.text(fmt3(f.ndvi), 183, fy + 5.5);
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7);
+    doc.setTextColor(60, 68, 80);
+    doc.text(`Directiva: ${f.accion}`, 16, fy + 14);
+  });
+
+  const yFirma = 266;
+  doc.setDrawColor(180, 186, 198);
+  doc.line(14, yFirma, 88, yFirma);
+  doc.line(122, yFirma, 196, yFirma);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7.5);
+  doc.setTextColor(40, 45, 55);
+  doc.text("MINISTERIO DE DESARROLLO ECONÓMICO Y PRODUCCIÓN", 14, yFirma + 4.5);
+  doc.text("MINISTERIO DE INFRAESTRUCTURA / RECURSOS HÍDRICOS", 122, yFirma + 4.5);
+
+  doc.save("Parte-Provincial-Jujuy-10-Municipios-2026-11-22.pdf");
 }
