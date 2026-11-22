@@ -10,7 +10,6 @@ import PanelDatos from "./PanelDatos";
 import PanelAlerta from "./PanelAlerta";
 import FichaCultural from "./FichaCultural";
 import { ChakanaIcon } from "./AndeanMotifs";
-import type { ResultadoBarrido } from "@/app/api/cron/alertas/route";
 
 const Mapa = dynamic(() => import("./Mapa"), {
   ssr: false,
@@ -22,7 +21,6 @@ const Mapa = dynamic(() => import("./Mapa"), {
 });
 
 const LS_KEY = (id: string) => `oa:lectura:${id}`;
-const fmt1 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 const sinSuscripcion = () => () => {};
 
@@ -49,13 +47,7 @@ function leerLocal(id: string): LecturaSatelital | null {
   }
 }
 
-const DESTACADAS = [
-  { id: "susques", etiqueta: "🔴 Urgencia Alta · Falta agua", accion: "Priorizar envío de forraje y agua" },
-  { id: "abra-pampa", etiqueta: "🟢 En recuperación · Llovió bien", accion: "Esperar rebrote natural de pasto" },
-  { id: "purmamarca", etiqueta: "🟡 Condición estable · Quebrada", accion: "Lluvia normal para la época" },
-] as const;
-
-type DetalleTab = "ninguno" | "priorizacion" | "satelite" | "cultura";
+type DetalleTab = "priorizacion" | "satelite" | "cultura";
 
 export default function App() {
   const parametroC = useSyncExternalStore(sinSuscripcion, leerParametroC, () => null);
@@ -66,8 +58,7 @@ export default function App() {
   const [vivas, setVivas] = useState<Record<string, LecturaSatelital>>({});
   const [terminada, setTerminada] = useState<string | null>(null);
   const [radar, setRadar] = useState<RadarSnapshot | null>(null);
-  const [tabDetalle, setTabDetalle] = useState<DetalleTab>("ninguno");
-  const [barrido, setBarrido] = useState<ResultadoBarrido | null>(null);
+  const [tabDetalle, setTabDetalle] = useState<DetalleTab>("priorizacion");
   const pedido = useRef(0);
 
   const comunidad = getComunidad(seleccion)!;
@@ -76,13 +67,6 @@ export default function App() {
     if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {
       navigator.serviceWorker.register("/sw.js").catch(() => {});
     }
-    // El motor automático corre solo en el servidor (Cron diario 08:00 hs + verificación automática al iniciar)
-    fetch("/api/cron/alertas")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((b: ResultadoBarrido | null) => {
-        if (b) setBarrido(b);
-      })
-      .catch(() => {});
   }, []);
 
   const cacheada = useMemo(() => {
@@ -122,12 +106,9 @@ export default function App() {
   const pueblosPuna = COMUNIDADES.filter((c) => c.region === "puna");
   const pueblosQuebrada = COMUNIDADES.filter((c) => c.region === "quebrada");
 
-  const toggleTab = (t: DetalleTab) => setTabDetalle((actual) => (actual === t ? "ninguno" : t));
-  const despachadosAuto = barrido?.despachos.filter((d) => d.accionAutomatica === "enviada") ?? [];
-
   return (
     <div className="min-h-screen amc-grid-bg text-[#F4F1EA]">
-      {/* HEADER LIMPIO — Sin contadores de pasajeros ni ruido */}
+      {/* HEADER INSTITUCIONAL LIMPIO */}
       <header className="relative z-[1000] border-b border-white/10 bg-[#0B0D10]/90 backdrop-blur-md sm:sticky sm:top-0">
         <div className="mx-auto max-w-6xl px-4 py-3 flex flex-wrap items-center gap-3 justify-between">
           <div className="flex items-center gap-2.5">
@@ -136,122 +117,52 @@ export default function App() {
             </div>
             <div>
               <h1 className="font-display text-base sm:text-lg font-extrabold tracking-tight text-[#F4F1EA]">
-                Ojo Andino <span className="font-normal text-[#9CA3AF]">· Agua y Pasturas en Jujuy</span>
+                Ojo Andino{" "}
+                <span className="font-normal text-[#9CA3AF]">
+                  · Tablero Hídrico y Territorial para el Gobierno de Jujuy
+                </span>
               </h1>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="rounded-xl px-3 py-2 border border-[#10B981]/40 text-[#10B981] bg-[#10B981]/10 font-medium">
-              🤖 Envío automático a Municipios: Activo (08:00 hs)
+            <span className="rounded-xl px-3 py-1.5 border border-[#F59E0B]/40 text-[#F59E0B] bg-[#F59E0B]/10 font-medium">
+              🏛️ 10 Jurisdicciones Municipales Monitoreadas
             </span>
             <span
-              className={`text-[11px] rounded-xl px-2.5 py-2 border font-medium ${
+              className={`text-[11px] rounded-xl px-2.5 py-1.5 border font-medium ${
                 online
-                  ? "border-white/15 text-[#F4F1EA]/80 bg-white/5"
+                  ? "border-[#10B981]/40 text-[#10B981] bg-[#10B981]/10"
                   : "border-[#F59E0B]/50 text-[#F59E0B] bg-[#F59E0B]/10"
               }`}
             >
-              {online ? "● Satélites en línea" : "● Modo sin conexión"}
+              {online ? "● Datos NASA / MODIS activos" : "● Modo sin conexión"}
             </span>
           </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-6xl px-4 py-6 space-y-6">
-        {/* BANNER DE ENVÍO AUTOMÁTICO (Sin que nadie tenga que tocar ningún botón) */}
-        <section className="rounded-2xl border border-[#10B981]/40 bg-[#10B981]/10 px-4 py-3.5 flex flex-wrap items-center justify-between gap-3">
-          <div className="space-y-0.5">
-            <div className="text-xs font-bold text-[#10B981] flex items-center gap-1.5">
-              <span>⚡</span>
-              <span>
-                Reporte Automático del Servidor (Hoy{" "}
-                {barrido?.fechaBarrido ?? new Date().toLocaleDateString("es-AR")} · sin intervención humana):
-              </span>
-            </div>
-            <p className="text-xs sm:text-sm text-[#F4F1EA]">
-              El sistema revisó solo los <strong>10 municipios de Jujuy</strong>. Detectó falta grave de agua en{" "}
-              <strong className="text-[#F59E0B]">
-                {despachadosAuto.length > 0 ? despachadosAuto.map((d) => d.comunidadNombre).join(", ") : "Susques (-78,9%)"}
-              </strong>{" "}
-              y despachó automáticamente la alerta a la <strong>Comisión Municipal de Susques</strong>.
-            </p>
-          </div>
-          <button
-            onClick={() => setTabDetalle("priorizacion")}
-            className="min-h-[40px] rounded-xl bg-[#0B0D10] hover:bg-black border border-[#10B981]/50 text-[#10B981] text-xs font-bold px-3.5 py-2 transition cursor-pointer shrink-0"
-          >
-            Ver los 10 Municipios →
-          </button>
+        {/* ENCABEZADO ENFOCADO 100% EN GESTIÓN PÚBLICA Y MUNICIPAL DE JUJUY */}
+        <section className="max-w-3xl space-y-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#D95D39]/20 border border-[#D95D39]/50 px-3 py-1 text-xs font-bold text-[#F4F1EA]">
+            🏛️ Para el Gobierno de Jujuy, Municipios y Comisiones Municipales
+          </span>
+          <h2 className="font-display text-2xl sm:text-4xl font-extrabold tracking-tight text-[#F4F1EA]">
+            ¿Dónde priorizar agua, forraje y obras hídricas hoy en Jujuy?
+          </h2>
+          <p className="text-sm sm:text-base text-[#9CA3AF] leading-relaxed">
+            Traduce datos satelitales de lluvia y vegetación en un{" "}
+            <strong className="text-[#F4F1EA]">parte oficial por municipio</strong> para decidir dónde enviar camiones de
+            forraje y agua en la Puna o dónde vigilar drenajes y caminos por exceso de lluvia en la Quebrada.
+          </p>
         </section>
 
-        {/* BLOQUE 1: PREGUNTA CLARA Y 3 CASOS REALES */}
-        <section className="space-y-4">
-          <div className="max-w-3xl space-y-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F59E0B]/15 border border-[#F59E0B]/40 px-3 py-1 text-xs font-bold text-[#F59E0B]">
-              🌾 Para Productores Ganaderos, Cooperativas y Municipios de Jujuy
-            </span>
-            <h2 className="font-display text-2xl sm:text-4xl font-extrabold tracking-tight text-[#F4F1EA]">
-              ¿Dónde falta agua y pasto hoy en Jujuy?
-            </h2>
-            <p className="text-sm sm:text-base text-[#9CA3AF] leading-relaxed">
-              Traducimos datos satelitales reales de lluvia y vegetación para saber{" "}
-              <strong className="text-[#F4F1EA]">a qué pueblo mandar agua o forraje hoy</strong> — con alertas automáticas al
-              Municipio y audios simples de WhatsApp para el productor.
-            </p>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-3">
-            {DESTACADAS.map((d) => {
-              const c = getComunidad(d.id)!;
-              const l = vivas[d.id] ?? lecturaCacheada(d.id);
-              const p = l?.meteorologia?.precipitacionMm30d;
-              const activa = seleccion === d.id;
-              return (
-                <button
-                  key={d.id}
-                  onClick={() => setSeleccion(d.id)}
-                  aria-pressed={activa}
-                  className={`min-h-[96px] rounded-2xl p-4 text-left border transition cursor-pointer flex flex-col justify-between ${
-                    activa
-                      ? "bg-[#1A202A] border-[#F59E0B] ring-2 ring-[#F59E0B]/40 shadow-lg"
-                      : "amc-surface hover:border-white/25"
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2 w-full">
-                    <span className="text-xs font-bold text-[#F4F1EA]">{d.etiqueta}</span>
-                    {p && (
-                      <span
-                        className={`font-mono text-xs font-bold px-2 py-0.5 rounded-full ${
-                          (p.porcentaje ?? 0) <= -25
-                            ? "bg-[#D95D39]/25 text-[#D95D39]"
-                            : (p.porcentaje ?? 0) >= 25
-                              ? "bg-[#10B981]/20 text-[#10B981]"
-                              : "bg-[#F59E0B]/20 text-[#F59E0B]"
-                        }`}
-                      >
-                        {(p.porcentaje ?? 0) >= 0 ? "+" : ""}
-                        {fmt1(p.porcentaje ?? 0)}%
-                      </span>
-                    )}
-                  </div>
-                  <div className="mt-2">
-                    <div className="font-display text-lg font-extrabold text-[#F4F1EA]">{c.nombre}</div>
-                    <div className="text-xs text-[#9CA3AF]">
-                      {p ? `Llovieron ${fmt1(p.observado)} mm (lo normal es ${fmt1(p.climatologia)} mm)` : d.accion}
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* BLOQUE 2: MAPA A LA IZQUIERDA + DIAGNÓSTICO Y WHATSAPP A LA DERECHA */}
+        {/* BLOQUE PRINCIPAL: MAPA DE LAS 10 JURISDICCIONES + PARTE OFICIAL DE LA JURISDICCIÓN SELECCIONADA */}
         <section className="grid gap-5 lg:grid-cols-[400px_1fr] items-start">
           <div className="amc-surface rounded-3xl overflow-hidden shadow-xl">
             <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
-              <span className="text-xs font-bold text-[#F4F1EA]">📍 Elegí un pueblo de Jujuy</span>
+              <span className="text-xs font-bold text-[#F4F1EA]">📍 Seleccioná Municipio o Comisión Municipal</span>
               {cargando && <span className="text-xs text-[#2DD4BF] animate-pulse">Actualizando…</span>}
             </div>
 
@@ -298,19 +209,14 @@ export default function App() {
             </div>
           </div>
 
-          <PanelAlerta
-            key={seleccion}
-            comunidad={comunidad}
-            lectura={lectura}
-            modo={tabDetalle === "priorizacion" ? "parametrico" : "comunidad"}
-          />
+          <PanelAlerta key={seleccion} comunidad={comunidad} lectura={lectura} modo="comunidad" />
         </section>
 
-        {/* BLOQUE 3: 3 PESTAÑAS LIMPIAS Y CLARAS */}
+        {/* BLOQUE INFERIOR: 3 PESTAÑAS DE GESTIÓN (Con la Tabla de los 10 Municipios abierta por defecto) */}
         <section className="space-y-4 pt-2">
           <div className="grid gap-2.5 sm:grid-cols-3">
             <button
-              onClick={() => toggleTab("priorizacion")}
+              onClick={() => setTabDetalle("priorizacion")}
               aria-expanded={tabDetalle === "priorizacion"}
               className={`min-h-[48px] rounded-2xl px-4 py-3 text-left text-xs font-bold border transition cursor-pointer flex items-center justify-between ${
                 tabDetalle === "priorizacion"
@@ -318,12 +224,12 @@ export default function App() {
                   : "amc-surface text-[#F4F1EA] hover:border-[#F59E0B]/50"
               }`}
             >
-              <span>🚚 Tabla de los 10 Municipios (Dónde mandar agua hoy)</span>
-              <span>{tabDetalle === "priorizacion" ? "▲" : "▼"}</span>
+              <span>🏛️ Tabla de Priorización de los 10 Municipios de Jujuy</span>
+              <span>●</span>
             </button>
 
             <button
-              onClick={() => toggleTab("satelite")}
+              onClick={() => setTabDetalle("satelite")}
               aria-expanded={tabDetalle === "satelite"}
               className={`min-h-[48px] rounded-2xl px-4 py-3 text-left text-xs font-bold border transition cursor-pointer flex items-center justify-between ${
                 tabDetalle === "satelite"
@@ -331,12 +237,12 @@ export default function App() {
                   : "amc-surface text-[#F4F1EA] hover:border-[#2DD4BF]/50"
               }`}
             >
-              <span>📊 Gráfico de Lluvia Diaria (30 días) y Satélite SAOCOM</span>
-              <span>{tabDetalle === "satelite" ? "▲" : "▼"}</span>
+              <span>📊 Gráfico de Lluvia (30 días) y Satélite SAOCOM</span>
+              <span>●</span>
             </button>
 
             <button
-              onClick={() => toggleTab("cultura")}
+              onClick={() => setTabDetalle("cultura")}
               aria-expanded={tabDetalle === "cultura"}
               className={`min-h-[48px] rounded-2xl px-4 py-3 text-left text-xs font-bold border transition cursor-pointer flex items-center justify-between ${
                 tabDetalle === "cultura"
@@ -344,19 +250,13 @@ export default function App() {
                   : "amc-surface text-[#F4F1EA] hover:border-[#D95D39]/50"
               }`}
             >
-              <span>🏔️ Contexto Cultural y Calendario de {comunidad.nombre}</span>
-              <span>{tabDetalle === "cultura" ? "▲" : "▼"}</span>
+              <span>🏔️ Contexto Territorial y Calendario de {comunidad.nombre}</span>
+              <span>●</span>
             </button>
           </div>
 
           {tabDetalle === "priorizacion" && (
-            <PanelDatos
-              comunidad={comunidad}
-              lectura={lectura}
-              modo="parametrico"
-              barrido={barrido}
-              onSeleccion={setSeleccion}
-            />
+            <PanelDatos comunidad={comunidad} lectura={lectura} modo="parametrico" onSeleccion={setSeleccion} />
           )}
 
           {tabDetalle === "satelite" && (

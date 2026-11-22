@@ -2,9 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AlertaRespuesta, Comunidad, LecturaSatelital } from "@/lib/types";
-import { alertaDeterminista, payloadUsuario, validarNumeros } from "@/lib/alerta";
+import { alertaDeterminista, payloadUsuario, recomendacionGobierno, validarNumeros } from "@/lib/alerta";
 import { estadoHidrico } from "@/lib/lecturas";
-import { registrarEvento } from "@/lib/traccion-cliente";
 
 type Props = {
   comunidad: Comunidad;
@@ -14,6 +13,19 @@ type Props = {
 
 const BARRAS_EQ = [30, 65, 45, 90, 55, 100, 72, 40, 85, 60, 95, 50];
 const fmt1 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+const JURISDICCION: Record<string, string> = {
+  "susques": "Comisión Municipal de Susques",
+  "abra-pampa": "Municipalidad de Abra Pampa",
+  "la-quiaca": "Municipalidad de La Quiaca",
+  "yavi": "Comisión Municipal de Yavi",
+  "humahuaca": "Municipalidad de Humahuaca",
+  "tilcara": "Municipalidad de Tilcara",
+  "maimara": "Comisión Municipal de Maimará",
+  "purmamarca": "Comisión Municipal de Purmamarca",
+  "tumbaya": "Comisión Municipal de Tumbaya",
+  "volcan": "Comisión Municipal de Volcán",
+};
 
 export default function PanelAlerta({ comunidad, lectura, modo }: Props) {
   const [alertaGrok, setAlertaGrok] = useState<AlertaRespuesta | null>(null);
@@ -45,6 +57,7 @@ export default function PanelAlerta({ comunidad, lectura, modo }: Props) {
   const m = lectura?.meteorologia;
   const ndvi = lectura?.ndvi;
   const est = lectura ? estadoHidrico(lectura) : "sin_dato";
+  const jurisdiccion = JURISDICCION[comunidad.id] ?? `Municipio de ${comunidad.nombre}`;
 
   useEffect(
     () => () => {
@@ -82,10 +95,9 @@ export default function PanelAlerta({ comunidad, lectura, modo }: Props) {
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const data = (await r.json()) as AlertaRespuesta;
       setAlertaGrok(data);
-      registrarEvento("alerta", comunidad.id);
-      avisarToast("✓ Mensaje actualizado con Grok AI");
+      avisarToast("✓ Parte oficial redactado con Grok AI");
     } catch {
-      setError("Mostrando recomendación verificada con datos locales.");
+      setError("Mostrando parte oficial generado con datos locales.");
     } finally {
       setCargando(false);
     }
@@ -115,7 +127,6 @@ export default function PanelAlerta({ comunidad, lectura, modo }: Props) {
     }
     setAudioCargando(true);
     setVozFallback(false);
-    registrarEvento("audio", comunidad.id);
     try {
       const r = await fetch("/api/tts", {
         method: "POST",
@@ -141,7 +152,7 @@ export default function PanelAlerta({ comunidad, lectura, modo }: Props) {
 
   const whatsappUrl = alerta
     ? `https://wa.me/?text=${encodeURIComponent(
-        `*Ojo Andino · Estado de Agua y Pasturas en ${comunidad.nombre}*\n\n${alerta.resumen_oral}\n\nVer mapa: ${
+        `*Parte Hídrico y Territorial · ${jurisdiccion}*\n\n${alerta.resumen_oral}\n\n_${alerta.fuentes}_\n\nTablero Jujuy: ${
           typeof window !== "undefined" ? `${window.location.origin}/?c=${comunidad.id}` : ""
         }`,
       )}`
@@ -150,45 +161,55 @@ export default function PanelAlerta({ comunidad, lectura, modo }: Props) {
   const diagnostico =
     est === "deficit"
       ? {
-          semaforo: "🔴 URGENCIA ALTA · FALTA AGUA",
+          semaforo: "🔴 PRIORIDAD ALTA · DÉFICIT DE AGUA Y PASTURAS",
           colorCaja: "border-[#D95D39]/60 bg-[#D95D39]/15 text-[#F4F1EA]",
-          decision: "Priorizar asistencia de forraje y revisar aguadas antes de mover la hacienda.",
         }
-      : est === "superavit_reciente"
+      : est === "superavit_reciente" && comunidad.region === "quebrada"
         ? {
-            semaforo: "🟢 EN RECUPERACIÓN · BUENA LLUVIA RECIENTE",
-            colorCaja: "border-[#10B981]/50 bg-[#10B981]/15 text-[#F4F1EA]",
-            decision: "Aprovechar la humedad de noviembre para seguir el rebrote natural antes de comprar más fardos.",
+            semaforo: "🔵 LLUVIAS ALTAS · VIGILAR DRENAJES Y CAMINOS",
+            colorCaja: "border-[#2DD4BF]/50 bg-[#2DD4BF]/15 text-[#F4F1EA]",
           }
-        : {
-            semaforo: "🟡 CONDICIÓN ESTABLE · LLUVIA NORMAL",
-            colorCaja: "border-[#F59E0B]/50 bg-[#F59E0B]/15 text-[#F4F1EA]",
-            decision: "Lluvias dentro de lo habitual para la época. Mantener manejo regular de pasturas.",
-          };
+        : est === "superavit_reciente"
+          ? {
+              semaforo: "🟢 EN RECUPERACIÓN HÍDRICA · SIN EMERGENCIA DE FORRAJE",
+              colorCaja: "border-[#10B981]/50 bg-[#10B981]/15 text-[#F4F1EA]",
+            }
+          : {
+              semaforo: "🟡 CONDICIÓN ESTABLE · SEGUIMIENTO HABITUAL",
+              colorCaja: "border-[#F59E0B]/50 bg-[#F59E0B]/15 text-[#F4F1EA]",
+            };
+
+  const accionDirecta = lectura ? recomendacionGobierno(comunidad, lectura) : "Cargando evaluación satelital…";
 
   const nivelVerdor = !ndvi
     ? "Sin lectura"
     : ndvi.ultimoComposite.ndvi < 0.11
-      ? "Muy bajo (suelo seco)"
+      ? "Crítico (suelo muy seco)"
       : ndvi.ultimoComposite.ndvi < 0.22
         ? "Bajo (inicio de rebrote)"
-        : "Moderado a bueno";
+        : "Bueno (cobertura activa)";
 
   return (
     <div className="amc-surface-elevated rounded-3xl p-5 sm:p-7 space-y-5 shadow-2xl relative overflow-hidden">
       <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#D95D39] via-[#F59E0B] to-[#10B981]" />
 
-      {/* Encabezado limpio: Pueblo + Decisión concreta */}
+      {/* Encabezado Municipal / Provincial */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1.5">
-          <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold border ${diagnostico.colorCaja}`}>
-            {diagnostico.semaforo}
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold border ${diagnostico.colorCaja}`}>
+              {diagnostico.semaforo}
+            </span>
+            <span className="text-xs font-medium text-[#9CA3AF]">{jurisdiccion}</span>
+          </div>
           <h2 className="font-display text-2xl sm:text-3xl font-extrabold text-[#F4F1EA]">
-            {comunidad.nombre} <span className="text-base font-normal text-[#9CA3AF]">({comunidad.region === "puna" ? "Puna" : "Quebrada"})</span>
+            {comunidad.nombre}{" "}
+            <span className="text-base font-normal text-[#9CA3AF]">
+              · {comunidad.region === "puna" ? "Puna Jujeña" : "Quebrada de Humahuaca"}
+            </span>
           </h2>
           <p className="text-sm sm:text-base font-medium text-[#F4F1EA]/95">
-            👉 <strong>Qué hacer hoy:</strong> {diagnostico.decision}
+            🏛️ <strong>Decisión sugerida para Provincia / Municipio:</strong> {accionDirecta}
           </p>
         </div>
 
@@ -198,39 +219,45 @@ export default function PanelAlerta({ comunidad, lectura, modo }: Props) {
           className="min-h-[44px] rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 disabled:opacity-50 text-[#F4F1EA] font-medium text-xs px-3.5 py-2 transition cursor-pointer flex items-center gap-1.5"
         >
           <span className={cargando ? "animate-spin text-[#F59E0B]" : "text-[#F59E0B]"}>✨</span>
-          <span>{cargando ? "Redactando con Grok…" : alerta?.origen === "grok" ? "Regenerar texto con IA" : "Redactar con Grok AI"}</span>
+          <span>
+            {cargando
+              ? "Redactando con Grok AI…"
+              : alerta?.origen === "grok"
+                ? "Actualizar parte con Grok AI"
+                : "Redactar parte con Grok AI"}
+          </span>
         </button>
       </div>
 
-      {/* 3 Indicadores en lenguaje humano (cero siglas técnicas en crudo) */}
+      {/* 3 Indicadores claros para gestión municipal */}
       {m && (
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="rounded-2xl bg-[#0B0D10]/80 border border-white/10 p-4">
-            <div className="text-xs text-[#9CA3AF]">🌧️ Agua caída (últimos 30 días)</div>
+            <div className="text-xs text-[#9CA3AF]">🌧️ Lluvia acumulada (30 días)</div>
             <div className="font-mono text-2xl font-extrabold text-[#F4F1EA] mt-1">
               {fmt1(m.precipitacionMm30d.observado)} mm
             </div>
             <div className="text-xs text-[#9CA3AF] mt-1">
-              Lo normal para la fecha: <strong className="text-[#F4F1EA]">{fmt1(m.precipitacionMm30d.climatologia)} mm</strong>
+              Promedio histórico: <strong className="text-[#F4F1EA]">{fmt1(m.precipitacionMm30d.climatologia)} mm</strong> (
+              {(m.precipitacionMm30d.porcentaje ?? 0) >= 0 ? "+" : ""}
+              {fmt1(m.precipitacionMm30d.porcentaje ?? 0)}%)
             </div>
           </div>
 
           <div className="rounded-2xl bg-[#0B0D10]/80 border border-white/10 p-4">
-            <div className="text-xs text-[#9CA3AF]">🌱 Estado del pasto y vegetación</div>
-            <div className="font-display text-xl font-extrabold text-[#10B981] mt-1">
-              {nivelVerdor}
-            </div>
+            <div className="text-xs text-[#9CA3AF]">🌱 Estado de pasturas y suelo</div>
+            <div className="font-display text-xl font-extrabold text-[#10B981] mt-1">{nivelVerdor}</div>
             <div className="text-xs text-[#9CA3AF] mt-1">
               {ndvi?.compositeAnioAnterior
                 ? ndvi.ultimoComposite.ndvi >= ndvi.compositeAnioAnterior.ndvi
-                  ? "Levemente mejor que en noviembre 2025"
-                  : "Más seco que en noviembre 2025"
-                : "Medición satelital cada 16 días"}
+                  ? "Índice superior o igual a noviembre 2025"
+                  : "Índice inferior a noviembre 2025"
+                : "Relevamiento satelital cada 16 días"}
             </div>
           </div>
 
           <div className="rounded-2xl bg-[#0B0D10]/80 border border-white/10 p-4">
-            <div className="text-xs text-[#9CA3AF]">🌡️ Clima de la última semana</div>
+            <div className="text-xs text-[#9CA3AF]">🌡️ Temperatura media (7 días)</div>
             <div className="font-mono text-2xl font-extrabold text-[#F4F1EA] mt-1">
               {fmt1(m.temperaturaC7d.mediaObservada)} °C
             </div>
@@ -248,13 +275,13 @@ export default function PanelAlerta({ comunidad, lectura, modo }: Props) {
       )}
       {error && <p className="text-xs text-[#F59E0B]">{error}</p>}
 
-      {/* Mensaje listo para escuchar y reenviar por WhatsApp */}
+      {/* Parte Oficial para el Comisionado Municipal o Equipo Territorial */}
       {alerta && (
         <div className="space-y-4">
-          <div className="rounded-2xl bg-[#0B0D10]/90 border border-white/10 p-4 sm:p-5 space-y-3">
+          <div className="rounded-2xl bg-[#0B0D10]/90 border border-white/10 p-4 sm:p-5 space-y-2.5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-xs font-bold text-[#F59E0B]">
-                💬 Mensaje listo para el productor o técnico municipal:
+                📋 Parte oficial para enviar a {jurisdiccion}:
               </span>
               <div className="flex items-center gap-2">
                 {reproduciendo && (
@@ -269,23 +296,22 @@ export default function PanelAlerta({ comunidad, lectura, modo }: Props) {
                   </div>
                 )}
                 <span className="text-[11px] text-[#10B981]">
-                  ✓ Datos verificados ({alerta.origen === "grok" ? "Grok AI" : "Satélite NASA/MODIS"})
+                  ✓ Verificado ({alerta.origen === "grok" ? "Grok AI" : "Datos NASA/MODIS"})
                 </span>
               </div>
             </div>
 
-            <p className="text-sm sm:text-base leading-relaxed text-[#F4F1EA]">
-              “{alerta.resumen_oral}”
-            </p>
+            <p className="text-sm sm:text-base leading-relaxed text-[#F4F1EA]">“{alerta.resumen_oral}”</p>
+
+            <div className="text-[11px] text-[#9CA3AF] pt-1">{alerta.fuentes}</div>
 
             {vozFallback && (
               <span className="inline-block text-[11px] text-[#F59E0B]">
-                Reproduciendo con voz local del dispositivo (modo sin conexión)
+                Reproduciendo con sintetizador local del dispositivo
               </span>
             )}
           </div>
 
-          {/* 2 Botones Principales Grandes y Claros */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <button
               onClick={escuchar}
@@ -299,10 +325,10 @@ export default function PanelAlerta({ comunidad, lectura, modo }: Props) {
               <span className="text-lg">{audioCargando ? "⏳" : reproduciendo ? "⏹" : "🔊"}</span>
               <span>
                 {audioCargando
-                  ? "Preparando audio…"
+                  ? "Generando audio del parte…"
                   : reproduciendo
                     ? "Detener audio"
-                    : "Escuchar recomendación en voz alta"}
+                    : "Escuchar parte oficial en voz alta"}
               </span>
             </button>
 
@@ -310,11 +336,10 @@ export default function PanelAlerta({ comunidad, lectura, modo }: Props) {
               href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() => registrarEvento("whatsapp", comunidad.id)}
               className="min-h-[50px] rounded-2xl bg-[#10B981] hover:bg-[#10B981]/90 text-[#0B0D10] font-bold text-sm px-5 py-3.5 transition flex items-center justify-center gap-2.5 shadow-lg"
             >
               <span className="text-lg">📲</span>
-              <span>Enviar alerta por WhatsApp</span>
+              <span>Enviar parte por WhatsApp al Municipio</span>
             </a>
           </div>
         </div>

@@ -18,32 +18,36 @@ const JSON_SCHEMA = {
     additionalProperties: false,
     required: ["resumen_oral", "estado_hidrico", "nota_parametrica", "fuentes"],
     properties: {
-      resumen_oral: { type: "string", description: "Mensaje oral de 4 a 6 oraciones, castellano rioplatense simple." },
+      resumen_oral: {
+        type: "string",
+        description: "Parte operativo claro de 4 a 5 oraciones para el Gobierno de Jujuy y la Municipalidad o Comisión Municipal.",
+      },
       estado_hidrico: { type: "string", enum: ["deficit", "normal", "superavit_reciente", "sin_dato"] },
       nota_parametrica: {
         type: "string",
-        description: "1 a 3 oraciones para una cooperativa o aseguradora: índice, ventana y desvío vs climatología. Sin prometer pólizas.",
+        description: "1 a 2 oraciones con la acción operativa recomendada para el Ministerio o Municipio (forraje, agua, drenajes o caminos).",
       },
-      fuentes: { type: "string", description: "Fuentes y fechas de los datos usados." },
+      fuentes: { type: "string", description: "Fuentes satelitales y fecha del último dato." },
     },
   },
 };
 
-export const SYSTEM_PROMPT = `Sos el redactor de alertas de Ojo Andino, un servicio que traduce datos satelitales a un mensaje oral para familias pastoriles, municipios, cooperativas y aseguradoras de la Puna y la Quebrada de Jujuy, Argentina.
+export const SYSTEM_PROMPT = `Sos el analista de inteligencia territorial de Ojo Andino para el Gobierno de la Provincia de Jujuy (Ministerio de Desarrollo Económico y Producción, Recursos Hídricos e Infraestructura) y sus Municipios y Comisiones Municipales.
 
-Reglas:
+Reglas estrictas:
 - Respondé SOLO con el JSON del esquema. Nada de markdown.
-- resumen_oral: castellano simple, rioplatense, de 4 a 6 oraciones. Trato de vos. Sin jerga de teledetección salvo el nombre de la fuente.
-- No inventes números. Usá solo los que vienen en el JSON del usuario. Si un campo viene null, no lo menciones o decí que no está disponible. No calcules números nuevos (ni diferencias ni promedios propios).
-- No conviertas el NDVI en "porcentaje de pasto" ni en predicción de mortandad. Es un índice de verdor (0 a 1). En la Puna valores cerca de 0,1–0,2 pueden ser normales: comparalo con el composite del año anterior si viene.
-- estado_hidrico DEBE ser igual a "estado_hidrico_calculado" del JSON. No afirmes sequía si la anomalía de lluvia es positiva. Podés recordar que la zona venía de meses secos (contexto), sin contradecir el dato actual.
-- Incluí: el pueblo, la ventana de fechas y las fuentes (NASA POWER para lluvia y temperatura, MODIS MOD13Q1 para el verdor). Aclará que el último dato meteorológico tiene 2 a 3 días de demora y que el NDVI es un compuesto de 16 días.
-- Un decimal para mm, °C y porcentajes; tres decimales para NDVI. Evitá "exactamente", "sin duda", "el ganado va a morir".
-- No hables en nombre de una comunidad, no cites personas reales, no des órdenes. Como máximo una sugerencia prudente (por ejemplo, consultar con el municipio o con extensión rural antes de mover la hacienda).
-- Si modo = "parametrico", el resumen_oral se dirige a una cooperativa o aseguradora: índice, ventana, desvío y limitaciones (riesgo de base), sin prometer pólizas ni decir que el índice está homologado.
-- nota_parametrica: 1 a 3 oraciones técnicas sobre el índice (ventana, desvío vs climatología 2001–2025) aclarando que es un insumo, no una póliza.`;
+- resumen_oral: redactá un parte ejecutivo, claro y natural (4 a 5 oraciones en castellano de Argentina) dirigido a un funcionario provincial o comisionado municipal.
+- NO metas códigos técnicos robóticos adentro del texto hablado (no digas "MOD13Q1" ni "PRECTOTCORR"; decí "los datos satelitales de la NASA" y "el índice de vegetación satelital"). Las siglas técnicas dejálas solo en el campo "fuentes".
+- No inventes números. Usá solo los que vienen en el JSON del usuario. No calcules restas ni promedios propios.
+- No conviertas el NDVI en "porcentaje de pasto". Es un índice de vegetación de 0 a 1 (en la Puna valores de 0,1 a 0,2 son habituales).
+- estado_hidrico DEBE coincidir con "estado_hidrico_calculado" del JSON.
+- Cerrá el resumen_oral con una recomendación concreta de gestión pública según el estado:
+  * Si hay déficit (como en Susques): priorizar a esta Comisión Municipal en el envío de camiones de forraje (alfalfa) y asistencia de agua.
+  * Si hay superávit de lluvia en la Puna (como en Abra Pampa o La Quiaca): no requiere envío de forraje de emergencia esta semana porque las lluvias recientes permiten esperar el rebrote natural.
+  * Si hay superávit de lluvia en la Quebrada (como en Volcán, Tumbaya o Humahuaca): recomendar al Municipio vigilar escorrentías, drenajes urbanos y estado de caminos rurales.
+  * Si está normal (como en Tilcara, Maimará o Purmamarca): mantener seguimiento habitual sin operativo de emergencia.
+- Nunca digas "hablá con el municipio", porque quien lee esto ES el Municipio o el Gobierno de Jujuy.`;
 
-/** Construye el payload compacto que ve Grok (solo números que existen en la fuente). */
 export function payloadUsuario(c: Comunidad, l: LecturaSatelital, modo: "comunidad" | "parametrico") {
   const m = l.meteorologia;
   return {
@@ -81,7 +85,6 @@ export function payloadUsuario(c: Comunidad, l: LecturaSatelital, modo: "comunid
   };
 }
 
-/** Números permitidos: los que existen en el payload (con redondeos) + enteros de fecha. */
 function numerosPermitidos(payload: unknown): number[] {
   const out: number[] = [];
   const walk = (v: unknown) => {
@@ -109,44 +112,68 @@ export function validarNumeros(texto: string, payload: unknown) {
 const fmt1 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const fmt3 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
 
-/** Texto determinista (sin LLM) con el mismo esquema. Es el respaldo y también la "verdad" de referencia. */
-export function alertaDeterminista(c: Comunidad, l: LecturaSatelital, modo: "comunidad" | "parametrico"): AlertaLLM {
+export function recomendacionGobierno(c: Comunidad, l: LecturaSatelital): string {
+  const est = estadoHidrico(l);
+  if (est === "deficit") {
+    return `Priorizar a ${c.nombre} en la asignación provincial de camiones de forraje (alfalfa) y asistencia de agua para productores.`;
+  }
+  if (est === "superavit_reciente" && c.region === "puna") {
+    return `No requiere envío de forraje de emergencia esta semana: las lluvias recientes permiten esperar el rebrote natural y reasignar recursos a zonas deficitarias.`;
+  }
+  if (est === "superavit_reciente" && c.region === "quebrada") {
+    return `Sin emergencia por sequía. Por el exceso de lluvia reciente, se recomienda al Municipio monitorear drenajes, obras urbanas y escorrentía en caminos.`;
+  }
+  return `Condición hídrica dentro del promedio histórico. Mantener monitoreo municipal habitual sin operativo de emergencia.`;
+}
+
+export function alertaDeterminista(c: Comunidad, l: LecturaSatelital, _modo: "comunidad" | "parametrico"): AlertaLLM {
   const m = l.meteorologia;
   const est = estadoHidrico(l);
   const partes: string[] = [];
+
   if (m) {
     const p = m.precipitacionMm30d;
-    const signo = (p.porcentaje ?? 0) >= 0 ? "por encima" : "por debajo";
+    const pctAbs = fmt1(Math.abs(p.porcentaje ?? 0));
+    if (est === "deficit") {
+      partes.push(
+        `Informe de situación para ${c.nombre}: en los últimos 30 días cayeron apenas ${fmt1(p.observado)} mm de lluvia, cuando lo normal para esta época es ${fmt1(p.climatologia)} mm (un déficit del ${pctAbs} %).`,
+      );
+    } else if (est === "superavit_reciente") {
+      partes.push(
+        `Informe de situación para ${c.nombre}: en los últimos 30 días se registraron ${fmt1(p.observado)} mm de lluvia frente a los ${fmt1(p.climatologia)} mm habituales para la fecha (${pctAbs} % por encima del promedio).`,
+      );
+    } else {
+      partes.push(
+        `Informe de situación para ${c.nombre}: en los últimos 30 días llovieron ${fmt1(p.observado)} mm, un valor alineado con el promedio histórico de ${fmt1(p.climatologia)} mm para esta época.`,
+      );
+    }
     partes.push(
-      `En ${c.nombre}, entre el ${p.ventana.split(" (")[0]}, NASA POWER registra ${fmt1(p.observado)} mm de lluvia, contra ${fmt1(p.climatologia)} mm del promedio 2001–2025 para esas fechas: ${fmt1(Math.abs(p.porcentaje ?? 0))} % ${signo} de lo normal.`,
-    );
-    partes.push(
-      `La temperatura media de los últimos 7 días con dato fue de ${fmt1(m.temperaturaC7d.mediaObservada)} °C, contra ${fmt1(m.temperaturaC7d.climatologiaMes)} °C del promedio del mes.`,
+      `La temperatura media de la última semana fue de ${fmt1(m.temperaturaC7d.mediaObservada)} °C (promedio histórico del mes: ${fmt1(m.temperaturaC7d.climatologiaMes)} °C).`,
     );
   } else {
-    partes.push(`En ${c.nombre} no hay dato meteorológico disponible en este momento.`);
+    partes.push(`En ${c.nombre} no hay lectura meteorológica disponible en este momento.`);
   }
+
   if (l.ndvi) {
     const n = l.ndvi;
     partes.push(
-      `El verdor medido por MODIS MOD13Q1 en el compuesto del ${n.ultimoComposite.fecha} es ${fmt3(n.ultimoComposite.ndvi)}${n.compositeAnioAnterior ? `, frente a ${fmt3(n.compositeAnioAnterior.ndvi)} en el mismo período del año pasado` : ""}.`,
+      `El índice satelital de vegetación marca ${fmt3(n.ultimoComposite.ndvi)}${
+        n.compositeAnioAnterior ? ` (frente a ${fmt3(n.compositeAnioAnterior.ndvi)} en la misma fecha del año pasado)` : ""
+      }.`,
     );
   }
-  if (est === "superavit_reciente")
-    partes.push("La zona venía de meses secos, pero el dato reciente muestra lluvias por encima del promedio; puede ser momento de seguir el rebrote antes de comprar más forraje.");
-  else if (est === "deficit")
-    partes.push("La lluvia viene por debajo del promedio; puede convenir hablar con el municipio o con extensión rural para anticipar agua y forraje.");
-  else if (est === "normal") partes.push("La lluvia está cerca de lo normal para la época.");
-  partes.push("El último dato de lluvia tiene 2 a 3 días de demora y el verdor es un compuesto de 16 días.");
+
+  const accion = recomendacionGobierno(c, l);
+  partes.push(`Recomendación operativa: ${accion}`);
 
   const p = m?.precipitacionMm30d;
   return {
     resumen_oral: partes.join(" "),
     estado_hidrico: est,
     nota_parametrica: p
-      ? `Índice de lluvia acumulada ${p.ventana}: ${fmt1(p.observado)} mm vs ${fmt1(p.climatologia)} mm climatológicos (desvío ${p.porcentaje! >= 0 ? "+" : ""}${fmt1(p.porcentaje ?? 0)} %). Insumo de datos para coberturas por índice; no es una póliza ni un índice homologado.`
-      : "Sin serie meteorológica disponible para construir el índice.",
-    fuentes: `NASA POWER (último dato ${m?.ultimoDiaConDato ?? "s/d"}) y MODIS MOD13Q1 vía ORNL (composite ${l.ndvi?.ultimoComposite.fecha ?? "s/d"}).`,
+      ? `${accion} (Ventana evaluada: ${p.ventana}, desvío ${p.porcentaje! >= 0 ? "+" : ""}${fmt1(p.porcentaje ?? 0)} % respecto a climatología 2001–2025).`
+      : accion,
+    fuentes: `NASA POWER (último dato ${m?.ultimoDiaConDato ?? "s/d"}, demora oficial 2–3 días) y MODIS MOD13Q1 (compuesto de 16 días al ${l.ndvi?.ultimoComposite.fecha ?? "s/d"}).`,
   };
 }
 

@@ -5,13 +5,11 @@ import type { Comunidad, LecturaSatelital } from "@/lib/types";
 import { COMUNIDADES } from "@/lib/comunidades";
 import { lecturaCacheada } from "@/lib/cache";
 import { estadoHidrico } from "@/lib/lecturas";
-import type { ResultadoBarrido } from "@/app/api/cron/alertas/route";
 
 type Props = {
   comunidad: Comunidad;
   lectura: LecturaSatelital | null;
   modo: "comunidad" | "parametrico";
-  barrido?: ResultadoBarrido | null;
   onSeleccion?: (id: string) => void;
 };
 
@@ -57,7 +55,7 @@ function GraficoLluvia({ serie }: { serie: DiaSerie[] }) {
     <figure className="rounded-2xl bg-[#0B0D10]/85 border border-white/10 p-4 space-y-2.5">
       <figcaption className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
         <span className="text-xs font-bold text-[#F4F1EA]">
-          📊 Lluvia día por día en {n} días (medida por NASA POWER)
+          📊 Lluvia día por día en {n} días (medida por satélite NASA POWER)
         </span>
         <span className="flex items-center gap-3 text-[11px] text-[#9CA3AF]">
           <span className="flex items-center gap-1.5">
@@ -155,7 +153,7 @@ function descargarCsv(comunidad: Comunidad, lectura: LecturaSatelital) {
   if (!m) return;
   const encabezados = [
     "localidad",
-    "municipio_destino",
+    "jurisdiccion_municipal",
     "fecha",
     "lluvia_caida_mm",
     "lluvia_normal_historica_mm",
@@ -176,12 +174,12 @@ function descargarCsv(comunidad: Comunidad, lectura: LecturaSatelital) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `reporte-agua-${comunidad.id}-${m.ultimoDiaConDato}.csv`;
+  a.download = `parte-hidrico-${comunidad.id}-${m.ultimoDiaConDato}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }
 
-export default function PanelDatos({ comunidad, lectura, modo, barrido, onSeleccion }: Props) {
+export default function PanelDatos({ comunidad, lectura, modo, onSeleccion }: Props) {
   if (!lectura) {
     return (
       <div className="amc-surface rounded-2xl p-6 text-xs text-[#9CA3AF]">
@@ -192,16 +190,15 @@ export default function PanelDatos({ comunidad, lectura, modo, barrido, onSelecc
 
   const m = lectura.meteorologia;
 
-  // Si está en la pestaña "satelite" (modo === "comunidad"), mostramos SOLO el gráfico de 30 días (sin repetir las 3 tarjetas de arriba).
   if (modo === "comunidad") {
     return (
       <div className="amc-surface rounded-2xl p-5 space-y-4">
         <div>
           <h3 className="font-display text-base sm:text-lg font-bold text-[#F4F1EA]">
-            Historial de lluvia de los últimos 30 días en {comunidad.nombre}
+            Historial diario de lluvias en {comunidad.nombre} (últimos 30 días)
           </h3>
           <p className="text-xs text-[#9CA3AF]">
-            Comparación diaria entre lo que llovió este mes y lo que suele llover históricamente (2001–2025).
+            Comparación entre la lluvia caída este mes y el promedio histórico de la NASA (2001–2025).
           </p>
         </div>
         {m && m.serie.length > 1 ? (
@@ -213,12 +210,19 @@ export default function PanelDatos({ comunidad, lectura, modo, barrido, onSelecc
     );
   }
 
-  // Si está en la pestaña "priorizacion" (modo === "parametrico"), mostramos SOLO la tabla limpia de los 10 municipios + estado del envío automático.
   const rankingRegional = COMUNIDADES.map((c) => {
     const l = c.id === comunidad.id ? lectura : lecturaCacheada(c.id);
     const p = l?.meteorologia?.precipitacionMm30d;
     const est = l ? estadoHidrico(l) : "sin_dato";
-    const despacho = barrido?.despachos.find((d) => d.comunidadId === c.id);
+    let accion = "Seguimiento municipal habitual";
+    if (est === "deficit") {
+      accion = "🚚 Priorizar envío de forraje (alfalfa) y agua";
+    } else if (est === "superavit_reciente" && c.region === "quebrada") {
+      accion = "🚧 Vigilar drenajes urbanos, obras y escorrentía en caminos";
+    } else if (est === "superavit_reciente") {
+      accion = "🌱 Sin emergencia de forraje (esperar rebrote natural)";
+    }
+
     return {
       comunidad: c,
       organismo: ORGANISMO_POR_ID[c.id] ?? `Municipio de ${c.nombre}`,
@@ -226,7 +230,7 @@ export default function PanelDatos({ comunidad, lectura, modo, barrido, onSelecc
       clim: p?.climatologia ?? 0,
       pct: p?.porcentaje ?? 0,
       estado: est,
-      enviadoAuto: despacho ? despacho.accionAutomatica === "enviada" : est === "deficit",
+      accion,
     };
   }).sort((a, b) => a.pct - b.pct);
 
@@ -235,14 +239,14 @@ export default function PanelDatos({ comunidad, lectura, modo, barrido, onSelecc
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <span className="text-[11px] uppercase tracking-wider font-bold text-[#F59E0B]">
-            🚚 Para el Gobierno de Jujuy, Municipios y Cooperativas
+            🏛️ Tablero Provincial de Asignación de Recursos · Gobierno de Jujuy
           </span>
           <h3 className="font-display text-lg sm:text-xl font-bold text-[#F4F1EA]">
-            ¿A qué pueblo hay que mandar agua o forraje hoy?
+            Priorización de los 10 Municipios y Comisiones Municipales
           </h3>
           <p className="text-xs text-[#9CA3AF] mt-0.5">
-            Ordenado automáticamente desde el pueblo más seco al que tuvo más lluvia. Cuando un pueblo entra en rojo, el
-            servidor envía la alerta sola a su Municipalidad o Comisión Municipal todos los días a las 08:00 hs.
+            Ordenado automáticamente desde la jurisdicción con mayor déficit de agua hasta la de mayor lluvia acumulada. Hacé
+            clic en cualquier municipio para ver su parte oficial y enviarlo por WhatsApp.
           </p>
         </div>
         {m && (
@@ -250,7 +254,7 @@ export default function PanelDatos({ comunidad, lectura, modo, barrido, onSelecc
             onClick={() => descargarCsv(comunidad, lectura)}
             className="min-h-[44px] rounded-xl bg-[#F59E0B] hover:bg-[#F59E0B]/90 text-[#0B0D10] font-bold text-xs px-4 py-2.5 transition shadow cursor-pointer"
           >
-            📥 Descargar Excel / CSV de {comunidad.nombre}
+            📥 Descargar Planilla CSV ({comunidad.nombre})
           </button>
         )}
       </div>
@@ -259,12 +263,12 @@ export default function PanelDatos({ comunidad, lectura, modo, barrido, onSelecc
         <table className="w-full text-left text-xs">
           <thead className="border-b border-white/10 text-[11px] text-[#9CA3AF] bg-white/5">
             <tr>
-              <th className="py-3 px-3">Orden / Pueblo</th>
-              <th className="py-3 px-3">Municipio / Destinatario</th>
-              <th className="py-3 px-3">Llovió este mes</th>
-              <th className="py-3 px-3">Lluvia normal</th>
-              <th className="py-3 px-3">Situación hoy</th>
-              <th className="py-3 px-3">Alerta Automática (08:00 hs)</th>
+              <th className="py-3 px-3">Prioridad / Localidad</th>
+              <th className="py-3 px-3">Jurisdicción Municipal</th>
+              <th className="py-3 px-3">Llovió (30d)</th>
+              <th className="py-3 px-3">Promedio normal</th>
+              <th className="py-3 px-3">Diagnóstico</th>
+              <th className="py-3 px-3">Acción recomendada para Provincia / Municipio</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/10">
@@ -296,21 +300,13 @@ export default function PanelDatos({ comunidad, lectura, modo, barrido, onSelecc
                       }`}
                     >
                       {r.estado === "deficit"
-                        ? `🔴 Falta agua (${fmt1(r.pct)}%)`
+                        ? `🔴 Déficit (${fmt1(r.pct)}%)`
                         : r.estado === "superavit_reciente"
-                          ? `🟢 Ya llovió (+${fmt1(r.pct)}%)`
+                          ? `🟢 Superávit (+${fmt1(r.pct)}%)`
                           : `🟡 Normal (+${fmt1(r.pct)}%)`}
                     </span>
                   </td>
-                  <td className="py-3 px-3">
-                    {r.enviadoAuto ? (
-                      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#10B981]">
-                        <span>✅</span> Enviada sola al Municipio
-                      </span>
-                    ) : (
-                      <span className="text-xs text-[#9CA3AF]">En vigilancia (sin emergencia hoy)</span>
-                    )}
-                  </td>
+                  <td className="py-3 px-3 text-[#F4F1EA]/90">{r.accion}</td>
                 </tr>
               );
             })}
