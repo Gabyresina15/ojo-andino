@@ -107,10 +107,16 @@ export default function App() {
 
   const pueblosPuna = COMUNIDADES.filter((c) => c.region === "puna");
   const pueblosQuebrada = COMUNIDADES.filter((c) => c.region === "quebrada");
-  const nodosPuna = pueblosPuna.map((comunidad) => ({
-    comunidad,
-    lectura: vivas[comunidad.id] ?? lecturaCacheada(comunidad.id),
-  }));
+  const nodosPuna = useMemo(
+    () => COMUNIDADES.filter((comunidad) => comunidad.region === "puna").map((comunidad) => {
+      const local = montado ? leerLocal(comunidad.id) : null;
+      return {
+        comunidad,
+        lectura: vivas[comunidad.id] ?? (local ? { ...local, fuenteCache: true } : lecturaCacheada(comunidad.id)),
+      };
+    }),
+    [vivas, montado],
+  );
   const priorizacion = simularPriorizacion(nodosPuna, 40);
 
   return (
