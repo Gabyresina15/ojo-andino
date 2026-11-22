@@ -3,7 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { AlertaRespuesta, Comunidad, LecturaSatelital } from "@/lib/types";
-import { alertaDeterminista, payloadUsuario, recomendacionGobierno, validarNumeros } from "@/lib/alerta";
+import {
+  alertaDeterminista,
+  calcularPatronDiario,
+  payloadUsuario,
+  recomendacionComunidad,
+  recomendacionGobierno,
+  validarNumeros,
+} from "@/lib/alerta";
 import { estadoHidrico } from "@/lib/lecturas";
 import { descargarPdfExpediente } from "@/lib/pdf-expediente";
 import { ChakanaIcon } from "./AndeanMotifs";
@@ -29,33 +36,35 @@ export const JURISDICCION_MUNICIPAL: Record<string, string> = {
 };
 
 export default function PanelAlerta({ comunidad, lectura }: Props) {
+  const [modoDictamen, setModoDictamen] = useState<"parametrico" | "comunidad">("parametrico");
   const [alertaGrok, setAlertaGrok] = useState<AlertaRespuesta | null>(null);
   const [cargando, setCargando] = useState(false);
 
   const alertaBase = useMemo<AlertaRespuesta | null>(() => {
     if (!lectura) return null;
-    const det = alertaDeterminista(comunidad, lectura, "comunidad");
-    const payload = payloadUsuario(comunidad, lectura, "comunidad");
+    const det = alertaDeterminista(comunidad, lectura, modoDictamen);
+    const payload = payloadUsuario(comunidad, lectura, modoDictamen);
     const v = validarNumeros(`${det.resumen_oral} ${det.nota_parametrica}`, payload);
     return {
       comunidadId: comunidad.id,
-      modo: "comunidad",
+      modo: modoDictamen,
       ...det,
       origen: "determinista",
       modelo: null,
       validacion: { ...v, estadoCorregido: false, motivoFallback: null },
       generadoEn: lectura.generadoEn,
     };
-  }, [comunidad, lectura]);
+  }, [comunidad, lectura, modoDictamen]);
 
   useEffect(() => {
     if (!lectura) return;
     let cancelado = false;
+    setAlertaGrok(null);
     setCargando(true);
     fetch("/api/alerta", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: comunidad.id, modo: "comunidad", lectura }),
+      body: JSON.stringify({ id: comunidad.id, modo: modoDictamen, lectura }),
     })
       .then((r) => (r.ok ? r.json() : null))
       .then((data: AlertaRespuesta | null) => {
@@ -68,11 +77,12 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
     return () => {
       cancelado = true;
     };
-  }, [comunidad.id, lectura]);
+  }, [comunidad.id, lectura, modoDictamen]);
 
   const alerta = alertaGrok ?? alertaBase;
   const m = lectura?.meteorologia;
   const ndvi = lectura?.ndvi;
+  const patron = lectura ? calcularPatronDiario(lectura) : null;
   const est = lectura ? estadoHidrico(lectura) : "sin_dato";
   const jurisdiccion = JURISDICCION_MUNICIPAL[comunidad.id] ?? `Municipio de ${comunidad.nombre}`;
   const expedienteNro = `EXP-JUJ-2026-${comunidad.id.toUpperCase()}`;
@@ -98,7 +108,11 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
               colorCaja: "border-[#F59E0B]/50 bg-[#F59E0B]/15 text-[#F4F1EA]",
             };
 
-  const accionDirecta = lectura ? recomendacionGobierno(comunidad, lectura) : "Evaluando datos satelitales…";
+  const accionDirecta = !lectura
+    ? "Evaluando datos satelitales…"
+    : modoDictamen === "comunidad"
+      ? recomendacionComunidad(comunidad, lectura)
+      : recomendacionGobierno(comunidad, lectura);
 
   const nivelVerdor = !ndvi
     ? "Sin lectura"
@@ -138,12 +152,16 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
             </span>
           </h2>
           <p className="text-sm sm:text-base font-medium text-[#F4F1EA]/95">
-            🏛️ <strong>Directiva Provincial → Municipio:</strong> {accionDirecta}
+            🏛️{" "}
+            <strong>
+              {modoDictamen === "parametrico" ? "Directiva Provincial → Municipio:" : "Recomendación para el Productor:"}
+            </strong>{" "}
+            {accionDirecta}
           </p>
         </div>
       </div>
 
-      {/* 3 Indicadores resumen */}
+      {/* 3 Indicadores resumen + Racha seca / Concentración */}
       {m && (
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="rounded-2xl bg-[#0B0D10]/80 border border-white/10 p-4">
@@ -152,9 +170,10 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
               {fmt1(m.precipitacionMm30d.observado)} mm
             </div>
             <div className="text-xs text-[#9CA3AF] mt-1">
-              Promedio histórico: <strong className="text-[#F4F1EA]">{fmt1(m.precipitacionMm30d.climatologia)} mm</strong> (
+              Normal: <strong className="text-[#F4F1EA]">{fmt1(m.precipitacionMm30d.climatologia)} mm</strong> (
               {(m.precipitacionMm30d.porcentaje ?? 0) >= 0 ? "+" : ""}
               {fmt1(m.precipitacionMm30d.porcentaje ?? 0)}%)
+              {patron ? ` · Racha seca: ${patron.racha_seca_maxima_dias}d` : ""}
             </div>
           </div>
 
@@ -171,30 +190,66 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
           </div>
 
           <div className="rounded-2xl bg-[#0B0D10]/80 border border-white/10 p-4">
-            <div className="text-xs text-[#9CA3AF]">🌡️ Temperatura media (7 días)</div>
+            <div className="text-xs text-[#9CA3AF]">🌡️ Temperatura y pico diario</div>
             <div className="font-mono text-2xl font-extrabold text-[#F4F1EA] mt-1">
               {fmt1(m.temperaturaC7d.mediaObservada)} °C
             </div>
             <div className="text-xs text-[#9CA3AF] mt-1">
-              Promedio histórico del mes: <strong className="text-[#F4F1EA]">{fmt1(m.temperaturaC7d.climatologiaMes)} °C</strong>
+              Normal mes: <strong className="text-[#F4F1EA]">{fmt1(m.temperaturaC7d.climatologiaMes)} °C</strong>
+              {patron ? ` · Pico 24h: ${fmt1(patron.pico_maximo_mm)} mm (${patron.concentracion_pico_pct}%)` : ""}
             </div>
           </div>
         </div>
       )}
 
-      {/* Dictamen Hidrológico (No repite los 3 números: analiza la serie de 30 días y justifica el expediente) */}
+      {/* Dictamen Hidrológico con Switch Gobierno vs Productor + Badge Firewall Numérico */}
       {alerta && (
         <div className="space-y-4">
-          <div className="rounded-2xl bg-[#0B0D10]/90 border border-white/10 p-4 sm:p-5 space-y-2.5">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-xs font-bold text-[#F59E0B] flex items-center gap-1.5">
-                <ChakanaIcon className="h-3.5 w-3.5 text-[#D95D39]" />
-                <span>Dictamen Hidrológico y Justificación de Expediente (Análisis de Serie Diaria)</span>
-              </span>
-              <span className="text-[11px] text-[#10B981]">
-                {cargando
-                  ? "● Analizando distribución de 30 días con Grok AI…"
-                  : `✓ Validado con Zod (${alerta.origen === "grok" ? "Grok AI" : "Motor Hidrológico"})`}
+          <div className="rounded-2xl bg-[#0B0D10]/90 border border-white/10 p-4 sm:p-5 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-2.5">
+              <div className="inline-flex rounded-xl bg-white/5 p-1 border border-white/10 text-xs">
+                <button
+                  onClick={() => setModoDictamen("parametrico")}
+                  className={`px-3 py-1 rounded-lg font-bold transition cursor-pointer ${
+                    modoDictamen === "parametrico"
+                      ? "bg-[#F59E0B] text-[#0B0D10]"
+                      : "text-[#9CA3AF] hover:text-[#F4F1EA]"
+                  }`}
+                >
+                  🏛️ Dictamen Gobierno / Municipio
+                </button>
+                <button
+                  onClick={() => setModoDictamen("comunidad")}
+                  className={`px-3 py-1 rounded-lg font-bold transition cursor-pointer ${
+                    modoDictamen === "comunidad"
+                      ? "bg-[#D95D39] text-[#F4F1EA]"
+                      : "text-[#9CA3AF] hover:text-[#F4F1EA]"
+                  }`}
+                >
+                  👨‍🌾 Mensaje al Productor
+                </button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                <span className="font-mono px-2.5 py-1 rounded-lg bg-[#10B981]/15 border border-[#10B981]/40 text-[#10B981] font-bold">
+                  ✓ {alerta.validacion.numerosVerificados}/{alerta.validacion.numerosEncontrados} cifras verificadas (Zod)
+                </span>
+                <span className="text-[#9CA3AF]">
+                  {cargando
+                    ? "● Analizando con Grok AI…"
+                    : alerta.origen === "grok"
+                      ? `Grok AI (${alerta.modelo})`
+                      : "Motor Hidrológico"}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5 text-xs font-bold text-[#F59E0B]">
+              <ChakanaIcon className="h-3.5 w-3.5 text-[#D95D39]" />
+              <span>
+                {modoDictamen === "parametrico"
+                  ? "Justificación Técnica de Expediente (Régimen de 30 días, racha seca y concentración)"
+                  : "Traducción directa para productores y familias de la jurisdicción"}
               </span>
             </div>
 

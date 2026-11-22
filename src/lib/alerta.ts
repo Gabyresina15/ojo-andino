@@ -5,7 +5,7 @@ import { estadoHidrico } from "./lecturas";
 export const AlertaSchema = z.object({
   resumen_oral: z.string().min(80).max(1200),
   estado_hidrico: z.enum(["deficit", "normal", "superavit_reciente", "sin_dato"]),
-  nota_parametrica: z.string().max(700),
+  nota_parametrica: z.string().min(15).max(700),
   fuentes: z.string().min(5).max(300),
 });
 export type AlertaLLM = z.infer<typeof AlertaSchema>;
@@ -21,68 +21,107 @@ const JSON_SCHEMA = {
       resumen_oral: {
         type: "string",
         description:
-          "Dictamen hidrológico y logístico de 4 a 5 oraciones para el Gobierno de Jujuy. Analiza la distribución diaria de lluvia (días secos, pico diario, últimos 7 días) y el impacto operativo, sin repetir de memoria los promedios.",
+          "Dictamen de 4 a 5 oraciones adaptado al modo ('comunidad' para productores/pueblo o 'parametrico' para gestión pública/aseguradoras). Analiza distribución diaria (días secos, racha seca máxima, pico diario y concentración) y su impacto real en terreno.",
       },
       estado_hidrico: { type: "string", enum: ["deficit", "normal", "superavit_reciente", "sin_dato"] },
       nota_parametrica: {
         type: "string",
         description:
-          "1 a 2 oraciones con la directiva logística concreta para el Ministerio (Producción, Recursos Hídricos o Vialidad/Obras).",
+          "1 a 2 oraciones con recomendación accionable concreta (manejo de agua/forraje para comunidad, o directiva logística/gatillo paramétrico para Gobierno).",
       },
       fuentes: { type: "string", description: "Fuentes satelitales y fecha del último dato." },
     },
   },
 };
 
-export const SYSTEM_PROMPT = `Sos el Analista Principal de Riesgo Hídrico, Productivo y Vial de Ojo Andino para el Gobierno de la Provincia de Jujuy (Ministerio de Desarrollo Económico y Producción, Recursos Hídricos e Infraestructura) y sus Municipios y Comisiones Municipales.
+export const SYSTEM_PROMPT = `Sos el Analista Principal de Riesgo Hídrico, Agroclimático y Territorial de Ojo Andino en Jujuy (Puna y Quebrada de Humahuaca).
 
-Tu trabajo NO es repetir los 3 números grandes que ya están arriba en las tarjetas. Tu trabajo es cruzar la distribución diaria de los últimos 30 días ("patron_diario") con la temperatura y la vegetación para darle al funcionario una justificación técnica de expediente:
+Tu trabajo NO es repetir de memoria los promedios que ya muestran las tarjetas superiores. Tu trabajo es interpretar el régimen diario de los últimos 30 días ("patron_diario"), la racha seca consecutiva, la temperatura y la vegetación ("ndvi") según el campo "modo":
 
-Reglas estrictas:
-- Respondé SOLO con el JSON del esquema. Nada de markdown.
-- En "resumen_oral" (4 a 5 oraciones en castellano de Argentina):
-  1. Analizá CÓMO se comportó la lluvia dentro de los 30 días usando "patron_diario": cuántos días estuvieron secos (< 1 mm), cuánto llovió en la última semana ("lluvia_ultimos_7d_mm") y cuál fue el pico máximo en un solo día ("pico_maximo_mm" y su fecha).
-  2. Cruzalo con el impacto físico en el terreno:
-     - Si hay déficit (ej. Susques): explicá que la cantidad de días secos seguidos combinada con la temperatura por encima de lo normal acelera la evaporación de aguadas y frena el rebrote del pastizal, justificando técnicamente ante Hacienda priorizar esta jurisdicción con camiones de forraje (alfalfa) y agua.
-     - Si hay superávit en la Puna (ej. Abra Pampa, La Quiaca, Yavi): explicá que la concentración de lluvias en los últimos días recargó la humedad superficial tras la sequía de septiembre/octubre, por lo que no corresponde enviar fardos de emergencia esta semana sino monitorear el rebrote natural y reasignar la logística provincial a zonas secas.
-     - Si hay superávit en la Quebrada (ej. Volcán, Tumbaya, Humahuaca): explicá que los picos diarios intensos sobre pendientes de Quebrada generan escorrentía rápida, por lo que la prioridad municipal no es sequía sino inspección de drenajes urbanos, badenes, obras y caminos rurales.
-     - Si está normal (ej. Tilcara, Maimará, Purmamarca): explicá que la distribución de lluvias acompaña el ciclo normal de inicio de temporada húmeda.
-- NO metas siglas robóticas adentro de "resumen_oral" (no escribas "MOD13Q1" ni "PRECTOTCORR"; esas siglas van solo en "fuentes").
-- No inventes números ni hagas cuentas propias: usá exclusivamente las cifras que vienen en el JSON del usuario.
-- estado_hidrico DEBE coincidir con "estado_hidrico_calculado".`;
+1. ADAPTACIÓN POR "modo":
+   - Si modo === "comunidad": hablá directo, claro y respetuoso a familias productoras, pastores y referentes comunitarios. Explicá qué significa la lluvia y el estado del pastizal para las aguadas, el ganado (llamas, ovejas, cabras) o los cultivos, integrando de forma natural el contexto cultural local ("contexto") sin jerga burocrática ni menciones a ministerios o expedientes.
+   - Si modo === "parametrico": redactá un dictamen técnico de expediente y gatillo paramétrico para el Gobierno de Jujuy (Producción, Recursos Hídricos, Vialidad) y Municipios, justificando asignación de fletes de forraje, alertas viales/drenajes o activación de asistencia.
+
+2. ANÁLISIS HIDROLÓGICO OBLIGATORIO EN "resumen_oral" (4 a 5 oraciones en castellano de Argentina):
+   - Citá el comportamiento interno del mes usando "patron_diario": cuántos días estuvieron secos ("dias_secos"), cuál fue la racha seca consecutiva más larga ("racha_seca_maxima_dias"), cuánto cayó en los últimos 7 días ("lluvia_ultimos_7d_mm") y el pico máximo en 24h ("pico_maximo_mm" el "pico_maximo_dia", que representa "concentracion_pico_pct"% del agua del mes).
+   - Cruzalo con "region" y "estado_hidrico_calculado":
+     * deficit: días secos seguidos + anomalía térmica aceleran evaporación de aguadas y frenan rebrote del pastizal -> urgencia de agua y forraje.
+     * superavit_reciente en puna: recarga superficial tras meses secos -> monitorear rebrote natural y evitar gasto innecesario de fardos de emergencia.
+     * superavit_reciente en quebrada (o concentracion_pico_pct >= 55% en pendiente): lluvia concentrada en pocas horas genera escorrentía rápida -> alerta de drenajes, badenes, caminos rurales y obras.
+     * normal: acompaña el ciclo histórico de inicio de temporada húmeda.
+
+3. REGLAS ANTI-ALUCINACIÓN (ESTRICTO):
+   - Respondé SOLO con el JSON del esquema. Cero markdown.
+   - PROHIBIDO meter siglas técnicas como "MOD13Q1" o "PRECTOTCORR" dentro de "resumen_oral" (van solo en "fuentes").
+   - PROHIBIDO inventar números o calcular porcentajes nuevos: usá exclusivamente las cifras exactas presentes en el JSON del usuario.
+   - "estado_hidrico" DEBE ser idéntico a "estado_hidrico_calculado".`;
 
 export type PatronDiario = {
   dias_totales: number;
   dias_con_lluvia_significativa: number;
   dias_secos: number;
+  racha_seca_maxima_dias: number;
   lluvia_ultimos_7d_mm: number;
   pico_maximo_mm: number;
   pico_maximo_dia: string;
+  concentracion_pico_pct: number;
 };
+
+const r1 = (n: number) => Math.round(n * 10) / 10;
 
 export function calcularPatronDiario(l: LecturaSatelital): PatronDiario | null {
   const serie = l.meteorologia?.serie;
   if (!serie || serie.length === 0) return null;
-  const r1 = (n: number) => Math.round(n * 10) / 10;
-  const diasConLluvia = serie.filter((d) => (d.lluviaMm ?? 0) >= 1).length;
-  const diasSecos = serie.length - diasConLluvia;
+
+  let diasConLluvia = 0;
+  let rachaActual = 0;
+  let rachaMax = 0;
+  let totalMm = 0;
+  let pico = serie[0];
+
+  for (const d of serie) {
+    const mm = d.lluviaMm ?? 0;
+    totalMm += mm;
+    if (mm >= 1) {
+      diasConLluvia++;
+      rachaActual = 0;
+    } else {
+      rachaActual++;
+      if (rachaActual > rachaMax) rachaMax = rachaActual;
+    }
+    if (mm > (pico.lluviaMm ?? 0)) pico = d;
+  }
+
   const ult7 = serie.slice(-7).reduce((acc, d) => acc + (d.lluviaMm ?? 0), 0);
-  const pico = [...serie].sort((a, b) => (b.lluviaMm ?? 0) - (a.lluviaMm ?? 0))[0];
+  const picoMm = pico?.lluviaMm ?? 0;
+  const concPico = totalMm > 0.1 ? Math.round((picoMm / totalMm) * 100) : 0;
   const ddmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
+
   return {
     dias_totales: serie.length,
     dias_con_lluvia_significativa: diasConLluvia,
-    dias_secos: diasSecos,
+    dias_secos: serie.length - diasConLluvia,
+    racha_seca_maxima_dias: rachaMax,
     lluvia_ultimos_7d_mm: r1(ult7),
-    pico_maximo_mm: r1(pico?.lluviaMm ?? 0),
+    pico_maximo_mm: r1(picoMm),
     pico_maximo_dia: pico ? ddmm(pico.fecha) : "s/d",
+    concentracion_pico_pct: concPico,
   };
 }
 
 export function payloadUsuario(c: Comunidad, l: LecturaSatelital, modo: "comunidad" | "parametrico") {
   const m = l.meteorologia;
   const patron = calcularPatronDiario(l);
-  const deltaTemp = m ? Math.round((m.temperaturaC7d.mediaObservada - m.temperaturaC7d.climatologiaMes) * 10) / 10 : null;
+  const deltaTemp = m ? r1(m.temperaturaC7d.mediaObservada - m.temperaturaC7d.climatologiaMes) : null;
+  const anomaliaPct = m?.precipitacionMm30d.porcentaje != null ? r1(m.precipitacionMm30d.porcentaje) : null;
+
+  const ndviUlt = l.ndvi?.ultimoComposite?.ndvi ?? null;
+  const ndviAnt = l.ndvi?.compositeAnterior?.ndvi ?? null;
+  const variacionNdviPct =
+    ndviUlt != null && ndviAnt != null && Math.abs(ndviAnt) > 0.001
+      ? r1(((ndviUlt - ndviAnt) / Math.abs(ndviAnt)) * 100)
+      : null;
+
   return {
     pueblo: c.nombre,
     region: c.region,
@@ -92,9 +131,9 @@ export function payloadUsuario(c: Comunidad, l: LecturaSatelital, modo: "comunid
     lluvia: m
       ? {
           ventana: m.precipitacionMm30d.ventana,
-          observado_mm: Math.round(m.precipitacionMm30d.observado * 10) / 10,
-          climatologia_mm: Math.round(m.precipitacionMm30d.climatologia * 10) / 10,
-          anomalia_pct: m.precipitacionMm30d.porcentaje,
+          observado_mm: r1(m.precipitacionMm30d.observado),
+          climatologia_mm: r1(m.precipitacionMm30d.climatologia),
+          anomalia_pct: anomaliaPct,
           ultimo_dia_con_dato: m.ultimoDiaConDato,
           climatologia_periodo: "2001–2025",
         }
@@ -103,8 +142,8 @@ export function payloadUsuario(c: Comunidad, l: LecturaSatelital, modo: "comunid
     temperatura: m
       ? {
           ventana: m.temperaturaC7d.ventana,
-          media_7d_c: Math.round(m.temperaturaC7d.mediaObservada * 10) / 10,
-          climatologia_mes_c: Math.round(m.temperaturaC7d.climatologiaMes * 10) / 10,
+          media_7d_c: r1(m.temperaturaC7d.mediaObservada),
+          climatologia_mes_c: r1(m.temperaturaC7d.climatologiaMes),
           diferencia_termica_c: deltaTemp,
           mes: m.temperaturaC7d.mesClimatologico,
         }
@@ -114,6 +153,7 @@ export function payloadUsuario(c: Comunidad, l: LecturaSatelital, modo: "comunid
           ultimo: l.ndvi.ultimoComposite,
           anterior: l.ndvi.compositeAnterior,
           mismo_periodo_anio_anterior: l.ndvi.compositeAnioAnterior,
+          variacion_vs_anterior_pct: variacionNdviPct,
         }
       : null,
     contexto: c.ficha.resumen,
@@ -123,14 +163,21 @@ export function payloadUsuario(c: Comunidad, l: LecturaSatelital, modo: "comunid
 function numerosPermitidos(payload: unknown): number[] {
   const out: number[] = [];
   const walk = (v: unknown) => {
-    if (typeof v === "number") out.push(v, Math.abs(v));
-    else if (typeof v === "string") {
-      for (const m of v.matchAll(/\d+(?:[.,]\d+)?/g)) out.push(Number(m[0].replace(",", ".")));
-    } else if (v && typeof v === "object") Object.values(v).forEach(walk);
+    if (typeof v === "number" && Number.isFinite(v)) {
+      const abs = Math.abs(v);
+      out.push(v, abs, Math.round(abs), Math.floor(abs), Math.ceil(abs));
+    } else if (typeof v === "string") {
+      for (const m of v.matchAll(/\d+(?:[.,]\d+)?/g)) {
+        const num = Number(m[0].replace(",", "."));
+        if (Number.isFinite(num)) out.push(num, Math.round(num));
+      }
+    } else if (v && typeof v === "object") {
+      Object.values(v).forEach(walk);
+    }
   };
   walk(payload);
   for (let i = 0; i <= 31; i++) out.push(i);
-  out.push(250, 2001, 2025, 2026, 2003);
+  out.push(100, 250, 2001, 2025, 2026, 2003);
   return out;
 }
 
@@ -139,9 +186,13 @@ export function validarNumeros(texto: string, payload: unknown) {
   const encontrados = [...texto.matchAll(/\d+(?:[.,]\d+)?/g)].map((m) => m[0]);
   const noVerificados = encontrados.filter((s) => {
     const n = Number(s.replace(",", "."));
-    return !permitidos.some((a) => Math.abs(a - n) <= Math.max(0.051, Math.abs(a) * 0.006));
+    return !permitidos.some((a) => Math.abs(a - n) <= Math.max(0.11, Math.abs(a) * 0.015));
   });
-  return { numerosEncontrados: encontrados.length, numerosVerificados: encontrados.length - noVerificados.length, noVerificados };
+  return {
+    numerosEncontrados: encontrados.length,
+    numerosVerificados: encontrados.length - noVerificados.length,
+    noVerificados,
+  };
 }
 
 const fmt1 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -161,77 +212,109 @@ export function recomendacionGobierno(c: Comunidad, l: LecturaSatelital): string
   return `Condición hídrica dentro del promedio histórico. Mantener monitoreo municipal habitual sin operativo de emergencia.`;
 }
 
-export function alertaDeterminista(c: Comunidad, l: LecturaSatelital, _modo: "comunidad" | "parametrico"): AlertaLLM {
+export function recomendacionComunidad(c: Comunidad, l: LecturaSatelital): string {
+  const est = estadoHidrico(l);
+  if (est === "deficit") {
+    return `Cuidar las aguadas y vegas disponibles en ${c.nombre}, racionar reservas de pasto y coordinar con la comisión municipal el pedido de forraje y agua.`;
+  }
+  if (est === "superavit_reciente" && c.region === "puna") {
+    return `Aprovechar la humedad reciente en los campos de ${c.nombre} para cuidar el rebrote natural del pastizal antes de sobrecargar las vegas.`;
+  }
+  if (est === "superavit_reciente" && c.region === "quebrada") {
+    return `Precaución en ${c.nombre} por crecidas repentinas en quebradas, badenes y acequias tras lluvias fuertes en pocas horas.`;
+  }
+  return `Las lluvias y pasturas en ${c.nombre} siguen el ritmo esperado para esta época del año; mantener el manejo habitual de aguadas y rodeos.`;
+}
+
+export function alertaDeterminista(c: Comunidad, l: LecturaSatelital, modo: "comunidad" | "parametrico"): AlertaLLM {
   const m = l.meteorologia;
   const est = estadoHidrico(l);
   const patron = calcularPatronDiario(l);
   const partes: string[] = [];
+  const esComunidad = modo === "comunidad";
 
   if (m && patron) {
     const deltaTemp = fmt1(Math.abs(m.temperaturaC7d.mediaObservada - m.temperaturaC7d.climatologiaMes));
+    const ndviAct = l.ndvi ? fmt3(l.ndvi.ultimoComposite.ndvi) : null;
+    const ndviPrev = l.ndvi?.compositeAnterior ? fmt3(l.ndvi.compositeAnterior.ndvi) : null;
+
     if (est === "deficit") {
       partes.push(
-        `Análisis de régimen diario para ${c.nombre}: de los últimos ${patron.dias_totales} días evaluados, ${patron.dias_secos} días no tuvieron lluvias útiles (solo ${patron.dias_con_lluvia_significativa} días superaron 1 mm, con un máximo diario de apenas ${fmt1(patron.pico_maximo_mm)} mm el ${patron.pico_maximo_dia}).`,
+        esComunidad
+          ? `Reporte para ${c.nombre}: en los últimos ${patron.dias_totales} días hubo ${patron.dias_secos} días sin lluvia útil, con una racha seca de ${patron.racha_seca_maxima_dias} días seguidos y apenas ${fmt1(patron.lluvia_ultimos_7d_mm)} mm en la última semana.`
+          : `Análisis de régimen diario para ${c.nombre}: de ${patron.dias_totales} días evaluados, ${patron.dias_secos} fueron secos (racha máxima de ${patron.racha_seca_maxima_dias} días seguidos sin lluvia >= 1 mm; máximo diario de ${fmt1(patron.pico_maximo_mm)} mm el ${patron.pico_maximo_dia}).`,
       );
       partes.push(
-        `En la última semana cayeron solo ${fmt1(patron.lluvia_ultimos_7d_mm)} mm y la temperatura estuvo ${deltaTemp} °C por encima del promedio del mes, lo que acelera la evaporación en aguadas y mantiene estancado el pastizal natural (${l.ndvi ? fmt3(l.ndvi.ultimoComposite.ndvi) : "bajo"}).`,
+        `Con ${fmt1(patron.lluvia_ultimos_7d_mm)} mm en 7 días y temperatura ${deltaTemp} °C sobre lo normal, aumenta la evaporación de aguadas y el pastizal sigue bajo${ndviAct ? ` (índice verde ${ndviAct})` : ""}.`,
       );
-      partes.push(
-        `Justificación de expediente: los datos respaldan asignar prioridad alta a la Comisión Municipal de ${c.nombre} para el despacho de fardos de alfalfa y agua.`,
-      );
+      if (!esComunidad) {
+        partes.push(
+          `Gatillo operativo: se justifica priorizar a ${c.nombre} en el despacho de alfalfa y agua de emergencia.`,
+        );
+      }
     } else if (est === "superavit_reciente" && c.region === "puna") {
       partes.push(
-        `Análisis de régimen diario para ${c.nombre}: tras los meses secos de septiembre y octubre, se registraron ${patron.dias_con_lluvia_significativa} jornadas con lluvias activas (${fmt1(patron.lluvia_ultimos_7d_mm)} mm acumulados en los últimos 7 días y un pico de ${fmt1(patron.pico_maximo_mm)} mm el ${patron.pico_maximo_dia}).`,
+        `En ${c.nombre} se registraron ${patron.dias_con_lluvia_significativa} días con lluvia activa, acumulando ${fmt1(patron.lluvia_ultimos_7d_mm)} mm en los últimos 7 días con un pico de ${fmt1(patron.pico_maximo_mm)} mm el ${patron.pico_maximo_dia}.`,
       );
       partes.push(
-        `Esta recarga de humedad superficial mejora la perspectiva de rebrote respecto al corte previo de octubre (${l.ndvi?.compositeAnterior ? fmt3(l.ndvi.compositeAnterior.ndvi) : "0,115"} a ${l.ndvi ? fmt3(l.ndvi.ultimoComposite.ndvi) : "0,138"}).`,
+        ndviAct && ndviPrev
+          ? `Esta recarga de humedad mejora la condición del campo respecto al corte previo (${ndviPrev} a ${ndviAct}).`
+          : `Esta recarga de humedad superficial favorece el rebrote natural del pastizal en la Puna.`,
       );
-      partes.push(
-        `Justificación de expediente: no se recomienda despachar forraje de emergencia a ${c.nombre} esta semana, pudiendo reasignar esos camiones a jurisdicciones con déficit activo como Susques.`,
-      );
+      if (!esComunidad) {
+        partes.push(
+          `Gatillo operativo: no requiere fardos de emergencia esta semana; conviene reasignar fletes hacia zonas con déficit activo.`,
+        );
+      }
     } else if (est === "superavit_reciente" && c.region === "quebrada") {
       partes.push(
-        `Análisis de régimen diario para ${c.nombre}: las precipitaciones superaron el promedio histórico concentrándose en ${patron.dias_con_lluvia_significativa} días de lluvia activa, con un evento máximo de ${fmt1(patron.pico_maximo_mm)} mm en 24 horas el ${patron.pico_maximo_dia} y ${fmt1(patron.lluvia_ultimos_7d_mm)} mm en la última semana.`,
+        `En ${c.nombre} las lluvias superaron el promedio en ${patron.dias_con_lluvia_significativa} jornadas activas, con un pico de ${fmt1(patron.pico_maximo_mm)} mm el ${patron.pico_maximo_dia} (${patron.concentracion_pico_pct} % del total en un solo día) y ${fmt1(patron.lluvia_ultimos_7d_mm)} mm en la última semana.`,
       );
       partes.push(
-        `En topografía de Quebrada, esta concentración de agua en pocos días incrementa la escorrentía superficial sobre laderas, badenes y trazas viales.`,
+        `En terreno de Quebrada, esa concentración en pocas horas genera escorrentía rápida sobre laderas, badenes y caminos.`,
       );
-      partes.push(
-        `Justificación de expediente: la jurisdicción no presenta riesgo de sequía; corresponde priorizar limpieza preventiva de desagües pluviales, defensas y control de caminos municipales.`,
-      );
+      if (!esComunidad) {
+        partes.push(
+          `Gatillo operativo: sin sequía activa; priorizar limpieza preventiva de drenajes pluviales y control vial.`,
+        );
+      }
     } else {
       partes.push(
-        `Análisis de régimen diario para ${c.nombre}: la lluvia se distribuyó en ${patron.dias_con_lluvia_significativa} días con precipitación significativa (pico máximo de ${fmt1(patron.pico_maximo_mm)} mm el ${patron.pico_maximo_dia} y ${fmt1(patron.lluvia_ultimos_7d_mm)} mm en la última semana).`,
+        `En ${c.nombre} la lluvia se repartió en ${patron.dias_con_lluvia_significativa} días activos (pico de ${fmt1(patron.pico_maximo_mm)} mm el ${patron.pico_maximo_dia} y ${fmt1(patron.lluvia_ultimos_7d_mm)} mm en los últimos 7 días).`,
       );
       partes.push(
-        `El balance hídrico coincide con el comportamiento normal de los últimos 25 años para el inicio de la temporada húmeda.`,
-      );
-      partes.push(
-        `Justificación de expediente: mantener seguimiento técnico ordinario sin activar partidas de emergencia.`,
+        `El balance hídrico acompaña el promedio histórico de los últimos 25 años para el inicio de la temporada húmeda.`,
       );
     }
   } else {
     partes.push(`Sin serie diaria suficiente para ${c.nombre}.`);
   }
 
-  const accion = recomendacionGobierno(c, l);
+  const accion = esComunidad ? recomendacionComunidad(c, l) : recomendacionGobierno(c, l);
   const p = m?.precipitacionMm30d;
+  const desvioRedondeado = p?.porcentaje != null ? r1(p.porcentaje) : 0;
+
   return {
     resumen_oral: partes.join(" "),
     estado_hidrico: est,
     nota_parametrica: p
-      ? `${accion} (Ventana: ${p.ventana}, desvío ${p.porcentaje! >= 0 ? "+" : ""}${fmt1(p.porcentaje ?? 0)} % vs serie 2001–2025).`
+      ? `${accion} (Ventana: ${p.ventana}, desvío ${desvioRedondeado >= 0 ? "+" : ""}${fmt1(desvioRedondeado)} % vs serie 2001–2025).`
       : accion,
     fuentes: `NASA POWER (corte ${m?.ultimoDiaConDato ?? "s/d"}, demora oficial 2–3 días) y MODIS MOD13Q1 (compuesto 16 días al ${l.ndvi?.ultimoComposite.fecha ?? "s/d"}).`,
   };
 }
+
+// Caché en memoria + deduplicación de requests en vuelo para sobrevivir cortes de Starlink en el tren
+const alertaCache = new Map<string, { exp: number; data: AlertaRespuesta }>();
+const inflightRequests = new Map<string, Promise<AlertaRespuesta>>();
+const CACHE_TTL_MS = 10 * 60 * 1000;
 
 async function llamarGrok(payload: unknown, conSchema: boolean): Promise<{ data: unknown; modelo: string }> {
   const key = process.env.XAI_API_KEY;
   if (!key) throw new Error("Falta XAI_API_KEY");
   const modelo = process.env.XAI_MODEL || "grok-4.20-0309-non-reasoning";
   const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), 25000);
+  const t = setTimeout(() => ctrl.abort(), 9500);
   try {
     const r = await fetch("https://api.x.ai/v1/chat/completions", {
       method: "POST",
@@ -239,7 +322,7 @@ async function llamarGrok(payload: unknown, conSchema: boolean): Promise<{ data:
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model: modelo,
-        temperature: 0.2,
+        temperature: 0.1,
         stream: false,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
@@ -258,7 +341,11 @@ async function llamarGrok(payload: unknown, conSchema: boolean): Promise<{ data:
   }
 }
 
-export async function generarAlerta(c: Comunidad, l: LecturaSatelital, modo: "comunidad" | "parametrico"): Promise<AlertaRespuesta> {
+async function ejecutarGeneracion(
+  c: Comunidad,
+  l: LecturaSatelital,
+  modo: "comunidad" | "parametrico",
+): Promise<AlertaRespuesta> {
   const payload = payloadUsuario(c, l, modo);
   const estadoReal = estadoHidrico(l);
   let motivo: string | null = null;
@@ -291,8 +378,17 @@ export async function generarAlerta(c: Comunidad, l: LecturaSatelital, modo: "co
         generadoEn: new Date().toISOString(),
       };
     } catch (e) {
-      motivo = (e as Error).message;
-      if (motivo.includes("Falta XAI_API_KEY") || (e as Error).name === "AbortError") break;
+      const err = e as Error;
+      motivo = err.name === "AbortError" ? "Timeout xAI (>9.5s) — fallback determinista activo" : err.message;
+      if (
+        motivo.includes("Falta XAI_API_KEY") ||
+        err.name === "AbortError" ||
+        motivo.includes("fetch failed") ||
+        motivo.includes("HTTP 401") ||
+        motivo.includes("HTTP 429")
+      ) {
+        break;
+      }
     }
   }
 
@@ -307,4 +403,36 @@ export async function generarAlerta(c: Comunidad, l: LecturaSatelital, modo: "co
     validacion: { ...v, estadoCorregido: false, motivoFallback: motivo },
     generadoEn: new Date().toISOString(),
   };
+}
+
+export async function generarAlerta(
+  c: Comunidad,
+  l: LecturaSatelital,
+  modo: "comunidad" | "parametrico",
+): Promise<AlertaRespuesta> {
+  const corte = l.meteorologia?.ultimoDiaConDato ?? "sin-corte";
+  const cacheKey = `${c.id}:${modo}:${corte}`;
+
+  const hit = alertaCache.get(cacheKey);
+  if (hit && hit.exp > Date.now()) {
+    return hit.data;
+  }
+
+  const pending = inflightRequests.get(cacheKey);
+  if (pending) {
+    return pending;
+  }
+
+  const promise = ejecutarGeneracion(c, l, modo)
+    .then((res) => {
+      const ttl = res.origen === "grok" ? CACHE_TTL_MS : 30_000;
+      alertaCache.set(cacheKey, { exp: Date.now() + ttl, data: res });
+      return res;
+    })
+    .finally(() => {
+      inflightRequests.delete(cacheKey);
+    });
+
+  inflightRequests.set(cacheKey, promise);
+  return promise;
 }

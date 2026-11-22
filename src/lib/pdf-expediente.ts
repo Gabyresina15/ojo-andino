@@ -133,13 +133,13 @@ export function descargarPdfExpediente(
       sub: m ? `Normal 2001-25: ${fmt1(m.precipitacionMm30d.climatologia)} mm` : "",
     },
     {
-      label: "DESVÍO CLIMATOLÓGICO",
+      label: "DESVÍO Y RACHA SECA",
       val: m ? `${(m.precipitacionMm30d.porcentaje ?? 0) >= 0 ? "+" : ""}${fmt1(m.precipitacionMm30d.porcentaje ?? 0)} %` : "s/d",
-      sub: patron ? `${patron.dias_secos} de ${patron.dias_totales} días secos (<1mm)` : "",
+      sub: patron ? `Racha seca máx: ${patron.racha_seca_maxima_dias}d (${patron.dias_secos}/${patron.dias_totales}d secos)` : "",
     },
     {
-      label: "PICO DIARIO / ÚLT. 7 DÍAS",
-      val: patron ? `${fmt1(patron.pico_maximo_mm)} mm` : "s/d",
+      label: "PICO DIARIO / CONCENTRACIÓN",
+      val: patron ? `${fmt1(patron.pico_maximo_mm)} mm (${patron.concentracion_pico_pct}%)` : "s/d",
       sub: patron ? `Día ${patron.pico_maximo_dia} | Últ. 7d: ${fmt1(patron.lluvia_ultimos_7d_mm)} mm` : "",
     },
     {
