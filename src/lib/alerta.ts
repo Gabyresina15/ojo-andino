@@ -47,7 +47,7 @@ riesgo_operativo_foco orienta el riesgo territorial; escorrentia_concentrada ind
 recomendacion_base es la acción determinista según modo. Anclá nota_parametrica en ella: podés reformularla, nunca contradecirla.
 
 Salida por modo:
-parametrico: redactá un Dictamen de Decisión Logística y Gatillo Paramétrico. resumen_oral lleva las etiquetas en prosa "Diagnóstico: ... Riesgo operativo: ... Recomendación: ...". Diagnóstico interpreta estado, racha y concentración disponibles; Riesgo operativo distingue posibilidad de daño observado; Recomendación define una decisión logística/presupuestaria verificable. nota_parametrica explica el estado del gatillo y la acción de recomendacion_base, con verificación de campo o registro del operativo, sin montos.
+parametrico: redactá un Dictamen de Decisión Logística y Gatillo Paramétrico. resumen_oral lleva las etiquetas en prosa "Diagnóstico: ... Riesgo operativo: ... Recomendación: ... Gatillo: ...". Diagnóstico interpreta estado, racha y concentración disponibles; Riesgo operativo distingue posibilidad de daño observado; Recomendación define una decisión logística/presupuestaria verificable. Después de Recomendación, explicitá en resumen_oral el estado del gatillo y el desvío frente al umbral disponible: ese texto se entrega por voz y WhatsApp sin la nota. nota_parametrica explica el gatillo y cómo verificar en campo o registro la decisión anclada en recomendacion_base, sin montos ni frases idénticas a resumen_oral.
 comunidad: resumen_oral son frases claras, directas y respetuosas para familias que cuidan hacienda, pastoreo, vegas y aguadas. Explicá qué significa el patrón de lluvia y qué podés revisar; nota_parametrica da una acción práctica de recomendacion_base, sin lenguaje de expediente.
 
 Tabla de decisión estado × región:
@@ -313,6 +313,11 @@ export function alertaDeterminista(c: Comunidad, l: LecturaSatelital, modo: "com
   const verificacion = c.region === "puna"
     ? "Verificar en campo aguadas y reservas de forraje y dejar registro."
     : "Verificar drenajes y transitabilidad de badenes y dejar registro.";
+  const gatilloOral = est === "sin_dato"
+    ? "Gatillo: no se puede evaluar sin dato de lluvia."
+    : est === "normal"
+      ? `Gatillo: sin activación, con desvío ${desvio} dentro de ±25 %.`
+      : `Gatillo: de ${est === "deficit" ? "déficit" : "exceso hídrico"} activado (desvío ${desvio} frente a ${est === "deficit" ? "-25" : "+25"} %).`;
   const nota = esComunidad
     ? accion
     : `${gatillo} ${verificacion}`;
@@ -320,7 +325,7 @@ export function alertaDeterminista(c: Comunidad, l: LecturaSatelital, modo: "com
   return {
     resumen_oral: esComunidad
       ? `${partes.join(" ")} ${riesgo}`
-      : `Diagnóstico: ${partes.join(" ")} Riesgo operativo: ${riesgo} Recomendación: ${accion}`,
+      : `Diagnóstico: ${partes.join(" ")} Riesgo operativo: ${riesgo} Recomendación: ${accion} ${gatilloOral}`,
     estado_hidrico: est,
     nota_parametrica: p && est !== "sin_dato"
       ? esComunidad

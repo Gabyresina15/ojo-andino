@@ -27,6 +27,7 @@ function verificar(c: (typeof COMUNIDADES)[number], l: LecturaSatelital) {
       assert.doesNotMatch(alerta.resumen_oral, /índice de verdor/);
     }
     if (modo === "parametrico") {
+      assert.match(alerta.resumen_oral, /Gatillo:/);
       assert.match(alerta.nota_parametrica, /Gatillo/);
       assert.ok(!alerta.nota_parametrica.includes(payload.recomendacion_base));
       assert.doesNotMatch(alerta.resumen_oral, /Registrar inspección y necesidades/);
