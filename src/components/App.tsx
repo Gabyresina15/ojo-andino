@@ -12,11 +12,16 @@ import PanelAlerta from "./PanelAlerta";
 import FichaCultural from "./FichaCultural";
 import Contador from "./Contador";
 import QrModal from "./QrModal";
+import { ChakanaIcon, GuardaAndinaDivider } from "./AndeanMotifs";
 import { registrarEvento } from "@/lib/traccion-cliente";
 
 const Mapa = dynamic(() => import("./Mapa"), {
   ssr: false,
-  loading: () => <div className="h-full grid place-items-center text-slate-400 text-sm">Cargando mapa satelital…</div>,
+  loading: () => (
+    <div className="h-full grid place-items-center text-[#9CA3AF] font-mono text-xs animate-pulse">
+      INICIALIZANDO CARTOGRAFÍA SATELITAL…
+    </div>
+  ),
 });
 
 const LS_KEY = (id: string) => `oa:lectura:${id}`;
@@ -45,6 +50,14 @@ function leerLocal(id: string): LecturaSatelital | null {
     return null;
   }
 }
+
+const ESTACIONES_CORREDOR = [
+  { id: "volcan", label: "Volcán" },
+  { id: "tumbaya", label: "Tumbaya" },
+  { id: "purmamarca", label: "Purmamarca" },
+  { id: "maimara", label: "Posta de Hornillos · Maimará" },
+  { id: "tilcara", label: "Tilcara" },
+];
 
 export default function App() {
   const parametroC = useSyncExternalStore(sinSuscripcion, leerParametroC, () => null);
@@ -112,192 +125,231 @@ export default function App() {
   const pueblosQuebrada = COMUNIDADES.filter((c) => c.region === "quebrada");
 
   return (
-    <div className="min-h-screen bg-[#05070d] text-slate-100">
-      {/* Barra superior pegajosa */}
-      <header className="relative z-[1000] border-b border-white/10 bg-black/70 backdrop-blur-md sm:sticky sm:top-0">
+    <div className="min-h-screen amc-grid-bg text-[#F4F1EA]">
+      {/* TOP BAR · ANDEAN MISSION CONTROL */}
+      <header className="relative z-[1000] border-b border-white/10 bg-[#0B0D10]/90 backdrop-blur-md sm:sticky sm:top-0">
         <div className="mx-auto max-w-7xl px-4 py-3 flex flex-wrap items-center gap-3 justify-between">
-          <div className="flex items-center gap-2.5">
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 text-black font-black text-lg shadow">
-              🛰️
-            </span>
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#D95D39] to-[#F59E0B] text-[#0B0D10] flex items-center justify-center shadow-lg">
+              <ChakanaIcon className="h-6 w-6" />
+            </div>
             <div>
-              <h1 className="text-base sm:text-lg font-extrabold tracking-tight">
-                <span className="text-amber-400">Ojo Andino</span>{" "}
-                <span className="text-slate-300 font-medium">· Inteligencia Satelital para Jujuy</span>
-              </h1>
-              <p className="text-[11px] text-slate-400 hidden sm:block">
-                Órbitas SAOCOM en vivo + agua, clima y verdor satelital traducidos a voz y WhatsApp
+              <div className="flex items-center gap-2">
+                <h1 className="font-display text-base sm:text-lg font-extrabold tracking-tight text-[#F4F1EA]">
+                  OJO ANDINO
+                </h1>
+                <span className="hidden md:inline-block font-mono text-[10px] uppercase tracking-widest px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[#9CA3AF]">
+                  ANDEAN MISSION CONTROL · JUJUY
+                </span>
+              </div>
+              <p className="text-[11px] text-[#9CA3AF] hidden sm:block">
+                Telemetría SAOCOM 1A/1B + NASA POWER + MODIS traducida a voz y WhatsApp
               </p>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 text-xs">
+            <Contador />
             <button
               onClick={() => setQrAbierto(true)}
-              className="rounded-full bg-amber-400 hover:bg-amber-300 px-3 py-1.5 font-bold text-black transition shadow"
+              className="min-h-[40px] rounded-xl bg-[#D95D39] hover:bg-[#D95D39]/90 active:scale-[0.99] px-3.5 py-2 font-bold text-[#F4F1EA] transition-all duration-200 shadow cursor-pointer"
             >
-              📱 Compartir QR en el Tren
+              📱 QR TREN
             </button>
-            <Contador />
             <span
-              className={`rounded-full px-2.5 py-1 border font-medium ${
-                online ? "border-emerald-500/40 text-emerald-300 bg-emerald-950/30" : "border-amber-500/50 text-amber-300"
+              className={`font-mono text-[11px] rounded-xl px-3 py-2 border font-bold ${
+                online
+                  ? "border-[#10B981]/40 text-[#10B981] bg-[#10B981]/10"
+                  : "border-[#F59E0B]/50 text-[#F59E0B] bg-[#F59E0B]/10"
               }`}
             >
-              {online ? "● Satélites en línea" : "● Modo Offline Activo"}
+              {online ? "● STARLINK LIVE · CACHE READY" : "● OFFLINE CACHE READY"}
             </span>
+          </div>
+        </div>
+
+        {/* Cinta del corredor del Tren Solar: Volcán -> Tumbaya -> Purmamarca -> Posta de Hornillos -> Maimará -> Tilcara */}
+        <div className="border-t border-white/5 bg-[#13171E]/90 px-4 py-1.5 overflow-x-auto">
+          <div className="mx-auto max-w-7xl flex items-center justify-between gap-3 text-[11px] font-mono whitespace-nowrap">
+            <span className="text-[#F59E0B] font-bold">🚆 CORREDOR TREN SOLAR (2.078–2.465 MSNM):</span>
+            <div className="flex items-center gap-1.5">
+              {ESTACIONES_CORREDOR.map((e, i) => (
+                <span key={e.id} className="inline-flex items-center gap-1.5">
+                  <button
+                    onClick={() => setSeleccion(e.id)}
+                    className={`px-2 py-0.5 rounded transition cursor-pointer ${
+                      seleccion === e.id
+                        ? "bg-[#F59E0B] text-[#0B0D10] font-bold"
+                        : "text-[#F4F1EA]/80 hover:text-[#F59E0B]"
+                    }`}
+                  >
+                    {e.label}
+                  </button>
+                  {i < ESTACIONES_CORREDOR.length - 1 && <span className="text-[#D95D39]">──</span>}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
       </header>
 
       {qrAbierto && <QrModal seleccion={seleccion} nombre={comunidad.nombre} onClose={() => setQrAbierto(false)} />}
 
-      {/* HERO VISUAL DE PRODUCTO — Pensado para que el jurado entienda el valor en 3 segundos */}
-      <section className="border-b border-white/10 bg-gradient-to-b from-amber-500/10 via-sky-500/5 to-transparent">
+      {/* HERO EDITORIAL & TARJETAS DE CONTRASTE EN 1 TOQUE */}
+      <section className="border-b border-white/10">
         <div className="mx-auto max-w-7xl px-4 py-5 sm:py-6 space-y-4">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div className="space-y-1.5 max-w-2xl">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-400/15 border border-amber-400/40 px-3 py-1 text-xs font-bold text-amber-300">
-                🚆 Cursor Hackathon Jujuy · A bordo del Tren Solar de la Quebrada
+              <span className="inline-flex items-center gap-2 rounded-lg bg-[#D95D39]/15 border border-[#D95D39]/40 px-3 py-1 text-xs font-mono font-bold text-[#D95D39]">
+                CURSOR HACKATHON JUJUY · 22/11/2026 · TELEMETRÍA + CULTURA
               </span>
-              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
+              <h2 className="font-display text-2xl sm:text-3xl font-extrabold tracking-tight text-[#F4F1EA]">
                 El satélite que le habla a la Puna y a la Quebrada.
               </h2>
-              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                En septiembre la Provincia asistió con camiones de alfalfa a la Puna por sequía. Hoy cruzamos{" "}
-                <strong className="text-white">NASA POWER</strong>, <strong className="text-white">MODIS</strong> y la órbita de{" "}
-                <strong className="text-white">SAOCOM 1A/1B</strong> para saber en segundos dónde falta agua hoy y enviar la alerta
-                en <strong className="text-emerald-300">voz y por WhatsApp</strong>.
+              <p className="text-xs sm:text-sm text-[#9CA3AF] leading-relaxed">
+                En septiembre la Provincia asistió con camiones de alfalfa a la Puna por sequía. Ojo Andino cruza{" "}
+                <strong className="text-[#F4F1EA]">NASA POWER</strong>, <strong className="text-[#F4F1EA]">MODIS</strong> y la
+                órbita de <strong className="text-[#F4F1EA]">SAOCOM 1A/1B</strong> para detectar dónde falta agua hoy y enviar la
+                alerta en <strong className="text-[#10B981]">voz y por WhatsApp</strong>.
               </p>
             </div>
 
-            {/* Selector claro de modelo de negocio: Gratis para Comunidad vs Pago B2B */}
-            <div className="rounded-2xl border border-white/15 bg-slate-900/90 p-2 flex flex-col gap-1.5 shrink-0">
-              <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold px-2">
-                Elegí el perfil de usuario:
+            {/* Selector de modo: Comunidad (Gratis) vs Cooperativa / Seguro Paramétrico (B2B) */}
+            <div className="amc-surface rounded-2xl p-2 flex flex-col gap-1.5 shrink-0">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-[#9CA3AF] font-bold px-2">
+                MODO DE OPERACIÓN / MODELO DE NEGOCIO:
               </span>
               <div className="grid grid-cols-2 gap-1.5 text-xs">
                 <button
                   onClick={() => setModo("comunidad")}
-                  className={`px-3.5 py-2.5 rounded-xl text-left transition ${
+                  className={`min-h-[48px] px-3.5 py-2 rounded-xl text-left transition-all duration-200 cursor-pointer ${
                     modo === "comunidad"
-                      ? "bg-emerald-500 text-black font-bold shadow"
-                      : "text-slate-300 hover:bg-white/5"
+                      ? "bg-[#D95D39] text-[#F4F1EA] font-bold shadow-lg"
+                      : "text-[#9CA3AF] hover:bg-white/5"
                   }`}
                 >
                   <div className="font-bold">👨‍🌾 Comunidad / Pastor</div>
-                  <div className={`text-[10px] ${modo === "comunidad" ? "text-black/80" : "text-slate-400"}`}>
-                    100% Gratis · Voz + WhatsApp
+                  <div className={`text-[10px] font-mono ${modo === "comunidad" ? "text-[#F4F1EA]/90" : "text-[#9CA3AF]"}`}>
+                    FREEMIUM $0 · VOZ + WA.ME
                   </div>
                 </button>
                 <button
                   onClick={() => setModo("parametrico")}
-                  className={`px-3.5 py-2.5 rounded-xl text-left transition ${
+                  className={`min-h-[48px] px-3.5 py-2 rounded-xl text-left transition-all duration-200 cursor-pointer ${
                     modo === "parametrico"
-                      ? "bg-sky-400 text-black font-bold shadow"
-                      : "text-slate-300 hover:bg-white/5"
+                      ? "bg-[#F59E0B] text-[#0B0D10] font-bold shadow-lg"
+                      : "text-[#9CA3AF] hover:bg-white/5"
                   }`}
                 >
                   <div className="font-bold">🏢 Cooperativa / Seguro B2B</div>
-                  <div className={`text-[10px] ${modo === "parametrico" ? "text-black/80" : "text-slate-400"}`}>
-                    Ranking + Índice Paramétrico CSV
+                  <div className={`text-[10px] font-mono ${modo === "parametrico" ? "text-[#0B0D10]/85" : "text-[#9CA3AF]"}`}>
+                    MATRIZ 10 NODOS + CSV
                   </div>
                 </button>
               </div>
             </div>
           </div>
 
-          {/* 3 Accesos Rápidos de Impacto (El contraste real que encontró el satélite hoy) */}
-          <div className="grid gap-2.5 sm:grid-cols-3 pt-1">
+          {/* 3 Tarjetas de Telemetría Rápida (Jerarquía: Dato duro en mono arriba -> Etiqueta -> Acción) */}
+          <div className="grid gap-3 sm:grid-cols-3">
             <button
               onClick={() => setSeleccion("susques")}
-              className={`rounded-2xl p-3.5 text-left border transition flex items-center justify-between gap-3 ${
+              className={`min-h-[88px] rounded-2xl p-4 text-left border transition-all duration-200 cursor-pointer flex items-center justify-between gap-3 ${
                 seleccion === "susques"
-                  ? "bg-rose-950/60 border-rose-400 ring-2 ring-rose-400/40"
-                  : "bg-slate-900/70 border-white/10 hover:border-rose-400/50"
+                  ? "bg-[#D95D39]/20 border-[#D95D39] ring-1 ring-[#D95D39]/50"
+                  : "amc-surface hover:border-[#D95D39]/50"
               }`}
             >
               <div>
-                <span className="text-[10px] font-bold uppercase text-rose-300">⚠️ Caso real hoy · Déficit Crítico</span>
-                <div className="text-base font-extrabold text-white">Susques (Puna)</div>
-                <div className="text-xs text-slate-300">Solo 8,7 mm vs 41,1 mm normales</div>
+                <div className="font-mono text-2xl font-extrabold text-[#D95D39]">-78,9%</div>
+                <div className="font-display text-sm font-bold text-[#F4F1EA]">Susques · Puna Occidental</div>
+                <div className="text-[11px] font-mono text-[#9CA3AF]">8,7 mm vs 41,1 mm · PRIORIDAD FORRAJE</div>
               </div>
-              <span className="text-lg font-black text-rose-300 font-mono">-78,9%</span>
+              <span className="font-mono text-[10px] px-2 py-1 rounded bg-[#D95D39]/25 text-[#F4F1EA] border border-[#D95D39]/40">
+                DÉFICIT
+              </span>
             </button>
 
             <button
               onClick={() => setSeleccion("abra-pampa")}
-              className={`rounded-2xl p-3.5 text-left border transition flex items-center justify-between gap-3 ${
+              className={`min-h-[88px] rounded-2xl p-4 text-left border transition-all duration-200 cursor-pointer flex items-center justify-between gap-3 ${
                 seleccion === "abra-pampa"
-                  ? "bg-sky-950/60 border-sky-400 ring-2 ring-sky-400/40"
-                  : "bg-slate-900/70 border-white/10 hover:border-sky-400/50"
+                  ? "bg-[#2DD4BF]/15 border-[#2DD4BF] ring-1 ring-[#2DD4BF]/40"
+                  : "amc-surface hover:border-[#2DD4BF]/50"
               }`}
             >
               <div>
-                <span className="text-[10px] font-bold uppercase text-sky-300">🌧️ Caso real hoy · Recuperación Nov</span>
-                <div className="text-base font-extrabold text-white">Abra Pampa (Puna)</div>
-                <div className="text-xs text-slate-300">82,1 mm vs 42,6 mm normales</div>
+                <div className="font-mono text-2xl font-extrabold text-[#2DD4BF]">+92,7%</div>
+                <div className="font-display text-sm font-bold text-[#F4F1EA]">Abra Pampa · Puna Central</div>
+                <div className="text-[11px] font-mono text-[#9CA3AF]">82,1 mm vs 42,6 mm · REBROTE EN NOV</div>
               </div>
-              <span className="text-lg font-black text-sky-300 font-mono">+92,7%</span>
+              <span className="font-mono text-[10px] px-2 py-1 rounded bg-[#2DD4BF]/20 text-[#2DD4BF] border border-[#2DD4BF]/40">
+                SUPERÁVIT
+              </span>
             </button>
 
             <button
               onClick={() => setSeleccion("purmamarca")}
-              className={`rounded-2xl p-3.5 text-left border transition flex items-center justify-between gap-3 ${
+              className={`min-h-[88px] rounded-2xl p-4 text-left border transition-all duration-200 cursor-pointer flex items-center justify-between gap-3 ${
                 seleccion === "purmamarca"
-                  ? "bg-amber-950/60 border-amber-400 ring-2 ring-amber-400/40"
-                  : "bg-slate-900/70 border-white/10 hover:border-amber-400/50"
+                  ? "bg-[#F59E0B]/15 border-[#F59E0B] ring-1 ring-[#F59E0B]/40"
+                  : "amc-surface hover:border-[#F59E0B]/50"
               }`}
             >
               <div>
-                <span className="text-[10px] font-bold uppercase text-amber-300">🚆 Parada Tren Solar · Equilibrio</span>
-                <div className="text-base font-extrabold text-white">Purmamarca (Quebrada)</div>
-                <div className="text-xs text-slate-300">52,1 mm vs 51,4 mm normales</div>
+                <div className="font-mono text-2xl font-extrabold text-[#10B981]">+1,3%</div>
+                <div className="font-display text-sm font-bold text-[#F4F1EA]">Purmamarca · Tren Solar</div>
+                <div className="text-[11px] font-mono text-[#9CA3AF]">52,1 mm vs 51,4 mm · EQUILIBRIO</div>
               </div>
-              <span className="text-lg font-black text-emerald-300 font-mono">+1,3%</span>
+              <span className="font-mono text-[10px] px-2 py-1 rounded bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/40">
+                NORMAL
+              </span>
             </button>
           </div>
+
+          <GuardaAndinaDivider />
         </div>
       </section>
 
       <main className="mx-auto max-w-7xl px-4 py-5 grid gap-5 lg:grid-cols-[380px_1fr]">
-        {/* Columna izquierda: Tren Solar + Telemetría SAOCOM */}
+        {/* Columna Izquierda: Check-in del Tren Solar + Telemetría SAOCOM 1A/1B */}
         <section className="space-y-5">
           <PanelGps fix={fix} onFix={setFix} seleccion={seleccion} onSeleccionEstacion={setSeleccion} />
           <RadarOrbital observador={observador} onSnapshot={setRadar} />
         </section>
 
-        {/* Columna principal: Paso 1 (Mapa) -> Paso 2 (Alerta Voz/WhatsApp) -> Paso 3 (Datos + Matriz B2B) */}
+        {/* Columna Derecha: Paso 01 (Mapa) -> Paso 02 (Síntesis Voz/WhatsApp) -> Paso 03 (Datos + Matriz B2B) */}
         <section className="space-y-5 min-w-0">
-          {/* PASO 1: MAPA Y SELECTOR DE COMUNIDAD */}
-          <div className="rounded-3xl border border-white/15 overflow-hidden bg-slate-900/70 shadow-xl">
+          {/* PASO 01: MAPA */}
+          <div className="amc-surface rounded-2xl overflow-hidden shadow-xl">
             <div className="px-4 py-3 border-b border-white/10 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <span className="inline-flex items-center rounded-full bg-amber-400/20 border border-amber-400/40 px-2.5 py-0.5 text-xs font-semibold text-amber-200">
-                  PASO 1 · Elegí localidad en el mapa
+                <span className="inline-flex items-center gap-1.5 rounded-lg bg-[#F59E0B]/15 border border-[#F59E0B]/40 px-2.5 py-1 text-[11px] font-mono font-bold text-[#F59E0B]">
+                  <ChakanaIcon className="h-3.5 w-3.5" />
+                  PASO 01 · SELECCIÓN DE NODO TERRITORIAL
                 </span>
-                <span className="text-xs text-slate-300 font-medium">
-                  Seleccionada: <strong className="text-white">{comunidad.nombre}</strong>
+                <span className="text-xs font-mono text-[#9CA3AF]">
+                  ACTIVO: <strong className="text-[#F4F1EA]">{comunidad.nombre.toUpperCase()}</strong>
                 </span>
               </div>
-              {cargando && <span className="text-xs text-sky-300 animate-pulse">● Actualizando satélite…</span>}
+              {cargando && <span className="text-xs font-mono text-[#2DD4BF] animate-pulse">● SYNC NASA/MODIS…</span>}
             </div>
 
             <div className="h-[290px] sm:h-[360px]">
               <Mapa seleccion={seleccion} onSeleccion={setSeleccion} fix={fix} radar={radar} />
             </div>
 
-            <div className="p-3.5 border-t border-white/10 space-y-2.5 bg-black/30">
+            <div className="p-3.5 border-t border-white/10 space-y-2.5 bg-[#0B0D10]/75">
               <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-[11px] font-bold text-emerald-300 mr-1">🏔️ Puna:</span>
+                <span className="text-[11px] font-mono font-bold text-[#10B981] mr-1">🏔️ PUNA:</span>
                 {pueblosPuna.map((c) => (
                   <button
                     key={c.id}
                     onClick={() => setSeleccion(c.id)}
-                    className={`text-xs rounded-full px-3 py-1 border font-medium transition ${
+                    className={`min-h-[38px] text-xs rounded-xl px-3 py-1.5 border font-medium transition-all duration-200 cursor-pointer ${
                       c.id === seleccion
-                        ? "bg-emerald-400 text-black border-emerald-300 font-bold shadow"
-                        : "border-white/15 text-slate-200 hover:border-emerald-400/60"
+                        ? "bg-[#D95D39] text-[#F4F1EA] border-[#D95D39] font-bold shadow"
+                        : "border-white/15 text-[#F4F1EA]/85 hover:border-[#D95D39]/60"
                     }`}
                   >
                     {c.nombre}
@@ -306,15 +358,15 @@ export default function App() {
               </div>
 
               <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-[11px] font-bold text-amber-300 mr-1">🚆 Quebrada y Tren Solar:</span>
+                <span className="text-[11px] font-mono font-bold text-[#F59E0B] mr-1">🚆 QUEBRADA / TREN SOLAR:</span>
                 {pueblosQuebrada.map((c) => (
                   <button
                     key={c.id}
                     onClick={() => setSeleccion(c.id)}
-                    className={`text-xs rounded-full px-3 py-1 border font-medium transition ${
+                    className={`min-h-[38px] text-xs rounded-xl px-3 py-1.5 border font-medium transition-all duration-200 cursor-pointer ${
                       c.id === seleccion
-                        ? "bg-amber-400 text-black border-amber-300 font-bold shadow"
-                        : "border-white/15 text-slate-200 hover:border-amber-400/60"
+                        ? "bg-[#F59E0B] text-[#0B0D10] border-[#F59E0B] font-bold shadow"
+                        : "border-white/15 text-[#F4F1EA]/85 hover:border-[#F59E0B]/60"
                     }`}
                   >
                     {c.paradaTren ? "🚆 " : ""}
@@ -325,10 +377,10 @@ export default function App() {
             </div>
           </div>
 
-          {/* PASO 2: LA ALERTA EN VOZ Y WHATSAPP (Protagonista inmediata) */}
+          {/* PASO 02: CONSOLA DE VOZ Y WHATSAPP */}
           <PanelAlerta key={`${seleccion}-${modo}`} comunidad={comunidad} lectura={lectura} modo={modo} />
 
-          {/* PASO 3: DATOS SATELITALES + GRÁFICO + TABLERO B2B */}
+          {/* PASO 03: TELEMETRÍA DE SUPERFICIE + MATRIZ B2B */}
           <PanelDatos comunidad={comunidad} lectura={lectura} modo={modo} onSeleccion={setSeleccion} />
 
           {/* CAPA CULTURAL */}
@@ -336,15 +388,14 @@ export default function App() {
         </section>
       </main>
 
-      <footer className="mx-auto max-w-7xl px-4 pb-8 text-[11px] text-slate-500 space-y-1">
+      <footer className="mx-auto max-w-7xl px-4 pb-8 pt-2 text-[11px] font-mono text-[#9CA3AF] space-y-1">
+        <GuardaAndinaDivider className="pb-3" />
         <p>
-          Datos públicos verificables: NASA/POWER (lluvia y temperatura, climatología 2001–2025) · MODIS MOD13Q1 vía ORNL DAAC
-          TESViS (doi:10.3334/ORNLDAAC/1600) · Elementos orbitales SAOCOM 1A/1B: CelesTrak (propagación SGP4 en navegador con
-          satellite.js) · Redacción y voz: Grok (xAI) con validación determinista Zod · Mapa © OpenStreetMap.
+          FUENTES: NASA/POWER (PRECTOTCORR, T2M · CLIMATOLOGÍA 2001–2025) · MODIS MOD13Q1 VÍA ORNL DAAC TESViS
+          (doi:10.3334/ORNLDAAC/1600) · CELESTRAK SGP4 (SAOCOM 1A/1B) · GROK AI (xAI) + ZOD · MAPA © OPENSTREETMAP.
         </p>
         <p>
-          Cursor Hackathon Jujuy · Tren Solar de la Quebrada (22/11/2026). Prototipo pensado para co-diseñarse junto a las
-          comunidades, cooperativas y municipios.
+          CURSOR HACKATHON JUJUY · TREN SOLAR DE LA QUEBRADA (22/11/2026). PROTOTIPO PARA CO-DISEÑO CON COMUNIDADES Y COOPERATIVAS.
         </p>
       </footer>
     </div>

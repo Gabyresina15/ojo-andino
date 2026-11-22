@@ -20,6 +20,14 @@ type Props = {
   onSeleccionEstacion?: (id: string) => void;
 };
 
+const RECORRIDO_TREN = [
+  { id: "volcan", nombre: "Volcán", km: "KM 0", msnm: "2.078m" },
+  { id: "tumbaya", nombre: "Tumbaya", km: "KM 8", msnm: "2.094m" },
+  { id: "purmamarca", nombre: "Purmamarca", km: "KM 19", msnm: "2.324m" },
+  { id: "maimara", nombre: "Hornillos / Maimará", km: "KM 34", msnm: "2.390m" },
+  { id: "tilcara", nombre: "Tilcara", km: "KM 42", msnm: "2.465m" },
+];
+
 export default function PanelGps({ fix, onFix, seleccion, onSeleccionEstacion }: Props) {
   const [activo, setActivo] = useState(false);
   const [checkinId, setCheckinId] = useState<string | null>(null);
@@ -65,7 +73,7 @@ export default function PanelGps({ fix, onFix, seleccion, onSeleccionEstacion }:
       (err) => {
         setError(
           err.code === 1
-            ? "Permiso de GPS denegado. Podés elegir tu estación con 1 toque arriba."
+            ? "Permiso de GPS denegado. Tocá tu estación arriba para hacer check-in directo."
             : `GPS no disponible: ${err.message}`,
         );
         setActivo(false);
@@ -85,92 +93,105 @@ export default function PanelGps({ fix, onFix, seleccion, onSeleccionEstacion }:
     : null;
 
   return (
-    <div className="rounded-3xl border border-amber-400/25 bg-slate-900/75 p-4 sm:p-5 space-y-3.5 shadow-lg">
+    <div className="amc-surface rounded-2xl p-4 sm:p-5 space-y-4">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <span className="text-[11px] uppercase tracking-wider text-amber-300 font-bold">
-            🚆 A Bordo del Tren Solar de la Quebrada
+          <span className="text-[11px] font-mono uppercase tracking-wider text-[#F59E0B] font-bold">
+            🚆 TELEMETRÍA TREN SOLAR · TRAZA 42 KM
           </span>
-          <h2 className="text-base font-bold text-white">¿Por qué estación vas ahora?</h2>
+          <h2 className="font-display text-base font-bold text-[#F4F1EA]">Check-in de Estación &amp; GNSS</h2>
         </div>
         {activo && (
           <button
             onClick={detener}
-            className="text-xs px-2.5 py-1 rounded-lg border border-white/20 text-slate-300 hover:bg-white/10"
+            className="min-h-[36px] text-xs font-mono px-3 py-1 rounded-lg border border-white/20 text-[#F4F1EA] hover:bg-white/10 transition-all duration-200"
           >
-            Apagar GPS
+            APAGAR GPS
           </button>
         )}
       </div>
 
-      {/* Check-in rápido de estación en 1 toque (cero fricción de permisos) */}
-      <div className="space-y-1.5">
-        <p className="text-xs text-slate-300">
-          Tocá tu estación actual para ver su estado satelital y sumar tu vagón al mapa en vivo:
+      {/* Traza ferroviaria Volcán -> Tumbaya -> Purmamarca -> Posta de Hornillos / Maimará -> Tilcara */}
+      <div className="space-y-2">
+        <p className="text-xs text-[#9CA3AF]">
+          Tocá la estación por la que va el tren para sincronizar telemetría y sumar tu vagón:
         </p>
-        <div className="grid grid-cols-5 gap-1.5">
-          {PARADAS_TREN.map((p, idx) => {
-            const esActiva = seleccion === p.id || checkinId === p.id;
+        <div className="grid grid-cols-1 gap-1.5">
+          {RECORRIDO_TREN.map((est, idx) => {
+            const esActiva = seleccion === est.id || checkinId === est.id;
             return (
               <button
-                key={p.id}
-                onClick={() => hacerCheckinEstacion(p.id)}
-                className={`rounded-xl p-2 text-center border transition flex flex-col items-center gap-0.5 ${
+                key={est.id}
+                onClick={() => hacerCheckinEstacion(est.id)}
+                className={`min-h-[44px] rounded-xl px-3 py-2 text-left border transition-all duration-200 flex items-center justify-between gap-2 cursor-pointer active:scale-[0.99] ${
                   esActiva
-                    ? "bg-amber-400 text-black border-amber-300 font-bold shadow"
-                    : "bg-black/40 border-white/10 text-slate-200 hover:border-amber-400/50"
+                    ? "bg-[#D95D39]/25 border-[#D95D39] text-[#F4F1EA] shadow"
+                    : "bg-[#0B0D10]/70 border-white/10 text-[#F4F1EA]/85 hover:border-[#F59E0B]/50"
                 }`}
               >
-                <span className="text-[10px] opacity-75">#{idx + 1}</span>
-                <span className="text-[11px] leading-tight truncate w-full">{p.nombre}</span>
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span
+                    className={`h-6 w-6 rounded-lg font-mono text-[11px] font-bold flex items-center justify-center shrink-0 ${
+                      esActiva ? "bg-[#D95D39] text-[#F4F1EA]" : "bg-white/10 text-[#9CA3AF]"
+                    }`}
+                  >
+                    0{idx + 1}
+                  </span>
+                  <span className="text-xs font-semibold truncate">{est.nombre}</span>
+                </div>
+                <span className="font-mono text-[11px] text-[#F59E0B] shrink-0">
+                  {est.km} · {est.msnm}
+                </span>
               </button>
             );
           })}
         </div>
         {checkinId && (
-          <p className="text-[11px] text-emerald-300 font-medium">
-            ✓ Check-in registrado en {PARADAS_TREN.find((p) => p.id === checkinId)?.nombre} · sumado al contador del tren
-          </p>
+          <div className="rounded-lg bg-[#10B981]/15 border border-[#10B981]/40 px-3 py-1.5 text-[11px] font-mono text-[#10B981]">
+            ✓ NODO REGISTRADO EN {RECORRIDO_TREN.find((e) => e.id === checkinId)?.nombre.toUpperCase()}
+          </div>
         )}
       </div>
 
-      {/* GPS en vivo con consentimiento explícito */}
+      {/* Botón GNSS en vivo */}
       {!activo ? (
         <button
           onClick={activar}
-          className="w-full rounded-2xl bg-amber-400/15 hover:bg-amber-400/25 border border-amber-400/40 text-amber-200 font-semibold text-xs py-2.5 px-3 transition"
+          className="min-h-[44px] w-full rounded-xl bg-[#F59E0B] hover:bg-[#F59E0B]/90 active:scale-[0.99] text-[#0B0D10] font-bold text-xs py-2.5 px-3 transition-all duration-200 cursor-pointer shadow"
         >
-          📍 O activá tu GPS en vivo (altitud msnm + velocidad del tren)
+          📍 Activar GPS en vivo (altitud msnm + velocidad km/h)
         </button>
       ) : !fix ? (
-        <p className="text-xs text-slate-300 animate-pulse">Buscando señal GNSS de tu celular…</p>
+        <div className="rounded-xl border border-[#F59E0B]/40 bg-black/40 p-3 text-xs font-mono text-[#F59E0B] animate-pulse">
+          Adquiriendo fix GNSS del dispositivo…
+        </div>
       ) : (
-        <div className="rounded-2xl bg-black/50 border border-emerald-500/30 p-3 text-xs space-y-2">
+        <div className="rounded-xl bg-[#0B0D10] border border-[#10B981]/40 p-3 text-xs space-y-2">
           <div className="grid grid-cols-2 gap-2 font-mono">
             <div>
-              <span className="block text-[10px] text-slate-400">Posición GPS</span>
-              <span className="text-white">
+              <span className="block text-[10px] text-[#9CA3AF]">COORDENADAS WGS84</span>
+              <span className="text-[#F4F1EA] font-bold">
                 {fix.lat.toFixed(4)}, {fix.lon.toFixed(4)}
               </span>
             </div>
             <div>
-              <span className="block text-[10px] text-slate-400">Altitud / Velocidad</span>
-              <span className="text-amber-300 font-bold">
+              <span className="block text-[10px] text-[#9CA3AF]">ALTITUD / VELOCIDAD</span>
+              <span className="text-[#F59E0B] font-bold">
                 {fix.altM !== null ? `${Math.round(fix.altM)} msnm` : "~2.400 msnm"} ·{" "}
-                {fix.velKmh !== null ? `${fix.velKmh.toFixed(1)} km/h` : "0 km/h"}
+                {fix.velKmh !== null ? `${fix.velKmh.toFixed(1)} km/h` : "0.0 km/h"}
               </span>
             </div>
           </div>
           {paradaCercana && (
-            <p className="text-[11px] text-emerald-300 border-t border-white/10 pt-1.5">
-              Estación más cercana: <strong>{paradaCercana.parada.nombre}</strong> ({paradaCercana.km.toFixed(1)} km) ·
-              precisión ±{Math.round(fix.precisionM ?? 0)} m
+            <p className="text-[11px] font-mono text-[#10B981] border-t border-white/10 pt-1.5">
+              ESTACIÓN CERCANA: <strong>{paradaCercana.parada.nombre.toUpperCase()}</strong> ({paradaCercana.km.toFixed(1)} km) ·
+              ±{Math.round(fix.precisionM ?? 0)}m
             </p>
           )}
         </div>
       )}
 
-      {error && <p className="text-xs text-amber-300">{error}</p>}
+      {error && <p className="text-xs font-mono text-[#F59E0B]">{error}</p>}
     </div>
   );
 }

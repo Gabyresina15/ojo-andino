@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { AlertaRespuesta, Comunidad, LecturaSatelital } from "@/lib/types";
 import { alertaDeterminista, payloadUsuario, validarNumeros } from "@/lib/alerta";
 import { registrarEvento } from "@/lib/traccion-cliente";
+import { ChakanaIcon } from "./AndeanMotifs";
 
 type Props = {
   comunidad: Comunidad;
@@ -11,16 +12,18 @@ type Props = {
   modo: "comunidad" | "parametrico";
 };
 
+const BARRAS_EQ = [28, 65, 45, 90, 55, 100, 72, 40, 85, 60, 95, 50, 75, 35];
+
 export default function PanelAlerta({ comunidad, lectura, modo }: Props) {
   const [alertaGrok, setAlertaGrok] = useState<AlertaRespuesta | null>(null);
   const [cargando, setCargando] = useState(false);
   const [audioCargando, setAudioCargando] = useState(false);
   const [reproduciendo, setReproduciendo] = useState(false);
   const [vozFallback, setVozFallback] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Alerta instantánea verificada para que NUNCA haya una caja vacía al entrar.
   const alertaBase = useMemo<AlertaRespuesta | null>(() => {
     if (!lectura) return null;
     const det = alertaDeterminista(comunidad, lectura, modo);
@@ -49,6 +52,11 @@ export default function PanelAlerta({ comunidad, lectura, modo }: Props) {
     [],
   );
 
+  const avisarToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3200);
+  };
+
   const detenerAudio = () => {
     audioRef.current?.pause();
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
@@ -71,8 +79,9 @@ export default function PanelAlerta({ comunidad, lectura, modo }: Props) {
       const data = (await r.json()) as AlertaRespuesta;
       setAlertaGrok(data);
       registrarEvento("alerta", comunidad.id);
+      avisarToast(`✓ Alerta validada (${data.validacion.numerosVerificados}/${data.validacion.numerosEncontrados} cifras verificadas)`);
     } catch (e) {
-      setError(`Usando resumen verificado local (${(e as Error).message})`);
+      setError(`Respaldo determinista activo (${(e as Error).message})`);
     } finally {
       setCargando(false);
     }
@@ -128,7 +137,7 @@ export default function PanelAlerta({ comunidad, lectura, modo }: Props) {
 
   const whatsappUrl = alerta
     ? `https://wa.me/?text=${encodeURIComponent(
-        `*Ojo Andino · Reporte Satelital de ${comunidad.nombre}*\n\n${alerta.resumen_oral}\n\n_${alerta.fuentes}_\n\nVer mapa en vivo: ${
+        `*Ojo Andino · Reporte Satelital de ${comunidad.nombre}*\n\n${alerta.resumen_oral}\n\n_${alerta.fuentes}_\n\nTablero en vivo: ${
           typeof window !== "undefined" ? `${window.location.origin}/?c=${comunidad.id}` : ""
         }`,
       )}`
@@ -136,110 +145,151 @@ export default function PanelAlerta({ comunidad, lectura, modo }: Props) {
 
   const etiquetaEstado =
     alerta?.estado_hidrico === "deficit"
-      ? { txt: "⚠️ Alerta de Déficit Hídrico", cls: "bg-rose-500/20 text-rose-200 border-rose-400/50" }
+      ? { txt: "DÉFICIT HÍDRICO ACTIVO", cls: "bg-[#D95D39]/20 text-[#F4F1EA] border-[#D95D39]/60" }
       : alerta?.estado_hidrico === "superavit_reciente"
-        ? { txt: "🌧️ Lluvias por encima de lo normal", cls: "bg-sky-500/20 text-sky-200 border-sky-400/50" }
-        : { txt: "✅ Condición hídrica normal", cls: "bg-emerald-500/20 text-emerald-200 border-emerald-400/50" };
+        ? { txt: "SUPERÁVIT DE LLUVIA RECIENTE", cls: "bg-[#2DD4BF]/15 text-[#2DD4BF] border-[#2DD4BF]/50" }
+        : { txt: "CONDICIÓN HÍDRICA NORMAL", cls: "bg-[#10B981]/15 text-[#10B981] border-[#10B981]/50" };
 
   return (
-    <div className="rounded-3xl border border-emerald-500/30 bg-gradient-to-br from-emerald-950/40 via-slate-900/90 to-slate-950 p-5 sm:p-6 shadow-xl space-y-4">
-      {/* Encabezado claro e intuitivo */}
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="amc-surface-elevated rounded-2xl p-5 sm:p-6 space-y-4 shadow-2xl relative overflow-hidden">
+      {/* Barra superior de acento terracota + oro solar */}
+      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#D95D39] via-[#F59E0B] to-[#10B981]" />
+
+      <div className="flex flex-wrap items-start justify-between gap-3 pt-1">
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 px-3 py-0.5 text-xs font-semibold text-emerald-200">
-              PASO 2 · El mensaje listo para el territorio
+            <span className="inline-flex items-center gap-1.5 rounded-lg bg-[#D95D39]/20 border border-[#D95D39]/50 px-2.5 py-1 text-[11px] font-mono font-bold uppercase tracking-wider text-[#F4F1EA]">
+              <ChakanaIcon className="h-3.5 w-3.5 text-[#D95D39]" />
+              PASO 02 · SÍNTESIS DE VOZ Y WHATSAPP
             </span>
-            <span className={`text-xs px-3 py-0.5 rounded-full border font-medium ${etiquetaEstado.cls}`}>
+            <span className={`text-[11px] font-mono font-bold px-2.5 py-1 rounded-lg border ${etiquetaEstado.cls}`}>
               {etiquetaEstado.txt}
             </span>
           </div>
-          <h3 className="text-lg sm:text-xl font-bold text-white">
-            Traducción satelital para {comunidad.nombre}
+          <h3 className="font-display text-lg sm:text-xl font-bold text-[#F4F1EA]">
+            Alerta territorial para {comunidad.nombre}
           </h3>
-          <p className="text-xs text-slate-300">
-            Escuchalo en voz alta o reenvialo en 1 toque al grupo de WhatsApp de la comunidad o cooperativa.
+          <p className="text-xs text-[#9CA3AF]">
+            Traducción validada con Zod a castellano simple, lista para escuchar o reenviar al territorio.
           </p>
         </div>
 
         <button
           onClick={generarConGrok}
           disabled={!lectura || cargando}
-          className="rounded-2xl bg-white/10 hover:bg-white/15 border border-white/20 disabled:opacity-50 text-white font-semibold text-xs px-4 py-2.5 transition flex items-center gap-2"
+          className="min-h-[44px] rounded-xl bg-[#13171E] hover:bg-white/10 active:scale-[0.99] border border-[#F59E0B]/50 disabled:opacity-50 text-[#F4F1EA] font-semibold text-xs px-4 py-2.5 transition-all duration-200 flex items-center gap-2 cursor-pointer"
         >
-          <span>✨</span>
+          <span className={cargando ? "animate-spin" : "text-[#F59E0B]"}>✦</span>
           <span>
             {cargando
-              ? "Redactando con Grok AI…"
+              ? "Validando con Grok + Zod…"
               : alerta?.origen === "grok"
-                ? "Regenerar redacción con Grok AI"
-                : "Redactar con Grok AI (xAI)"}
+                ? "Regenerar con Grok AI"
+                : "Sintetizar con Grok AI (xAI)"}
           </span>
         </button>
       </div>
 
-      {error && <p className="text-xs text-amber-300">{error}</p>}
+      {toast && (
+        <div className="rounded-xl border border-[#10B981]/50 bg-[#10B981]/15 px-3.5 py-2 text-xs font-mono text-[#10B981]">
+          {toast}
+        </div>
+      )}
+
+      {error && <p className="text-xs font-mono text-[#F59E0B]">{error}</p>}
+
+      {cargando && (
+        <div className="rounded-xl border border-[#F59E0B]/30 bg-black/40 p-3.5 flex items-center gap-3 text-xs font-mono text-[#F59E0B]">
+          <span className="h-2.5 w-2.5 rounded-full bg-[#F59E0B] animate-ping shrink-0" />
+          <span>Verificando serie NASA POWER + MODIS contra esquema Zod sin alucinación numérica…</span>
+        </div>
+      )}
 
       {alerta && (
         <div className="space-y-4">
-          {/* Tarjeta tipo burbuja de WhatsApp / Audio */}
-          <div className="rounded-2xl bg-[#0b141a] border border-emerald-500/30 p-4 sm:p-5 space-y-3 shadow-inner">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-2.5">
-              <div className="flex items-center gap-2">
-                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-black font-bold text-sm">
-                  🛰️
-                </span>
+          {/* Consola del mensaje + Ecualizador de voz */}
+          <div className="rounded-2xl bg-[#0B0D10]/90 border border-white/10 p-4 sm:p-5 space-y-3.5">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="h-9 w-9 rounded-xl bg-[#D95D39]/20 border border-[#D95D39]/50 flex items-center justify-center text-[#D95D39]">
+                  <ChakanaIcon className="h-5 w-5" />
+                </div>
                 <div>
-                  <div className="text-xs font-bold text-emerald-300">
-                    Ojo Andino · {modo === "comunidad" ? "Alerta Comunitaria (Gratis)" : "Reporte Técnico Cooperativa / B2B"}
+                  <div className="text-xs font-bold text-[#F4F1EA]">
+                    {modo === "comunidad" ? "Canal Comunitario · Freemium ($0)" : "Canal Cooperativa & Seguro Paramétrico · B2B"}
                   </div>
-                  <div className="text-[11px] text-slate-400">
-                    {alerta.origen === "grok" ? `Redactado por Grok (${alerta.modelo})` : "Resumen satelital instantáneo"}
+                  <div className="text-[11px] font-mono text-[#9CA3AF]">
+                    ENGINE: {alerta.origen === "grok" ? `xAI ${alerta.modelo}` : "DETERMINISTIC_SAFE_ENGINE"}
                   </div>
                 </div>
               </div>
-              <span className="px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/40 text-[11px] font-medium text-emerald-300">
-                ✓ {alerta.validacion.numerosVerificados}/{alerta.validacion.numerosEncontrados} cifras verificadas con Zod
-              </span>
+
+              {/* Ecualizador animado + Badge de validación */}
+              <div className="flex items-center gap-3">
+                <div
+                  className="flex items-end gap-0.5 h-5 px-2 py-1 rounded-md bg-white/5 border border-white/10"
+                  title={reproduciendo ? "Reproduciendo audio" : "Audio listo"}
+                >
+                  {BARRAS_EQ.map((h, i) => (
+                    <span
+                      key={i}
+                      className={`w-1 rounded-full transition-all ${
+                        reproduciendo ? "bg-[#F59E0B] amc-eq-bar" : "bg-[#9CA3AF]/40"
+                      }`}
+                      style={{
+                        height: reproduciendo ? `${Math.max(25, h)}%` : "30%",
+                        animationDelay: `${i * 0.06}s`,
+                      }}
+                    />
+                  ))}
+                </div>
+
+                <span className="px-2.5 py-1 rounded-lg bg-[#10B981]/15 border border-[#10B981]/40 text-[11px] font-mono font-bold text-[#10B981]">
+                  ✓ {alerta.validacion.numerosVerificados}/{alerta.validacion.numerosEncontrados} CIFRAS OK
+                </span>
+              </div>
             </div>
 
-            <p className="text-sm sm:text-base leading-relaxed text-slate-100">
+            <p className="text-sm sm:text-base leading-relaxed text-[#F4F1EA]">
               “{alerta.resumen_oral}”
             </p>
 
             {modo === "parametrico" && (
-              <div className="rounded-xl bg-sky-950/50 border border-sky-400/30 p-3 text-xs text-sky-100">
-                <strong className="text-sky-300">Índice Paramétrico B2B:</strong> {alerta.nota_parametrica}
+              <div className="rounded-xl bg-[#13171E] border border-[#F59E0B]/35 p-3.5 text-xs text-[#F4F1EA] space-y-1">
+                <div className="font-mono text-[11px] uppercase font-bold text-[#F59E0B]">
+                  Dictamen de Índice Paramétrico (B2B)
+                </div>
+                <p className="text-[#F4F1EA]/90 leading-relaxed">{alerta.nota_parametrica}</p>
               </div>
             )}
 
-            <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-[11px] text-slate-400">
-              <span>{alerta.fuentes}</span>
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-[11px] font-mono text-[#9CA3AF]">
+              <span>FUENTES: {alerta.fuentes}</span>
               {vozFallback && (
-                <span className="px-2 py-0.5 rounded-full border border-amber-400/40 text-amber-200">
-                  Voz del navegador (modo offline)
+                <span className="px-2 py-0.5 rounded bg-[#F59E0B]/15 border border-[#F59E0B]/40 text-[#F59E0B]">
+                  WEB_SPEECH_FALLBACK
                 </span>
               )}
             </div>
           </div>
 
-          {/* Botones de acción grandes y claros (Mobile-first) */}
+          {/* Botonera thumb-zone >= 48px de alto */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <button
               onClick={escuchar}
               disabled={audioCargando}
-              className={`rounded-2xl font-bold text-sm px-5 py-3.5 transition flex items-center justify-center gap-2.5 shadow-lg ${
+              className={`min-h-[48px] rounded-xl font-bold text-sm px-5 py-3 transition-all duration-200 flex items-center justify-center gap-2.5 shadow-lg cursor-pointer active:scale-[0.99] ${
                 reproduciendo
-                  ? "bg-amber-400 text-black hover:bg-amber-300"
-                  : "bg-white text-slate-950 hover:bg-slate-200"
+                  ? "bg-[#F59E0B] text-black hover:bg-[#F59E0B]/90"
+                  : "bg-[#D95D39] text-[#F4F1EA] hover:bg-[#D95D39]/90"
               }`}
             >
-              <span className="text-lg">{audioCargando ? "⏳" : reproduciendo ? "⏹️" : "🔊"}</span>
+              <span className="text-base">{audioCargando ? "⏳" : reproduciendo ? "⏹" : "🔊"}</span>
               <span>
                 {audioCargando
-                  ? "Generando voz natural (xAI)…"
+                  ? "Sintetizando voz (xAI TTS)…"
                   : reproduciendo
-                    ? "Detener audio en voz alta"
+                    ? "Detener transmisión de voz"
                     : "Escuchar alerta en voz alta"}
               </span>
             </button>
@@ -248,10 +298,13 @@ export default function PanelAlerta({ comunidad, lectura, modo }: Props) {
               href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() => registrarEvento("whatsapp", comunidad.id)}
-              className="rounded-2xl bg-[#25D366] hover:bg-[#22c35e] text-black font-bold text-sm px-5 py-3.5 transition flex items-center justify-center gap-2.5 shadow-lg"
+              onClick={() => {
+                registrarEvento("whatsapp", comunidad.id);
+                avisarToast("✓ Abriendo WhatsApp con reporte precargado");
+              }}
+              className="min-h-[48px] rounded-xl bg-[#10B981] hover:bg-[#10B981]/90 active:scale-[0.99] text-[#0B0D10] font-bold text-sm px-5 py-3 transition-all duration-200 flex items-center justify-center gap-2.5 shadow-lg"
             >
-              <span className="text-lg">📲</span>
+              <span className="text-base">📲</span>
               <span>Enviar alerta por WhatsApp</span>
             </a>
           </div>
