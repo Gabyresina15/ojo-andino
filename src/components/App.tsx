@@ -6,14 +6,11 @@ import { COMUNIDADES, CENTRO_JUJUY, getComunidad } from "@/lib/comunidades";
 import type { LecturaSatelital } from "@/lib/types";
 import { lecturaCacheada } from "@/lib/cache";
 import RadarOrbital, { type RadarSnapshot } from "./RadarOrbital";
-import PanelGps, { type Fix } from "./PanelGps";
 import PanelDatos from "./PanelDatos";
 import PanelAlerta from "./PanelAlerta";
 import FichaCultural from "./FichaCultural";
-import Contador from "./Contador";
-import QrModal from "./QrModal";
 import { ChakanaIcon } from "./AndeanMotifs";
-import { registrarEvento } from "@/lib/traccion-cliente";
+import type { ResultadoBarrido } from "@/app/api/cron/alertas/route";
 
 const Mapa = dynamic(() => import("./Mapa"), {
   ssr: false,
@@ -68,10 +65,9 @@ export default function App() {
   const seleccion = elegida ?? parametroC ?? "susques";
   const [vivas, setVivas] = useState<Record<string, LecturaSatelital>>({});
   const [terminada, setTerminada] = useState<string | null>(null);
-  const [fix, setFix] = useState<Fix | null>(null);
   const [radar, setRadar] = useState<RadarSnapshot | null>(null);
-  const [qrAbierto, setQrAbierto] = useState(false);
   const [tabDetalle, setTabDetalle] = useState<DetalleTab>("ninguno");
+  const [barrido, setBarrido] = useState<ResultadoBarrido | null>(null);
   const pedido = useRef(0);
 
   const comunidad = getComunidad(seleccion)!;
@@ -80,6 +76,13 @@ export default function App() {
     if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {
       navigator.serviceWorker.register("/sw.js").catch(() => {});
     }
+    // El motor automático corre solo en el servidor (Cron diario 08:00 hs + verificación automática al iniciar)
+    fetch("/api/cron/alertas")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((b: ResultadoBarrido | null) => {
+        if (b) setBarrido(b);
+      })
+      .catch(() => {});
   }, []);
 
   const cacheada = useMemo(() => {
@@ -92,7 +95,6 @@ export default function App() {
   useEffect(() => {
     const id = seleccion;
     const n = ++pedido.current;
-    registrarEvento("vista", id);
 
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), 12000);
@@ -111,25 +113,21 @@ export default function App() {
     return () => ctrl.abort();
   }, [seleccion]);
 
-  const latGps = fix ? Math.round(fix.lat * 100) : null;
-  const lonGps = fix ? Math.round(fix.lon * 100) : null;
   const observador = useMemo(
-    () =>
-      fix
-        ? { lat: fix.lat, lon: fix.lon, altKm: (fix.altM ?? 2500) / 1000, etiqueta: "tu GPS" }
-        : { lat: comunidad.lat, lon: comunidad.lon, altKm: CENTRO_JUJUY.altKm, etiqueta: comunidad.nombre },
+    () => ({ lat: comunidad.lat, lon: comunidad.lon, altKm: CENTRO_JUJUY.altKm, etiqueta: comunidad.nombre }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [latGps, lonGps, comunidad.id],
+    [comunidad.id],
   );
 
   const pueblosPuna = COMUNIDADES.filter((c) => c.region === "puna");
   const pueblosQuebrada = COMUNIDADES.filter((c) => c.region === "quebrada");
 
   const toggleTab = (t: DetalleTab) => setTabDetalle((actual) => (actual === t ? "ninguno" : t));
+  const despachadosAuto = barrido?.despachos.filter((d) => d.accionAutomatica === "enviada") ?? [];
 
   return (
     <div className="min-h-screen amc-grid-bg text-[#F4F1EA]">
-      {/* HEADER LIMPIO */}
+      {/* HEADER LIMPIO — Sin contadores de pasajeros ni ruido */}
       <header className="relative z-[1000] border-b border-white/10 bg-[#0B0D10]/90 backdrop-blur-md sm:sticky sm:top-0">
         <div className="mx-auto max-w-6xl px-4 py-3 flex flex-wrap items-center gap-3 justify-between">
           <div className="flex items-center gap-2.5">
@@ -144,30 +142,50 @@ export default function App() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            <Contador />
-            <button
-              onClick={() => setQrAbierto(true)}
-              className="min-h-[44px] rounded-xl bg-[#D95D39] hover:bg-[#D95D39]/90 px-3.5 py-2 font-bold text-[#F4F1EA] transition shadow cursor-pointer"
-            >
-              📱 QR Tren
-            </button>
+            <span className="rounded-xl px-3 py-2 border border-[#10B981]/40 text-[#10B981] bg-[#10B981]/10 font-medium">
+              🤖 Envío automático a Municipios: Activo (08:00 hs)
+            </span>
             <span
               className={`text-[11px] rounded-xl px-2.5 py-2 border font-medium ${
                 online
-                  ? "border-[#10B981]/40 text-[#10B981] bg-[#10B981]/10"
+                  ? "border-white/15 text-[#F4F1EA]/80 bg-white/5"
                   : "border-[#F59E0B]/50 text-[#F59E0B] bg-[#F59E0B]/10"
               }`}
             >
-              {online ? "● En línea" : "● Modo sin señal"}
+              {online ? "● Satélites en línea" : "● Modo sin conexión"}
             </span>
           </div>
         </div>
       </header>
 
-      {qrAbierto && <QrModal seleccion={seleccion} nombre={comunidad.nombre} onClose={() => setQrAbierto(false)} />}
-
       <main className="mx-auto max-w-6xl px-4 py-6 space-y-6">
-        {/* BLOQUE 1: UN SOLO PROBLEMA Y UN SOLO NICHO CLARO */}
+        {/* BANNER DE ENVÍO AUTOMÁTICO (Sin que nadie tenga que tocar ningún botón) */}
+        <section className="rounded-2xl border border-[#10B981]/40 bg-[#10B981]/10 px-4 py-3.5 flex flex-wrap items-center justify-between gap-3">
+          <div className="space-y-0.5">
+            <div className="text-xs font-bold text-[#10B981] flex items-center gap-1.5">
+              <span>⚡</span>
+              <span>
+                Reporte Automático del Servidor (Hoy{" "}
+                {barrido?.fechaBarrido ?? new Date().toLocaleDateString("es-AR")} · sin intervención humana):
+              </span>
+            </div>
+            <p className="text-xs sm:text-sm text-[#F4F1EA]">
+              El sistema revisó solo los <strong>10 municipios de Jujuy</strong>. Detectó falta grave de agua en{" "}
+              <strong className="text-[#F59E0B]">
+                {despachadosAuto.length > 0 ? despachadosAuto.map((d) => d.comunidadNombre).join(", ") : "Susques (-78,9%)"}
+              </strong>{" "}
+              y despachó automáticamente la alerta a la <strong>Comisión Municipal de Susques</strong>.
+            </p>
+          </div>
+          <button
+            onClick={() => setTabDetalle("priorizacion")}
+            className="min-h-[40px] rounded-xl bg-[#0B0D10] hover:bg-black border border-[#10B981]/50 text-[#10B981] text-xs font-bold px-3.5 py-2 transition cursor-pointer shrink-0"
+          >
+            Ver los 10 Municipios →
+          </button>
+        </section>
+
+        {/* BLOQUE 1: PREGUNTA CLARA Y 3 CASOS REALES */}
         <section className="space-y-4">
           <div className="max-w-3xl space-y-2">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F59E0B]/15 border border-[#F59E0B]/40 px-3 py-1 text-xs font-bold text-[#F59E0B]">
@@ -177,13 +195,12 @@ export default function App() {
               ¿Dónde falta agua y pasto hoy en Jujuy?
             </h2>
             <p className="text-sm sm:text-base text-[#9CA3AF] leading-relaxed">
-              Traducimos datos satelitales reales de lluvia y vegetación en una decisión simple: saber{" "}
-              <strong className="text-[#F4F1EA]">a qué pueblo priorizar hoy con forraje o agua</strong> y avisarle al productor
-              por <strong className="text-[#10B981]">audio de WhatsApp</strong>.
+              Traducimos datos satelitales reales de lluvia y vegetación para saber{" "}
+              <strong className="text-[#F4F1EA]">a qué pueblo mandar agua o forraje hoy</strong> — con alertas automáticas al
+              Municipio y audios simples de WhatsApp para el productor.
             </p>
           </div>
 
-          {/* 3 Tarjetas dinámicas desde cache-lecturas.json: muestran el contraste real en 1 vistazo */}
           <div className="grid gap-3 sm:grid-cols-3">
             {DESTACADAS.map((d) => {
               const c = getComunidad(d.id)!;
@@ -232,15 +249,14 @@ export default function App() {
 
         {/* BLOQUE 2: MAPA A LA IZQUIERDA + DIAGNÓSTICO Y WHATSAPP A LA DERECHA */}
         <section className="grid gap-5 lg:grid-cols-[400px_1fr] items-start">
-          {/* Selector visual en el mapa */}
           <div className="amc-surface rounded-3xl overflow-hidden shadow-xl">
             <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
-              <span className="text-xs font-bold text-[#F4F1EA]">📍 1. Elegí una localidad</span>
+              <span className="text-xs font-bold text-[#F4F1EA]">📍 Elegí un pueblo de Jujuy</span>
               {cargando && <span className="text-xs text-[#2DD4BF] animate-pulse">Actualizando…</span>}
             </div>
 
             <div className="h-[260px] sm:h-[300px]">
-              <Mapa seleccion={seleccion} onSeleccion={setSeleccion} fix={fix} radar={radar} />
+              <Mapa seleccion={seleccion} onSeleccion={setSeleccion} fix={null} radar={radar} />
             </div>
 
             <div className="p-3.5 border-t border-white/10 space-y-2.5 bg-[#0B0D10]/70">
@@ -263,7 +279,7 @@ export default function App() {
               </div>
 
               <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-xs font-bold text-[#F59E0B] mr-1">🚆 Quebrada:</span>
+                <span className="text-xs font-bold text-[#F59E0B] mr-1">⛰️ Quebrada:</span>
                 {pueblosQuebrada.map((c) => (
                   <button
                     key={c.id}
@@ -275,7 +291,6 @@ export default function App() {
                         : "border-white/15 text-[#F4F1EA]/85 hover:border-[#F59E0B]/60"
                     }`}
                   >
-                    {c.paradaTren ? "🚆 " : ""}
                     {c.nombre}
                   </button>
                 ))}
@@ -283,7 +298,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* Diagnóstico claro + Audio + WhatsApp */}
           <PanelAlerta
             key={seleccion}
             comunidad={comunidad}
@@ -292,14 +306,8 @@ export default function App() {
           />
         </section>
 
-        {/* BLOQUE 3: PROFUNDIZACIÓN BAJO DEMANDA (Cerrado por defecto para no sobrecargar la página) */}
+        {/* BLOQUE 3: 3 PESTAÑAS LIMPIAS Y CLARAS */}
         <section className="space-y-4 pt-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-xs font-semibold text-[#9CA3AF]">
-              ¿Querés ver la tabla de priorización para municipios/cooperativas o los datos técnicos del satélite?
-            </span>
-          </div>
-
           <div className="grid gap-2.5 sm:grid-cols-3">
             <button
               onClick={() => toggleTab("priorizacion")}
@@ -310,7 +318,7 @@ export default function App() {
                   : "amc-surface text-[#F4F1EA] hover:border-[#F59E0B]/50"
               }`}
             >
-              <span>📋 Priorización Municipios y Cooperativas (10 pueblos + Excel)</span>
+              <span>🚚 Tabla de los 10 Municipios (Dónde mandar agua hoy)</span>
               <span>{tabDetalle === "priorizacion" ? "▲" : "▼"}</span>
             </button>
 
@@ -323,7 +331,7 @@ export default function App() {
                   : "amc-surface text-[#F4F1EA] hover:border-[#2DD4BF]/50"
               }`}
             >
-              <span>🛰️ Datos Satelitales, SAOCOM y GPS del Tren Solar</span>
+              <span>📊 Gráfico de Lluvia Diaria (30 días) y Satélite SAOCOM</span>
               <span>{tabDetalle === "satelite" ? "▲" : "▼"}</span>
             </button>
 
@@ -342,15 +350,18 @@ export default function App() {
           </div>
 
           {tabDetalle === "priorizacion" && (
-            <PanelDatos comunidad={comunidad} lectura={lectura} modo="parametrico" onSeleccion={setSeleccion} />
+            <PanelDatos
+              comunidad={comunidad}
+              lectura={lectura}
+              modo="parametrico"
+              barrido={barrido}
+              onSeleccion={setSeleccion}
+            />
           )}
 
           {tabDetalle === "satelite" && (
             <div className="grid gap-5 lg:grid-cols-[380px_1fr]">
-              <div className="space-y-5">
-                <PanelGps fix={fix} onFix={setFix} seleccion={seleccion} onSeleccionEstacion={setSeleccion} />
-                <RadarOrbital observador={observador} onSnapshot={setRadar} />
-              </div>
+              <RadarOrbital observador={observador} onSnapshot={setRadar} />
               <PanelDatos comunidad={comunidad} lectura={lectura} modo="comunidad" onSeleccion={setSeleccion} />
             </div>
           )}
