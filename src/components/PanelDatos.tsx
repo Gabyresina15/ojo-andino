@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { Comunidad, LecturaSatelital } from "@/lib/types";
 import { estadoHidrico } from "@/lib/lecturas";
 
@@ -11,6 +12,122 @@ type Props = {
 
 const fmt1 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const fmt3 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+
+type DiaSerie = NonNullable<LecturaSatelital["meteorologia"]>["serie"][number];
+
+const ddmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
+const fmt2 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+function GraficoLluvia({ serie }: { serie: DiaSerie[] }) {
+  const [activo, setActivo] = useState<number | null>(null);
+  const n = serie.length;
+  const alto = 100;
+  const tope = Math.max(1, ...serie.map((d) => Math.max(d.lluviaMm ?? 0, d.climaMm ?? 0)));
+  const techo = Math.ceil(tope / 2) * 2;
+  const y = (mm: number) => alto - (mm / techo) * alto;
+
+  let lineaClima = "";
+  serie.forEach((d, i) => {
+    if (d.climaMm === null) return;
+    const yi = y(d.climaMm).toFixed(2);
+    lineaClima += lineaClima && serie[i - 1]?.climaMm !== null ? ` V${yi} H${i + 1}` : ` M${i} ${yi} H${i + 1}`;
+  });
+
+  const medio = Math.floor((n - 1) / 2);
+  const dia = activo !== null ? serie[activo] : null;
+
+  return (
+    <figure className="rounded-xl bg-black/40 border border-white/10 p-3 space-y-2">
+      <figcaption className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+        <span className="text-[11px] text-slate-400">Lluvia diaria · últimos {n} días con dato</span>
+        <span className="flex items-center gap-3 text-[10px] text-slate-400">
+          <span className="flex items-center gap-1">
+            <span className="inline-block h-2.5 w-2.5 rounded-sm bg-sky-400" /> Observada
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="inline-block w-4 border-t-2 border-dashed border-amber-300" /> Climatología 2001–2025
+          </span>
+        </span>
+      </figcaption>
+
+      <div className="relative h-32 sm:h-36 pl-9">
+        <span className="absolute left-0 top-0 -translate-y-1/2 text-[10px] font-mono text-slate-500">{techo} mm</span>
+        <span className="absolute left-0 top-1/2 -translate-y-1/2 text-[10px] font-mono text-slate-500">{techo / 2} mm</span>
+        <span className="absolute left-0 bottom-0 translate-y-1/2 text-[10px] font-mono text-slate-500">0 mm</span>
+        <svg
+          viewBox={`0 0 ${n} ${alto}`}
+          preserveAspectRatio="none"
+          className="h-full w-full overflow-visible"
+          role="img"
+          aria-label={`Lluvia diaria observada frente a la climatología diaria, del ${ddmm(serie[0].fecha)} al ${ddmm(serie[n - 1].fecha)}`}
+          onPointerLeave={() => setActivo(null)}
+        >
+          {[0, alto / 2, alto].map((gy) => (
+            <line key={gy} x1={0} x2={n} y1={gy} y2={gy} className="stroke-white/10" vectorEffect="non-scaling-stroke" />
+          ))}
+          {serie.map((d, i) =>
+            d.lluviaMm ? (
+              <rect
+                key={d.fecha}
+                x={i + 0.15}
+                y={y(d.lluviaMm)}
+                width={0.7}
+                height={alto - y(d.lluviaMm)}
+                className={activo === i ? "fill-sky-300" : "fill-sky-400/80"}
+              />
+            ) : null,
+          )}
+          <path
+            d={lineaClima}
+            fill="none"
+            className="stroke-amber-300"
+            strokeWidth={1.5}
+            strokeDasharray="4 3"
+            vectorEffect="non-scaling-stroke"
+          />
+          {serie.map((d, i) => (
+            <rect
+              key={`hit-${d.fecha}`}
+              x={i}
+              y={0}
+              width={1}
+              height={alto}
+              className={activo === i ? "fill-white/5" : "fill-transparent"}
+              onPointerEnter={() => setActivo(i)}
+              onClick={() => setActivo(i)}
+            >
+              <title>
+                {`${ddmm(d.fecha)}: ${d.lluviaMm === null ? "s/d" : `${fmt2(d.lluviaMm)} mm`} · climatología ${
+                  d.climaMm === null ? "s/d" : `${fmt2(d.climaMm)} mm`
+                }`}
+              </title>
+            </rect>
+          ))}
+        </svg>
+      </div>
+
+      <div className="relative h-3 ml-9 text-[10px] font-mono text-slate-500">
+        <span className="absolute left-0">{ddmm(serie[0].fecha)}</span>
+        <span className="absolute -translate-x-1/2" style={{ left: `${((medio + 0.5) / n) * 100}%` }}>
+          {ddmm(serie[medio].fecha)}
+        </span>
+        <span className="absolute right-0">{ddmm(serie[n - 1].fecha)}</span>
+      </div>
+
+      <p className="text-[11px] text-slate-300 min-h-4" aria-live="polite">
+        {dia ? (
+          <>
+            <strong className="text-white">{ddmm(dia.fecha)}</strong> · lluvia{" "}
+            <strong className="text-sky-300">{dia.lluviaMm === null ? "s/d" : `${fmt2(dia.lluviaMm)} mm`}</strong> ·
+            climatología <strong className="text-amber-200">{dia.climaMm === null ? "s/d" : `${fmt2(dia.climaMm)} mm`}</strong>
+          </>
+        ) : (
+          <span className="text-slate-500">Pasá el cursor o tocá un día para ver el detalle.</span>
+        )}
+      </p>
+    </figure>
+  );
+}
 
 export default function PanelDatos({ comunidad, lectura, modo }: Props) {
   if (!lectura) {
@@ -124,6 +241,8 @@ export default function PanelDatos({ comunidad, lectura, modo }: Props) {
           )}
         </div>
       </div>
+
+      {m && m.serie.length > 1 && <GraficoLluvia serie={m.serie} />}
 
       {modo === "parametrico" && m && (
         <div className="rounded-xl border border-sky-400/40 bg-sky-950/30 p-3 text-xs space-y-1.5">

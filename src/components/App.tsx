@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import dynamic from "next/dynamic";
 import { COMUNIDADES, CENTRO_JUJUY, getComunidad } from "@/lib/comunidades";
 import type { LecturaSatelital } from "@/lib/types";
@@ -11,6 +11,7 @@ import PanelDatos from "./PanelDatos";
 import PanelAlerta from "./PanelAlerta";
 import FichaCultural from "./FichaCultural";
 import Contador from "./Contador";
+import QrModal from "./QrModal";
 import { registrarEvento } from "@/lib/traccion-cliente";
 
 const Mapa = dynamic(() => import("./Mapa"), {
@@ -19,6 +20,23 @@ const Mapa = dynamic(() => import("./Mapa"), {
 });
 
 const LS_KEY = (id: string) => `oa:lectura:${id}`;
+
+const sinSuscripcion = () => () => {};
+
+function suscribirRed(avisar: () => void) {
+  window.addEventListener("online", avisar);
+  window.addEventListener("offline", avisar);
+  return () => {
+    window.removeEventListener("online", avisar);
+    window.removeEventListener("offline", avisar);
+  };
+}
+
+// ?c=id en la URL (links de WhatsApp y QR)
+function leerParametroC(): string | null {
+  const c = new URLSearchParams(window.location.search).get("c");
+  return c && getComunidad(c) ? c : null;
+}
 
 function leerLocal(id: string): LecturaSatelital | null {
   try {
@@ -30,43 +48,38 @@ function leerLocal(id: string): LecturaSatelital | null {
 }
 
 export default function App() {
-  const [seleccion, setSeleccion] = useState<string>("abra-pampa");
-  const [lectura, setLectura] = useState<LecturaSatelital | null>(() => lecturaCacheada("abra-pampa"));
-  const [cargando, setCargando] = useState(false);
+  const parametroC = useSyncExternalStore(sinSuscripcion, leerParametroC, () => null);
+  const montado = useSyncExternalStore(sinSuscripcion, () => true, () => false);
+  const online = useSyncExternalStore(suscribirRed, () => navigator.onLine, () => true);
+  const [elegida, setSeleccion] = useState<string | null>(null);
+  const seleccion = elegida ?? parametroC ?? "abra-pampa";
+  const [vivas, setVivas] = useState<Record<string, LecturaSatelital>>({});
+  const [terminada, setTerminada] = useState<string | null>(null);
   const [modo, setModo] = useState<"comunidad" | "parametrico">("comunidad");
   const [fix, setFix] = useState<Fix | null>(null);
   const [radar, setRadar] = useState<RadarSnapshot | null>(null);
-  const [online, setOnline] = useState(true);
+  const [qrAbierto, setQrAbierto] = useState(false);
   const pedido = useRef(0);
 
   const comunidad = getComunidad(seleccion)!;
 
-  // ?c=id en la URL (links de WhatsApp)
   useEffect(() => {
-    const c = new URLSearchParams(window.location.search).get("c");
-    if (c && getComunidad(c)) setSeleccion(c);
-    setOnline(navigator.onLine);
-    const on = () => setOnline(true);
-    const off = () => setOnline(false);
-    window.addEventListener("online", on);
-    window.addEventListener("offline", off);
     if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {
       navigator.serviceWorker.register("/sw.js").catch(() => {});
     }
-    return () => {
-      window.removeEventListener("online", on);
-      window.removeEventListener("offline", off);
-    };
   }, []);
 
-  // Offline-first: pinta cache al instante, después intenta en vivo.
+  // Offline-first: pinta cache al instante (localStorage o bundle), después intenta en vivo.
+  const cacheada = useMemo(() => {
+    const local = montado ? leerLocal(seleccion) : null;
+    return local ? { ...local, fuenteCache: true } : lecturaCacheada(seleccion);
+  }, [seleccion, montado]);
+  const lectura = vivas[seleccion] ?? cacheada;
+  const cargando = terminada !== seleccion;
+
   useEffect(() => {
     const id = seleccion;
     const n = ++pedido.current;
-    const local = leerLocal(id);
-    const bundled = lecturaCacheada(id);
-    setLectura(local ? { ...local, fuenteCache: true } : bundled);
-    setCargando(true);
     registrarEvento("vista", id);
 
     const ctrl = new AbortController();
@@ -75,29 +88,31 @@ export default function App() {
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
       .then((l: LecturaSatelital) => {
         if (n !== pedido.current) return;
-        setLectura(l);
+        setVivas((v) => ({ ...v, [id]: l }));
         if (l.meteorologia && !l.fuenteCache) localStorage.setItem(LS_KEY(id), JSON.stringify(l));
       })
       .catch(() => {})
       .finally(() => {
         clearTimeout(t);
-        if (n === pedido.current) setCargando(false);
+        if (n === pedido.current) setTerminada(id);
       });
     return () => ctrl.abort();
   }, [seleccion]);
 
+  const latGps = fix ? Math.round(fix.lat * 100) : null;
+  const lonGps = fix ? Math.round(fix.lon * 100) : null;
   const observador = useMemo(
     () =>
       fix
         ? { lat: fix.lat, lon: fix.lon, altKm: (fix.altM ?? 2500) / 1000, etiqueta: "tu GPS" }
         : { lat: comunidad.lat, lon: comunidad.lon, altKm: CENTRO_JUJUY.altKm, etiqueta: comunidad.nombre },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [fix ? Math.round(fix.lat * 100) : null, fix ? Math.round(fix.lon * 100) : null, comunidad.id],
+    [latGps, lonGps, comunidad.id],
   );
 
   return (
     <div className="min-h-screen bg-[#05070d] text-slate-100">
-      <header className="border-b border-white/10 bg-black/40 backdrop-blur sticky top-0 z-[1000]">
+      <header className="relative z-[1000] border-b border-white/10 bg-black/40 backdrop-blur sm:sticky sm:top-0">
         <div className="mx-auto max-w-7xl px-4 py-3 flex flex-wrap items-center gap-3 justify-between">
           <div>
             <h1 className="text-lg sm:text-xl font-bold tracking-tight">
@@ -109,6 +124,12 @@ export default function App() {
             </p>
           </div>
           <div className="flex items-center gap-2 text-xs">
+            <button
+              onClick={() => setQrAbierto(true)}
+              className="rounded-full border border-amber-400/50 px-2.5 py-1 font-semibold text-amber-200 transition hover:bg-amber-400/10"
+            >
+              📱 QR Tren
+            </button>
             <Contador />
             <span
               className={`rounded-full px-2 py-1 border ${online ? "border-emerald-500/40 text-emerald-300" : "border-amber-500/50 text-amber-300"}`}
@@ -118,6 +139,8 @@ export default function App() {
           </div>
         </div>
       </header>
+
+      {qrAbierto && <QrModal seleccion={seleccion} nombre={comunidad.nombre} onClose={() => setQrAbierto(false)} />}
 
       <main className="mx-auto max-w-7xl px-4 py-4 grid gap-4 lg:grid-cols-[380px_1fr]">
         <section className="space-y-4">
@@ -167,7 +190,7 @@ export default function App() {
           </div>
 
           <PanelDatos comunidad={comunidad} lectura={lectura} modo={modo} />
-          <PanelAlerta comunidad={comunidad} lectura={lectura} modo={modo} />
+          <PanelAlerta key={`${seleccion}-${modo}`} comunidad={comunidad} lectura={lectura} modo={modo} />
           <FichaCultural comunidad={comunidad} />
         </section>
       </main>

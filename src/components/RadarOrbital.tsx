@@ -37,7 +37,9 @@ export default function RadarOrbital({ observador, onSnapshot }: Props) {
 
   const sats = useMemo(() => (tleTxt ? parseTle(tleTxt) : []), [tleTxt]);
 
-  // Recalcula la próxima pasada solo cuando cambian los TLEs o el observador.
+  // Recalcula la próxima pasada solo cuando cambian los TLEs o el observador (~1 km).
+  const latObs = Math.round(observador.lat * 100);
+  const lonObs = Math.round(observador.lon * 100);
   const proxima = useMemo(() => {
     if (!sats.length) return null;
     const base = new Date();
@@ -47,7 +49,7 @@ export default function RadarOrbital({ observador, onSnapshot }: Props) {
       .sort((a, b) => a.inicio.getTime() - b.inicio.getTime());
     return pasadas[0] ?? null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sats, Math.round(observador.lat * 100), Math.round(observador.lon * 100)]);
+  }, [sats, latObs, lonObs]);
 
   useEffect(() => {
     const id = setInterval(() => setAhora(new Date()), 1000);

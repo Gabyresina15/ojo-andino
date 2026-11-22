@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import type { AlertaRespuesta, Comunidad, LecturaSatelital } from "@/lib/types";
 import { registrarEvento } from "@/lib/traccion-cliente";
 
@@ -17,12 +17,6 @@ export default function PanelAlerta({ comunidad, lectura, modo }: Props) {
   const [vozFallback, setVozFallback] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  useEffect(() => {
-    setAlerta(null);
-    setError(null);
-    setVozFallback(false);
-  }, [comunidad.id, modo]);
 
   const generar = async () => {
     if (!lectura) return;
