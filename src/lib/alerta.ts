@@ -268,7 +268,7 @@ export function alertaDeterminista(c: Comunidad, l: LecturaSatelital, modo: "com
       }
     } else if (est === "superavit_reciente" && c.region === "quebrada") {
       partes.push(
-        `En ${c.nombre} las lluvias superaron el promedio en ${patron.dias_con_lluvia_significativa} jornadas activas, con un pico de ${fmt1(patron.pico_maximo_mm)} mm el ${patron.pico_maximo_dia} (${patron.concentracion_pico_pct} % del total en un solo día) y ${fmt1(patron.lluvia_ultimos_7d_mm)} mm en la última semana.`,
+        `En ${c.nombre} la lluvia acumulada superó el promedio histórico, con ${patron.dias_con_lluvia_significativa} días de lluvia de 1 mm o más, un pico de ${fmt1(patron.pico_maximo_mm)} mm el ${patron.pico_maximo_dia} (${patron.concentracion_pico_pct} % del total en un solo día) y ${fmt1(patron.lluvia_ultimos_7d_mm)} mm en la última semana.`,
       );
       partes.push(
         `En terreno de Quebrada, esa concentración en pocas horas genera escorrentía rápida sobre laderas, badenes y caminos.`,
