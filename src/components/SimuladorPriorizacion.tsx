@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { leerCosto, leerFletes } from "@/lib/entradas-priorizacion";
 import { presupuestoRedirigido, simularPriorizacion, type NodoPriorizacion } from "@/lib/priorizacion";
 
 const etiquetas = { deficit: "Déficit", normal: "Normal", superavit_reciente: "Recuperada", sin_dato: "Sin dato" };
@@ -15,10 +16,13 @@ const moneda = new Intl.NumberFormat("es-AR", {
 
 export default function SimuladorPriorizacion({ nodos, onSeleccion }: { nodos: NodoPriorizacion[]; onSeleccion: (id: string) => void }) {
   const [fletes, setFletes] = useState(40);
+  const [textoFletes, setTextoFletes] = useState("40");
   const [costo, setCosto] = useState("");
+  const [ultimoCosto, setUltimoCosto] = useState<number | null>(null);
+  const fletesInvalidos = leerFletes(textoFletes) === null;
+  const costoInvalido = costo !== "" && leerCosto(costo) === null;
   const resultado = simularPriorizacion(nodos, fletes);
   const destinos = resultado.filas.filter((f) => f.delta > 0).map((f) => f.nombre).join(", ");
-  const costoValido = costo.trim() !== "" && Number.isFinite(Number(costo)) && Number(costo) >= 0;
   return (
     <section aria-labelledby="simulador-titulo" className="amc-surface rounded-2xl p-4 sm:p-5 space-y-4">
       <div>
@@ -28,16 +32,32 @@ export default function SimuladorPriorizacion({ nodos, onSeleccion }: { nodos: N
       </div>
       <div className="flex flex-wrap gap-4">
         <label className="text-sm flex flex-col gap-1">Fletes totales
-          <input className="rounded-lg border border-white/20 bg-[#0B0D10] px-3 py-2 w-40" type="number" min="0" step="1" value={fletes} onChange={(e) => { const n = Number(e.target.value); if (Number.isSafeInteger(n) && n >= 0) setFletes(n); }} />
+          <input className="rounded-lg border border-white/20 bg-[#0B0D10] px-3 py-2 w-40" type="text" inputMode="numeric" value={textoFletes} aria-invalid={fletesInvalidos} aria-describedby="fletes-validacion" onChange={(e) => {
+            const texto = e.target.value;
+            setTextoFletes(texto);
+            const valor = leerFletes(texto);
+            if (valor !== null) setFletes(valor);
+          }} />
+          <span id="fletes-validacion" className="text-xs text-[#F59E0B]">
+            {fletesInvalidos ? "Ingresá un entero no negativo. Se conserva el último reparto válido." : ""}
+          </span>
         </label>
         <label className="text-sm flex flex-col gap-1">Costo por flete (pesos, opcional)
-          <input className="rounded-lg border border-white/20 bg-[#0B0D10] px-3 py-2 w-56 max-w-full" type="number" min="0" step="any" placeholder="Ingresá tu costo" value={costo} onChange={(e) => setCosto(e.target.value)} />
+          <input className="rounded-lg border border-white/20 bg-[#0B0D10] px-3 py-2 w-56 max-w-full" type="text" inputMode="decimal" placeholder="Ingresá tu costo" value={costo} aria-invalid={costoInvalido} aria-describedby="costo-validacion" onChange={(e) => {
+            const texto = e.target.value;
+            setCosto(texto);
+            const valor = leerCosto(texto);
+            if (texto === "" || valor !== null) setUltimoCosto(valor);
+          }} />
+          <span id="costo-validacion" className="text-xs text-[#F59E0B]">
+            {costoInvalido ? "Ingresá un costo no negativo con hasta 2 decimales. Se conserva el último costo válido." : ""}
+          </span>
         </label>
       </div>
       <div className="rounded-xl border border-[#10B981]/30 bg-[#10B981]/5 p-3">
         <p className="font-bold text-[#10B981]">{resultado.fletesReasignados} de {fletes} fletes pasan de municipios recuperados{destinos ? ` a ${destinos}` : " a destinos con déficit (sin destinos actuales)"}.</p>
         <p className="text-sm text-[#9CA3AF]">En el reparto uniforme, {resultado.fletesARecuperados} fletes irían a municipios recuperados con superávit reciente de lluvia (30d). Reserva provincial: {resultado.reservaProvincial} fletes.</p>
-        {costoValido && <p className="text-sm mt-1">Presupuesto redirigido: <strong>{moneda.format(presupuestoRedirigido(resultado.fletesReasignados, Number(costo)))}</strong>. No es un ahorro neto: se mantiene el presupuesto de los viajes reasignados.</p>}
+        {ultimoCosto !== null && <p className="text-sm mt-1">Presupuesto redirigido: <strong>{moneda.format(presupuestoRedirigido(resultado.fletesReasignados, ultimoCosto))}</strong>. No es un ahorro neto: se mantiene el presupuesto de los viajes reasignados.</p>}
       </div>
       <ul className="space-y-3 sm:hidden" aria-label="Fletes por municipio antes y después de priorizar">
         {resultado.filas.map((fila) => (

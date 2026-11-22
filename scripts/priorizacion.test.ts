@@ -4,6 +4,7 @@ import { lecturaCacheada } from "../src/lib/cache";
 import { COMUNIDADES } from "../src/lib/comunidades";
 import { estadoHidrico } from "../src/lib/lecturas";
 import { lecturaMasReciente } from "../src/lib/lectura-reciente";
+import { leerCosto, leerFletes } from "../src/lib/entradas-priorizacion";
 import { presupuestoRedirigido, simularPriorizacion, type NodoPriorizacion } from "../src/lib/priorizacion";
 
 function nodo(id: string, porcentaje: number | null): NodoPriorizacion {
@@ -11,6 +12,16 @@ function nodo(id: string, porcentaje: number | null): NodoPriorizacion {
   lectura.meteorologia!.precipitacionMm30d.porcentaje = porcentaje;
   return { comunidad: { id, nombre: id }, lectura };
 }
+
+test("valida texto crudo de fletes y costos", () => {
+  for (const texto of ["", "-7", "3.5", "NaN", "Infinity"]) assert.equal(leerFletes(texto), null);
+  assert.equal(leerFletes("0"), 0);
+  assert.equal(leerFletes("7"), 7);
+  for (const texto of ["", "-7", "0.123", "Infinity"]) assert.equal(leerCosto(texto), null);
+  assert.equal(leerCosto("0.05"), 0.05);
+  assert.equal(leerCosto("0,05"), 0.05);
+  assert.equal(leerCosto("0"), 0);
+});
 
 test("elige la lectura por último día y luego por generación", () => {
   const cache = lecturaCacheada("susques")!;
