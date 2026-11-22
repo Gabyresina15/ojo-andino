@@ -208,19 +208,21 @@ export default function App() {
               </div>
             </button>
 
-            <div className="amc-surface rounded-2xl p-3.5 text-left border border-[#F59E0B]/30">
+            <a
+              href="#simulador-priorizacion"
+              className="amc-surface rounded-2xl p-3.5 text-left border border-[#F59E0B]/30 hover:border-[#F59E0B]/60 transition cursor-pointer"
+            >
               <div className="text-[11px] font-mono uppercase text-[#F59E0B] font-bold">🚚 Eficiencia Logística Puna</div>
               <div className="font-display text-xl font-extrabold text-[#F59E0B] mt-0.5">
                 {priorizacion.porcentajeReasignable.toLocaleString("es-AR", { maximumFractionDigits: 1 })}% fletes reasignables
               </div>
               <div className="text-xs text-[#9CA3AF] mt-0.5">
-                {priorizacion.nodosRecuperados} de {priorizacion.nodosConDato} nodos puneños con dato recuperados; priorizá los destinos con déficit
+                {priorizacion.nodosRecuperados} de {priorizacion.nodosConDato} nodos puneños con dato recuperados;{" "}
+                <span className="text-[#F59E0B] whitespace-nowrap">Ver simulador ↓</span>
               </div>
-            </div>
+            </a>
           </div>
         </section>
-
-        <SimuladorPriorizacion nodos={nodosPuna} onSeleccion={setSeleccion} />
 
         {/* BLOQUE PRINCIPAL: MAPA DE LAS 10 JURISDICCIONES + PARTE OFICIAL DE LA JURISDICCIÓN SELECCIONADA */}
         <section className="grid gap-5 lg:grid-cols-[400px_1fr] items-start">
@@ -347,6 +349,10 @@ export default function App() {
           )}
 
           {tabDetalle === "cultura" && <FichaCultural comunidad={comunidad} />}
+        </section>
+
+        <section id="simulador-priorizacion" className="scroll-mt-20" aria-label="Gestión logística provincial">
+          <SimuladorPriorizacion nodos={nodosPuna} onSeleccion={setSeleccion} />
         </section>
       </main>
 
