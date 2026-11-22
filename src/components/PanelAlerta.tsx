@@ -14,6 +14,7 @@ import {
 import { estadoHidrico } from "@/lib/lecturas";
 import { descargarPdfExpediente } from "@/lib/pdf-expediente";
 import { ChakanaIcon } from "./AndeanMotifs";
+import ResolucionSatelital from "./ResolucionSatelital";
 
 type Props = {
   comunidad: Comunidad;
@@ -266,6 +267,8 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
           </div>
         </div>
       )}
+
+      <ResolucionSatelital />
 
       {/* Dictamen Hidrológico con Switch Gobierno vs Productor + Audio xAI TTS + Firewall Numérico */}
       {alerta && (

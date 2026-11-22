@@ -9,6 +9,7 @@ import { alertaDeterminista, payloadUsuario, recomendacionGobierno, validarNumer
 import { descargarPdfExpediente } from "@/lib/pdf-expediente";
 import { JURISDICCION_MUNICIPAL } from "./PanelAlerta";
 import { ChakanaIcon } from "./AndeanMotifs";
+import ResolucionSatelital from "./ResolucionSatelital";
 
 const fmt1 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const fmt2 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -229,6 +230,8 @@ export default function ExpedienteMunicipal({ comunidad }: { comunidad: Comunida
           </section>
         )}
 
+        <ResolucionSatelital />
+
         {/* EVOLUCIÓN INTERANUAL DE PASTURAS (2025 vs 2026) Y ANTECEDENTES DE LA JURISDICCIÓN */}
         <section className="grid gap-4 lg:grid-cols-2">
           <div className="amc-surface rounded-2xl p-5 space-y-3 print:border print:border-slate-300 print:bg-white">
@@ -302,7 +305,7 @@ export default function ExpedienteMunicipal({ comunidad }: { comunidad: Comunida
                   📅 Registro Histórico Día por Día ({m.precipitacionMm30d.ventana})
                 </h2>
                 <p className="text-xs text-[#9CA3AF] print:text-slate-600">
-                  Bitácora diaria verificada de precipitaciones y temperaturas en {comunidad.nombre} (fuente: NASA POWER).
+                  Serie diaria de lluvia y temperatura de la celda de NASA POWER correspondiente a {comunidad.nombre}.
                 </p>
               </div>
             </div>
@@ -312,7 +315,7 @@ export default function ExpedienteMunicipal({ comunidad }: { comunidad: Comunida
                 <thead className="border-b border-white/10 text-[11px] text-[#9CA3AF] bg-white/5 print:bg-slate-100 print:text-black print:border-slate-300">
                   <tr>
                     <th className="py-2.5 px-3">Fecha</th>
-                    <th className="py-2.5 px-3">Lluvia caída</th>
+                    <th className="py-2.5 px-3">Lluvia estimada</th>
                     <th className="py-2.5 px-3">Promedio histórico (2001–2025)</th>
                     <th className="py-2.5 px-3">Diferencia del día</th>
                     <th className="py-2.5 px-3">Temperatura media</th>
