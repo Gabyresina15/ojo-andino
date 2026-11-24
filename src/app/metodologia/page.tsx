@@ -52,7 +52,7 @@ const BACKTEST = [
 
 const NO_MIDE = [
   "No mide el agua de un campo, una aguada o una vega en particular.",
-  "No usa imágenes de radar SAOCOM ni datos de estaciones meteorológicas locales. La segunda fuente (CHIRPS) también es satelital.",
+  "No usa imágenes de radar SAOCOM ni datos de estaciones meteorológicas locales. La segunda fuente (CHIRPS) también es satelital, y el panel de pasadas solo calcula cuándo pasan los satélites.",
   "No sirve para emergencias de horas (crecidas, tormentas): los datos tienen 2 a 3 días de demora.",
   "El estado no pronostica: describe lo que ya llovió frente a lo normal. El pronóstico de 7 días se muestra aparte y no lo modifica.",
   "No reemplaza la verificación en el territorio ni la decisión del organismo competente.",
