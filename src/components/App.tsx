@@ -108,6 +108,7 @@ export default function App() {
       .then((todas: LecturaSatelital[]) => {
         const nuevas = Object.fromEntries(todas.filter((l) => l.meteorologia && !l.fuenteCache).map((l) => [l.comunidadId, l]));
         setVivas((v) => ({ ...nuevas, ...v }));
+        for (const l of Object.values(nuevas)) localStorage.setItem(LS_KEY(l.comunidadId), JSON.stringify(l));
       })
       .catch(() => {});
     return () => ctrl.abort();
@@ -119,7 +120,17 @@ export default function App() {
     [comunidad.id],
   );
 
-  const sint = useMemo(() => sintesisRegional({ ...vivas, [seleccion]: lectura }), [vivas, seleccion, lectura]);
+  // Cada localidad usa siempre la misma fuente, esté o no seleccionada: en vivo, o la última guardada en este navegador.
+  const regionales = useMemo(() => {
+    const r: Record<string, LecturaSatelital> = {};
+    for (const c of COMUNIDADES) {
+      const local = montado ? leerLocal(c.id) : null;
+      const l = vivas[c.id] ?? (local ? { ...local, fuenteCache: true } : null);
+      if (l) r[c.id] = l;
+    }
+    return r;
+  }, [vivas, montado]);
+  const sint = useMemo(() => sintesisRegional({ ...regionales, [seleccion]: lectura }), [regionales, seleccion, lectura]);
   const punaEnDeficit = sint.deficit.filter((f) => f.c.region === "puna");
 
   const pueblosPuna = COMUNIDADES.filter((c) => c.region === "puna");
@@ -244,7 +255,7 @@ export default function App() {
             </div>
 
             <div className="h-[260px] sm:h-[300px]">
-              <Mapa seleccion={seleccion} onSeleccion={setSeleccion} fix={null} radar={radar} lecturas={vivas} />
+              <Mapa seleccion={seleccion} onSeleccion={setSeleccion} fix={null} radar={radar} lecturas={regionales} />
             </div>
 
             {/* Leyenda cromática del Semáforo en el Mapa */}
@@ -349,13 +360,13 @@ export default function App() {
           </div>
 
           {tabDetalle === "priorizacion" && (
-            <PanelDatos comunidad={comunidad} lectura={lectura} modo="parametrico" onSeleccion={setSeleccion} lecturas={vivas} />
+            <PanelDatos comunidad={comunidad} lectura={lectura} modo="parametrico" onSeleccion={setSeleccion} lecturas={regionales} />
           )}
 
           {tabDetalle === "satelite" && (
             <div className="grid gap-5 lg:grid-cols-[380px_1fr]">
               <RadarOrbital observador={observador} onSnapshot={setRadar} />
-              <PanelDatos comunidad={comunidad} lectura={lectura} modo="comunidad" onSeleccion={setSeleccion} lecturas={vivas} />
+              <PanelDatos comunidad={comunidad} lectura={lectura} modo="comunidad" onSeleccion={setSeleccion} lecturas={regionales} />
             </div>
           )}
 
