@@ -415,7 +415,10 @@ export function descargarPdfProvincialConsolidado(lecturas?: Record<string, Lect
     doc.setFont("helvetica", "bold");
     doc.setFontSize(7);
     doc.setTextColor(60, 68, 80);
-    doc.text(`Recomendación: ${f.accion}`, 16, fy + 14);
+    const textoAccion = `Recomendación: ${f.accion}`;
+    let cuerpo = 7;
+    while (cuerpo > 5 && doc.getTextWidth(textoAccion) > 178) doc.setFontSize((cuerpo -= 0.25));
+    doc.text(textoAccion, 16, fy + 14);
   });
 
   const yFirma = 266;
