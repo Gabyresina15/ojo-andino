@@ -1,0 +1,102 @@
+{
+ "generadoEn": "2026-11-24T23:47:04.216Z",
+ "estacion": {
+  "nombre": "Abra Pampa - EEA Abra Pampa",
+  "organismo": "INTA",
+  "lat": -22.8,
+  "lon": -65.83,
+  "alturaM": 3463,
+  "ultimoDiaConDato": "2026-11-23"
+ },
+ "fuentes": {
+  "estacion": "Sistema de Información y Gestión Agrometeorológica (SIGA) de INTA, precipitación diaria. Acceso por el visor web, sin licencia publicada.",
+  "nasa": "NASA POWER (PRECTOTCORR) en la coordenada de la estación",
+  "chirps": "CHIRPS v3.0 (Climate Hazards Center, UCSB), píxel de la estación"
+ },
+ "nota": "Totales del 1/12 al 30/4. Solo temporadas en que la estación tiene dato todos los días, para que las tres fuentes cubran el mismo período. ultimaPct: última temporada frente al promedio de las temporadas listadas, en cada fuente.",
+ "temporadas": [
+  {
+   "temporada": 2016,
+   "estacionMm": 82,
+   "diasSinDato": 0,
+   "nasaMm": 457.5,
+   "chirpsMm": 265.5
+  },
+  {
+   "temporada": 2018,
+   "estacionMm": 317,
+   "diasSinDato": 0,
+   "nasaMm": 497.8,
+   "chirpsMm": 344.6
+  },
+  {
+   "temporada": 2019,
+   "estacionMm": 227,
+   "diasSinDato": 0,
+   "nasaMm": 470.9,
+   "chirpsMm": 297.1
+  },
+  {
+   "temporada": 2020,
+   "estacionMm": 213.3,
+   "diasSinDato": 0,
+   "nasaMm": 473.2,
+   "chirpsMm": 332.4
+  },
+  {
+   "temporada": 2021,
+   "estacionMm": 208.8,
+   "diasSinDato": 0,
+   "nasaMm": 536.7,
+   "chirpsMm": 362.5
+  },
+  {
+   "temporada": 2022,
+   "estacionMm": 355.3,
+   "diasSinDato": 0,
+   "nasaMm": 675.9,
+   "chirpsMm": 339.6
+  },
+  {
+   "temporada": 2023,
+   "estacionMm": 130.8,
+   "diasSinDato": 0,
+   "nasaMm": 396.3,
+   "chirpsMm": 232.4
+  },
+  {
+   "temporada": 2024,
+   "estacionMm": 207.8,
+   "diasSinDato": 0,
+   "nasaMm": 479.1,
+   "chirpsMm": 356
+  },
+  {
+   "temporada": 2025,
+   "estacionMm": 212,
+   "diasSinDato": 0,
+   "nasaMm": 377.7,
+   "chirpsMm": 316.9
+  },
+  {
+   "temporada": 2026,
+   "estacionMm": 177.5,
+   "diasSinDato": 0,
+   "nasaMm": 459.6,
+   "chirpsMm": 301.8
+  }
+ ],
+ "resumen": {
+  "estacionUltimaPct": -16.7,
+  "nasa": {
+   "correlacion": 0.69,
+   "excesoPct": 126,
+   "ultimaPct": -4.7
+  },
+  "chirps": {
+   "correlacion": 0.66,
+   "excesoPct": 48,
+   "ultimaPct": -4.2
+  }
+ }
+}

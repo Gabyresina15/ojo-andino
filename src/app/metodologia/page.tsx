@@ -1,4 +1,5 @@
 import backtest from "@/data/backtest.json";
+import estacion from "@/data/estacion.json";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { COMUNIDADES } from "@/lib/comunidades";
@@ -23,10 +24,10 @@ const FUENTES = [
       "Es un compuesto de 16 días: no cambia de un día para otro. Se muestra como contexto y no interviene en el estado hídrico.",
   },
   {
-    nombre: "CHIRPS (Climate Hazards Center, UCSB)",
+    nombre: "CHIRPS v3 (Climate Hazards Center, UCSB)",
     uso: "Segunda fuente de lluvia, grilla de unos 5 km. Se usa solo para cruzar el acumulado de la última temporada de lluvias cerrada.",
     limite:
-      "No decide el estado: si no coincide con NASA POWER, se avisa que hay que verificar en campo. Llega con semanas de demora, así que no cubre los últimos 30 días ni la temporada en curso. También es una estimación satelital, no una estación.",
+      "No decide el estado: si no coincide con NASA POWER, se avisa que hay que verificar en campo. Llega con semanas de demora, así que no cubre los últimos 30 días ni la temporada en curso. También es una estimación satelital, no una estación. Desde noviembre de 2026 se usa la versión 3: la versión 2 deja de producirse después de diciembre de 2026.",
   },
   {
     nombre: "MET Norway (api.met.no)",
@@ -52,6 +53,7 @@ const fmt1 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 1
 
 // Generado por scripts/backtest.ts (npm run backtest): ninguna cifra de la prueba se escribe a mano.
 const BT = backtest.filas;
+const EST = estacion;
 const ESTADO: Record<string, string> = { deficit: "déficit", normal: "normal", superavit_reciente: "superávit", sin_dato: "sin dato" };
 const pct = (n: number | null) => (n === null ? "sin dato" : `${n > 0 ? "+" : ""}${fmt1(n)} %`);
 const lista = (v: string[]) => (v.length > 1 ? `${v.slice(0, -1).join(", ")} y ${v[v.length - 1]}` : (v[0] ?? "ninguna"));
@@ -59,7 +61,7 @@ const fechaAr = (iso: string) => iso.slice(0, 10).split("-").reverse().join("/")
 
 const NO_MIDE = [
   "No mide el agua de un campo, una aguada o una vega en particular.",
-  "No usa imágenes de radar SAOCOM ni datos de estaciones meteorológicas locales. La segunda fuente (CHIRPS) también es satelital, y el panel de pasadas solo calcula cuándo pasan los satélites.",
+  "No usa imágenes de radar SAOCOM ni consulta estaciones meteorológicas locales. La segunda fuente (CHIRPS) también es satelital, y el panel de pasadas solo calcula cuándo pasan los satélites.",
   "No sirve para emergencias de horas (crecidas, tormentas): los datos tienen 2 a 3 días de demora.",
   "El estado no pronostica: describe lo que ya llovió frente a lo normal. El pronóstico de 7 días se muestra aparte y no lo modifica.",
   "No reemplaza la verificación en el territorio ni la decisión del organismo competente.",
@@ -219,8 +221,18 @@ export default function MetodologiaPage() {
             </li>
             <li>
               Entre 2001 y {backtest.evento.fecha.slice(0, 4)} los totales de temporada de NASA POWER y CHIRPS se parecen poco en estas
-              localidades (correlación de {fmt2(Math.min(...corr))} a {fmt2(Math.max(...corr))}). Sin estaciones en tierra no se puede
-              decir cuál de las dos acierta.
+              localidades (correlación de {fmt2(Math.min(...corr))} a {fmt2(Math.max(...corr))}).
+            </li>
+            <li>
+              <strong className="text-[#F4F1EA]">Contraste con una estación en tierra.</strong> Se compararon {EST.temporadas.length}{" "}
+              temporadas ({EST.temporadas[0].temporada} a {EST.temporadas[EST.temporadas.length - 1].temporada}) con la lluvia diaria de la
+              estación de INTA en Abra Pampa. Las dos fuentes satelitales dan más lluvia que la estación: NASA POWER{" "}
+              {EST.resumen.nasa.excesoPct} % más y CHIRPS {EST.resumen.chirps.excesoPct} % más. La correlación entre temporadas es{" "}
+              {fmt2(EST.resumen.nasa.correlacion)} con NASA POWER y {fmt2(EST.resumen.chirps.correlacion)} con CHIRPS. En la última
+              temporada la estación quedó en {pct(EST.resumen.estacionUltimaPct)} frente a su promedio de esos años, NASA POWER en{" "}
+              {pct(EST.resumen.nasa.ultimaPct)} y CHIRPS en {pct(EST.resumen.chirps.ultimaPct)}. Es una sola estación, y CHIRPS no la usa
+              como dato de entrada. El dato sale del visor SIGA de INTA, que no es un servicio documentado: para sumarlo al tablero hace
+              falta un acuerdo con INTA. Generado el {fechaAr(EST.generadoEn)} con <code>npm run estacion</code>.
             </li>
             <li>Es un solo evento. No alcanza para estimar aciertos ni falsas alarmas.</li>
             <li>

@@ -91,13 +91,13 @@ test("el cruce con CHIRPS solo aplica a temporadas cerradas y dice si coincide c
   base.meteorologia!.ultimoDiaConDato = "2026-09-23";
   const c = cruceTemporada(base)!;
   assert.equal(c.temporada, 2026);
-  assert.equal(c.observado, 372.5);
-  assert.ok(c.porcentaje > -20 && c.porcentaje < 0);
-  assert.equal(c.coincide, false);
+  assert.equal(c.observado, 273.6);
+  assert.ok(c.porcentaje <= -20);
+  assert.equal(c.coincide, true);
 
   const normal = lectura(anom(12.2, 6.2), anom(430, 446));
   normal.meteorologia!.ultimoDiaConDato = "2026-09-23";
-  assert.equal(cruceTemporada(normal)!.coincide, true);
+  assert.equal(cruceTemporada(normal)!.coincide, false);
 
   const enCurso = lectura(anom(60, 80), anom(100, 150));
   enCurso.meteorologia!.ultimoDiaConDato = "2027-02-15";
@@ -118,4 +118,32 @@ test("Puna con lluvia reciente y temporada cerrada en déficit: el texto y la re
   assert.doesNotMatch(det.resumen_oral + det.nota_parametrica, /reasignar fletes|no requiere/i);
   m.precipitacionTemporada = { ...m.precipitacionTemporada!, porcentaje: -5 };
   assert.match(alertaDeterminista(c, l, "parametrico").resumen_oral, /reasignar fletes/);
+});
+
+test("un texto de Grok que descarta forraje con la temporada cerrada en déficit se rechaza", async () => {
+  const { lecturaCacheada } = await import("../src/lib/cache");
+  const { COMUNIDADES } = await import("../src/lib/comunidades");
+  const c = COMUNIDADES.find((x) => x.id === "abra-pampa")!;
+  const l = structuredClone(lecturaCacheada("abra-pampa")!);
+  const m = l.meteorologia!;
+  m.precipitacionMm30d = { ...m.precipitacionMm30d, observado: 80, climatologia: 40, porcentaje: 100 };
+  m.precipitacionTemporada = { ...m.precipitacionTemporada!, enCurso: false, porcentaje: -21 };
+  const payload = payloadUsuario(c, l, "parametrico");
+  assert.equal(payload.temporada_cerrada_en_deficit, true);
+  for (const t of [
+    "La recarga permite evitar gasto innecesario de fardos de emergencia.",
+    "No se requiere envío de forraje esta semana.",
+    "Conviene reasignar los fletes a otras zonas.",
+    "Se puede esperar el rebrote natural del pastizal.",
+    "No es necesario enviar forraje.",
+    "El envío de fardos resulta innecesario.",
+  ]) {
+    assert.ok(validarNumeros(t, payload).noVerificados.length > 0, t);
+  }
+  for (const modo of ["parametrico", "comunidad"] as const) {
+    const det = alertaDeterminista(c, l, modo);
+    assert.deepEqual(validarNumeros(`${det.resumen_oral} ${det.nota_parametrica}`, payloadUsuario(c, l, modo)).noVerificados, []);
+  }
+  m.precipitacionTemporada = { ...m.precipitacionTemporada!, porcentaje: -5 };
+  assert.deepEqual(validarNumeros("Conviene reasignar los fletes a otras zonas.", payloadUsuario(c, l, "parametrico")).noVerificados, []);
 });
