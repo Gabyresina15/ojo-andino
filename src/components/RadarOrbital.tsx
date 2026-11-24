@@ -45,6 +45,8 @@ export default function RadarOrbital({ observador, onSnapshot, seleccion, onSele
   const [fuenteTle, setFuenteTle] = useState<"celestrak" | "cache">("cache");
   const [obtenidoEn, setObtenidoEn] = useState<string>(tleLocal.obtenidoEn || "");
   const [ahora, setAhora] = useState<Date>(() => new Date());
+  // Se incrementa cuando termina una pasada mostrada, para volver a buscar la siguiente.
+  const [epoca, setEpoca] = useState(0);
 
   useEffect(() => {
     fetch("/api/tle")
@@ -72,7 +74,7 @@ export default function RadarOrbital({ observador, onSnapshot, seleccion, onSele
       .sort((a, b) => a.inicio.getTime() - b.inicio.getTime());
     return pasadas[0] ?? null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sats, latObs, lonObs]);
+  }, [sats, latObs, lonObs, epoca]);
 
   // Próxima pasada de cualquiera de los dos satélites sobre cada localidad del tablero.
   const porLocalidad = useMemo(() => {
@@ -86,7 +88,15 @@ export default function RadarOrbital({ observador, onSnapshot, seleccion, onSele
         .sort((a, b) => a.inicio.getTime() - b.inicio.getTime())[0];
       return { id: c.id, nombre: c.nombre, pasada: p ?? null };
     });
-  }, [sats]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sats, epoca]);
+
+  useEffect(() => {
+    const fines = [proxima, ...porLocalidad.map((f) => f.pasada)].filter((p): p is Pasada => !!p).map((p) => p.fin.getTime());
+    if (!fines.length) return;
+    const id = setTimeout(() => setEpoca((e) => e + 1), Math.max(1000, Math.min(...fines) - Date.now() + 1000));
+    return () => clearTimeout(id);
+  }, [proxima, porLocalidad]);
 
   useEffect(() => {
     const id = setInterval(() => setAhora(new Date()), 1000);
@@ -228,7 +238,7 @@ export default function RadarOrbital({ observador, onSnapshot, seleccion, onSele
       </div>
 
       {/* Próxima pasada sobre cada localidad */}
-      <div className="rounded-xl bg-[#0B0D10]/85 border border-white/10 overflow-hidden">
+      <div className="rounded-xl bg-[#0B0D10]/85 border border-white/10 overflow-x-auto">
         <div className="px-3 py-2 text-[11px] font-mono uppercase text-[#2DD4BF] font-bold border-b border-white/10">
           Próxima pasada por localidad
         </div>
@@ -250,7 +260,19 @@ export default function RadarOrbital({ observador, onSnapshot, seleccion, onSele
                   f.id === seleccion ? "bg-[#2DD4BF]/10" : ""
                 }`}
               >
-                <td className="px-3 py-1.5 font-bold text-[#F4F1EA] whitespace-nowrap">{f.nombre}</td>
+                <td className="px-3 py-1.5 font-bold text-[#F4F1EA] whitespace-nowrap">
+                  {onSeleccion ? (
+                    <button
+                      type="button"
+                      aria-pressed={f.id === seleccion}
+                      className="font-bold text-left cursor-pointer underline-offset-2 hover:underline"
+                    >
+                      {f.nombre}
+                    </button>
+                  ) : (
+                    f.nombre
+                  )}
+                </td>
                 {f.pasada ? (
                   <>
                     <td className="px-2 py-1.5 text-[#F59E0B] whitespace-nowrap">{f.pasada.nombre}</td>
