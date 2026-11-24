@@ -28,6 +28,12 @@ const FUENTES = [
       "No decide el estado: si no coincide con NASA POWER, se avisa que hay que verificar en campo. Llega con semanas de demora, así que no cubre los últimos 30 días ni la temporada en curso. También es una estimación satelital, no una estación.",
   },
   {
+    nombre: "MET Norway (api.met.no)",
+    uso: "Pronóstico de lluvia para los próximos 7 días. Se muestra aparte, rotulado como pronóstico. Licencia CC BY 4.0.",
+    limite:
+      "No interviene en el estado hídrico ni en la recomendación. Es un modelo global, no una estación del lugar, y no está verificado contra lluvia medida en la Puna. No sirve como alerta de crecidas o tormentas.",
+  },
+  {
     nombre: "Grok (xAI)",
     uso: "Redacta el texto de la alerta a partir de las cifras anteriores.",
     limite:
@@ -48,7 +54,7 @@ const NO_MIDE = [
   "No mide el agua de un campo, una aguada o una vega en particular.",
   "No usa imágenes de radar SAOCOM ni datos de estaciones meteorológicas locales. La segunda fuente (CHIRPS) también es satelital.",
   "No sirve para emergencias de horas (crecidas, tormentas): los datos tienen 2 a 3 días de demora.",
-  "No pronostica: describe lo que ya llovió frente a lo normal.",
+  "El estado no pronostica: describe lo que ya llovió frente a lo normal. El pronóstico de 7 días se muestra aparte y no lo modifica.",
   "No reemplaza la verificación en el territorio ni la decisión del organismo competente.",
 ];
 
