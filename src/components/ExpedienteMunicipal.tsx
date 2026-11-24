@@ -1,13 +1,13 @@
 "use client";
 
+import { jurisdiccionDe } from "@/lib/comunidades";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { AlertaRespuesta, Comunidad, LecturaSatelital } from "@/lib/types";
 import { lecturaCacheada } from "@/lib/cache";
-import { estadoHidrico } from "@/lib/lecturas";
+import { corteLectura, estadoHidrico } from "@/lib/lecturas";
 import { alertaDeterminista, payloadUsuario, recomendacionGobierno, validarNumeros } from "@/lib/alerta";
 import { descargarPdfExpediente } from "@/lib/pdf-expediente";
-import { JURISDICCION_MUNICIPAL } from "./PanelAlerta";
 import { ChakanaIcon } from "./AndeanMotifs";
 
 const fmt1 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -50,11 +50,11 @@ export default function ExpedienteMunicipal({ comunidad }: { comunidad: Comunida
     fetch("/api/alerta", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: comunidad.id, modo: "comunidad", lectura }),
+      body: JSON.stringify({ id: comunidad.id, modo: "comunidad" }),
     })
       .then((r) => (r.ok ? r.json() : null))
       .then((a: AlertaRespuesta | null) => {
-        if (a) setAlertaGrok(a);
+        setAlertaGrok(a && a.corteDatos === corteLectura(lectura) ? a : null);
       })
       .catch(() => {});
   }, [comunidad.id, lectura]);
@@ -63,7 +63,7 @@ export default function ExpedienteMunicipal({ comunidad }: { comunidad: Comunida
   const m = lectura?.meteorologia;
   const ndvi = lectura?.ndvi;
   const est = lectura ? estadoHidrico(lectura) : "sin_dato";
-  const jurisdiccion = JURISDICCION_MUNICIPAL[comunidad.id] ?? `Municipio de ${comunidad.nombre}`;
+  const jurisdiccion = jurisdiccionDe(comunidad);
 
   const copiarLink = async () => {
     try {
@@ -98,7 +98,7 @@ export default function ExpedienteMunicipal({ comunidad }: { comunidad: Comunida
               onClick={copiarLink}
               className="min-h-[42px] rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 px-3.5 py-2 text-xs font-semibold text-[#F4F1EA] transition cursor-pointer"
             >
-              {copiado ? "✓ Link del expediente copiado" : "🔗 Copiar link de este registro"}
+              {copiado ? "✓ Link del informe copiado" : "🔗 Copiar link de este registro"}
             </button>
             <button
               onClick={() => lectura && descargarPdfExpediente(comunidad, lectura, alerta)}
@@ -106,23 +106,23 @@ export default function ExpedienteMunicipal({ comunidad }: { comunidad: Comunida
               className="min-h-[42px] rounded-xl bg-[#F59E0B] hover:bg-[#F59E0B]/90 px-4 py-2 text-xs font-bold text-[#0B0D10] transition shadow cursor-pointer flex items-center gap-2"
             >
               <span>📄</span>
-              <span>Descargar Anexo Oficial (.PDF)</span>
+              <span>Descargar Informe Técnico (.PDF)</span>
             </button>
           </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-5xl px-4 py-7 space-y-6 print:py-2 print:space-y-4">
-        {/* MEMBRETE OFICIAL DEL EXPEDIENTE MUNICIPAL */}
+        {/* ENCABEZADO DEL INFORME */}
         <section className="amc-surface-elevated rounded-3xl p-6 sm:p-8 space-y-4 print:border print:border-slate-300 print:bg-white print:text-black print:shadow-none">
           <div className="flex flex-wrap items-start justify-between gap-4 border-b border-white/10 pb-4 print:border-slate-300">
             <div className="space-y-1">
               <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-[#F59E0B] print:text-slate-700 font-bold">
                 <ChakanaIcon className="h-4 w-4 text-[#D95D39]" />
-                <span>Gobierno de la Provincia de Jujuy · Sistema Ojo Andino</span>
+                <span>Ojo Andino · Informe técnico</span>
               </div>
               <h1 className="font-display text-2xl sm:text-4xl font-extrabold text-[#F4F1EA] print:text-black">
-                Expediente Hídrico e Historial Satelital · {comunidad.nombre}
+                Informe Hídrico e Historial Satelital · {comunidad.nombre}
               </h1>
               <p className="text-sm text-[#9CA3AF] print:text-slate-600">
                 Jurisdicción: <strong className="text-[#F4F1EA] print:text-black">{jurisdiccion}</strong> · Región:{" "}
@@ -132,7 +132,7 @@ export default function ExpedienteMunicipal({ comunidad }: { comunidad: Comunida
 
             <div className="rounded-2xl bg-[#0B0D10]/80 border border-white/10 p-3.5 text-xs font-mono space-y-1 print:bg-slate-100 print:border-slate-300 print:text-black">
               <div>
-                EXPEDIENTE: <strong>EXP-JUJ-2026-{comunidad.id.toUpperCase()}</strong>
+                REFERENCIA: <strong>OA-{comunidad.id.toUpperCase()}</strong>
               </div>
               <div>
                 COORDENADAS: {comunidad.lat.toFixed(4)}°, {comunidad.lon.toFixed(4)}°
@@ -186,6 +186,14 @@ export default function ExpedienteMunicipal({ comunidad }: { comunidad: Comunida
               <div className="text-xs text-[#9CA3AF] print:text-slate-600 mt-1">
                 Promedio 2001–2025: <strong>{fmt1(m.precipitacionMm30d.climatologia)} mm</strong>
               </div>
+              {m.precipitacionTemporada && (
+                <div className="text-xs text-[#9CA3AF] print:text-slate-600 mt-1">
+                  Temporada de lluvias{m.precipitacionTemporada.enCurso ? " (en curso)" : ""}:{" "}
+                  <strong>{fmt1(m.precipitacionTemporada.observado)} mm</strong> de {fmt1(m.precipitacionTemporada.climatologia)} mm
+                  normales ({(m.precipitacionTemporada.porcentaje ?? 0) >= 0 ? "+" : ""}
+                  {fmt1(m.precipitacionTemporada.porcentaje ?? 0)}%)
+                </div>
+              )}
             </div>
 
             <div className="amc-surface rounded-2xl p-4 print:border print:border-slate-300 print:bg-white">
@@ -359,7 +367,7 @@ export default function ExpedienteMunicipal({ comunidad }: { comunidad: Comunida
         )}
 
         <footer className="text-[11px] text-[#9CA3AF] print:text-slate-600 border-t border-white/10 print:border-slate-300 pt-4">
-          Documento oficial generado por Ojo Andino para el Gobierno de la Provincia de Jujuy y {jurisdiccion}. Fuentes:
+          Informe técnico generado automáticamente por Ojo Andino sobre {jurisdiccion}. No es un documento oficial. Fuentes:
           NASA/POWER (serie 2001–2025) y MODIS MOD13Q1 (ORNL DAAC).
         </footer>
       </main>

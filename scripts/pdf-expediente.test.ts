@@ -40,7 +40,7 @@ function capturarTexto(t: TestContext, alerta?: AlertaRespuesta) {
 test("el dictamen de Volcán cabe a la fuente con la que se dibuja", (t) => {
   const textos = capturarTexto(t);
   const inicio = textos.findIndex(({ texto }) => texto.startsWith("En Volcán"));
-  const fin = textos.findIndex(({ texto }) => texto.startsWith("2. DIRECTIVA"));
+  const fin = textos.findIndex(({ texto }) => texto.startsWith("2. RECOMENDACIÓN"));
   assert.ok(inicio >= 0 && fin > inicio);
   const dictamen = textos.slice(inicio, fin);
   assert.match(dictamen.map(({ texto }) => texto).join(" "), /38,1 mm en la última semana/);
@@ -68,7 +68,7 @@ test("la bitácora pasa de página si un dictamen largo dejaría poco espacio", 
       motivoFallback: null,
     },
   });
-  const firma = textos.find(({ texto }) => texto.startsWith("DIRECCIÓN PROVINCIAL"));
+  const firma = textos.find(({ texto }) => texto.startsWith("ELABORÓ: OJO ANDINO"));
   assert.ok(firma);
   assert.equal(firma.pagina, 2);
   const dias = textos.filter(({ texto }) => /^\d{2}\/\d{2}\/2026$/.test(texto));
@@ -132,7 +132,7 @@ test("el expediente lleva un QR que abre /municipio/[id] en la banda del encabez
   }
   assert.deepEqual(dibujados, esperados);
 
-  for (const { texto, x, y, ancho } of textos.filter(({ y }) => y <= qr.y + qr.alto)) {
+  for (const { texto, x, ancho } of textos.filter(({ y }) => y <= qr.y + qr.alto)) {
     assert.ok(x + ancho < qr.x - 4, `El encabezado pisa el QR: ${texto}`);
   }
   const pie = textos.filter(({ y }) => y > 280);
