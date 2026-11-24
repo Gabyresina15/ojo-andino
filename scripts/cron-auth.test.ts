@@ -15,3 +15,13 @@ test("con CRON_SECRET, acepta el token correcto", async () => {
   const r = await GET(new Request(URL_CRON, { headers: { authorization: "Bearer s3creto" } }));
   assert.equal(r.status, 200);
 });
+
+test("en producción sin CRON_SECRET, no despacha", async () => {
+  delete process.env.CRON_SECRET;
+  process.env.VERCEL_ENV = "production";
+  try {
+    assert.equal((await GET(new Request(URL_CRON))).status, 503);
+  } finally {
+    delete process.env.VERCEL_ENV;
+  }
+});
