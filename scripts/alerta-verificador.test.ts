@@ -88,3 +88,9 @@ test("un pico mencionado en otra cláusula no se adueña de un total semanal", (
   assert.deepEqual(validarNumeros(ok, payload).noVerificados, []);
   assert.ok(validarNumeros(ok.replace("2,5 mm", "2,3 mm"), payload).noVerificados.length > 0);
 });
+
+test("'Pico: X mm en los últimos 7 días' se verifica como pico", () => {
+  const ok = "Pico: 2,3 mm en los últimos 7 días.";
+  assert.deepEqual(validarNumeros(ok, payload).noVerificados, []);
+  assert.ok(validarNumeros(ok.replace("2,3 mm", "2,5 mm"), payload).noVerificados.length > 0);
+});
