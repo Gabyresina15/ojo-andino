@@ -344,6 +344,7 @@ export function descargarPdfProvincialConsolidado(lecturas?: Record<string, Lect
       clim: p?.climatologia ?? 0,
       pct: p?.porcentaje ?? 0,
       temporadaPct: t?.porcentaje ?? null,
+      temporadaEnCurso: !!t?.enCurso,
       decideTemporada: !!l && baseEstado(l) === "temporada_lluvias",
       decide30d: !!l && baseEstado(l) === "lluvia_30d",
       corte: l?.meteorologia?.ultimoDiaConDato ?? null,
@@ -436,7 +437,7 @@ export function descargarPdfProvincialConsolidado(lecturas?: Record<string, Lect
     doc.text(conSigno(f.pct), 117, fy + 5.5);
     doc.setFont("helvetica", f.decideTemporada ? "bold" : "normal");
     colorDesvio(f.temporadaPct ?? 0, f.decideTemporada);
-    doc.text(f.temporadaPct === null ? "s/d" : conSigno(f.temporadaPct), 136, fy + 5.5);
+    doc.text(f.temporadaPct === null ? "s/d" : `${conSigno(f.temporadaPct)}${f.temporadaEnCurso ? " *" : ""}`, 136, fy + 5.5);
 
     doc.setFont("helvetica", "normal");
     doc.setTextColor(40, 45, 55);
@@ -458,7 +459,7 @@ export function descargarPdfProvincialConsolidado(lecturas?: Record<string, Lect
   doc.setTextColor(95, 102, 114);
   doc.text(
     doc.splitTextToSize(
-      `TEMPORADA: lluvia acumulada de la temporada de lluvias (1/12 al 30/4) frente a lo normal. En negrita, el desvío que decide el estado: el de temporada cuando la normal de 30 días es menor a ${PISO_NORMAL_30D_MM} mm (época seca); si no, el de 30 días. Umbrales provisorios, sin calibrar.`,
+      `TEMPORADA: lluvia acumulada de la última temporada de lluvias completa (1/12 al 30/4) frente a lo normal.${filas.some((f) => f.temporadaEnCurso) ? " * Temporada en curso: acumulado parcial desde el 1/12 hasta la fecha de corte, frente a lo normal de esos mismos días." : ""} En negrita, el desvío que decide el estado: el de temporada cuando la normal de 30 días es menor a ${PISO_NORMAL_30D_MM} mm (época seca); si no, el de 30 días. Umbrales provisorios, sin calibrar.`,
       182,
     ),
     14,
