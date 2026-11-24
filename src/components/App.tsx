@@ -367,7 +367,7 @@ export default function App() {
           )}
 
           {tabDetalle === "satelite" && (
-            <div className="grid gap-5 lg:grid-cols-[380px_1fr] items-start">
+            <div className="grid gap-5 grid-cols-[minmax(0,1fr)] lg:grid-cols-[380px_minmax(0,1fr)] items-start">
               <RadarOrbital observador={observador} seleccion={seleccion} onSeleccion={setSeleccion} />
               <PanelDatos comunidad={comunidad} lectura={lectura} modo="comunidad" onSeleccion={setSeleccion} lecturas={regionales} />
             </div>
