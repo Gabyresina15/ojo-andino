@@ -12,12 +12,13 @@ import {
   recomendacionGobierno,
   validarNumeros,
 } from "@/lib/alerta";
-import { corteLectura, estadoHidrico } from "@/lib/lecturas";
+import { corteLectura, estadoHidrico, productoNdvi } from "@/lib/lecturas";
 import { cruceTemporada, textoCruce } from "@/lib/cruce";
 import { descargarPdfExpediente } from "@/lib/pdf-expediente";
 import { ChakanaIcon } from "./AndeanMotifs";
 import { PronosticoLluvia } from "./PronosticoLluvia";
 import { ContextoSatelital } from "./ContextoSatelital";
+import ResolucionSatelital from "./ResolucionSatelital";
 
 type Props = {
   comunidad: Comunidad;
@@ -272,6 +273,8 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
           </div>
         </div>
       )}
+
+      <ResolucionSatelital producto={productoNdvi(ndvi)} />
 
       <PronosticoLluvia comunidadId={comunidad.id} />
 

@@ -46,11 +46,11 @@ function GraficoLluvia({ serie }: { serie: DiaSerie[] }) {
     <figure className="rounded-2xl bg-[#0B0D10]/85 border border-white/10 p-4 space-y-2.5">
       <figcaption className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
         <span className="text-xs font-bold text-[#F4F1EA]">
-          📊 Lluvia día por día en {n} días (medida por satélite NASA POWER)
+          📊 Lluvia estimada día por día en {n} días (grilla de NASA POWER)
         </span>
         <span className="flex items-center gap-3 text-[11px] text-[#9CA3AF]">
           <span className="flex items-center gap-1.5">
-            <span className="inline-block h-2.5 w-2.5 rounded-sm bg-[#2DD4BF]" /> Lluvia caída
+            <span className="inline-block h-2.5 w-2.5 rounded-sm bg-[#2DD4BF]" /> Lluvia estimada
           </span>
           <span className="flex items-center gap-1.5">
             <span className="inline-block w-4 border-t-2 border-dashed border-[#F59E0B]" /> Promedio normal (2001–2025)
@@ -126,13 +126,13 @@ function GraficoLluvia({ serie }: { serie: DiaSerie[] }) {
       <p className="text-xs text-[#F4F1EA] min-h-4" aria-live="polite">
         {dia ? (
           <>
-            <strong>{ddmm(dia.fecha)}</strong> · Llovió:{" "}
+            <strong>{ddmm(dia.fecha)}</strong> · Lluvia estimada:{" "}
             <strong className="text-[#2DD4BF]">{dia.lluviaMm === null ? "s/d" : `${fmt2(dia.lluviaMm)} mm`}</strong> ·
             Normal para ese día:{" "}
             <strong className="text-[#F59E0B]">{dia.climaMm === null ? "s/d" : `${fmt2(dia.climaMm)} mm`}</strong>
           </>
         ) : (
-          <span className="text-[#9CA3AF]">Tocá cualquier barra para ver cuánta agua cayó ese día.</span>
+          <span className="text-[#9CA3AF]">Tocá cualquier barra para ver la lluvia estimada de ese día.</span>
         )}
       </p>
     </figure>
@@ -156,10 +156,10 @@ export default function PanelDatos({ comunidad, lectura, modo, onSeleccion, lect
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h3 className="font-display text-base sm:text-lg font-bold text-[#F4F1EA]">
-              Historial diario de lluvias en {comunidad.nombre} (últimos 30 días)
+              Historial diario de lluvias para {comunidad.nombre} (últimos 30 días)
             </h3>
             <p className="text-xs text-[#9CA3AF]">
-              Comparación entre la lluvia caída este mes y el promedio histórico de la NASA (2001–2025).
+              Comparación entre la lluvia estimada en la celda regional y el promedio histórico de NASA POWER (2001–2025).
             </p>
           </div>
           <button
