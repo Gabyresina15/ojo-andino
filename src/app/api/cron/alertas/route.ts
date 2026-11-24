@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { COMUNIDADES } from "@/lib/comunidades";
-import { lecturaCacheada } from "@/lib/cache";
-import { estadoHidrico, porPrioridad } from "@/lib/lecturas";
+import { lecturaServidor } from "@/lib/lectura-servidor";
+import { anomaliaDelEstado, estadoHidrico, porPrioridad } from "@/lib/lecturas";
 import { generarAlerta } from "@/lib/alerta";
+import { fechaJujuy, guardarBarrido, type EstadoHistorial } from "@/lib/historial";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 export type DespachoMunicipal = {
   comunidadId: string;
@@ -15,6 +17,9 @@ export type DespachoMunicipal = {
   lluviaNormalMm: number;
   anomaliaPct: number;
   estado: "deficit" | "normal" | "superavit_reciente" | "sin_dato";
+  /** Último día con dato de lluvia y si la lectura salió del cache del deploy por falla de la fuente. */
+  corteDatos: string | null;
+  desdeCache: boolean;
   accionAutomatica: "enviada" | "en_vigilancia";
   canal: "meta_cloud_api" | "webhook" | "cola_institucional";
   mensajeEnviado: string | null;
@@ -27,6 +32,8 @@ export type ResultadoBarrido = {
   totalMunicipios: number;
   alertasDisparadas: number;
   metaCloudConfigurado: boolean;
+  /** Si este barrido quedó registrado en el historial persistente. */
+  historial: EstadoHistorial;
   despachos: DespachoMunicipal[];
 };
 
@@ -87,7 +94,15 @@ async function enviarPorWebhook(payload: unknown): Promise<boolean> {
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
+  const secreto = process.env.CRON_SECRET;
+  if (!secreto && process.env.VERCEL_ENV === "production") {
+    return NextResponse.json({ error: "CRON_SECRET no configurado" }, { status: 503 });
+  }
+  if (secreto && req.headers.get("authorization") !== `Bearer ${secreto}`) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  }
+
   if (cacheBarrido && Date.now() - cacheBarrido.t < TTL_MS) {
     return NextResponse.json(cacheBarrido.res);
   }
@@ -98,9 +113,13 @@ export async function GET() {
     process.env.META_WHATSAPP_TOKEN && process.env.META_PHONE_NUMBER_ID && process.env.META_RECIPIENT_PHONE,
   );
 
-  for (const c of COMUNIDADES) {
-    const l = lecturaCacheada(c.id);
-    const p = l?.meteorologia?.precipitacionMm30d;
+  // Datos del día: cada localidad se lee en vivo y solo cae al cache del deploy si la fuente no responde.
+  const lecturas = await Promise.all(COMUNIDADES.map(lecturaServidor));
+
+  for (const [i, c] of COMUNIDADES.entries()) {
+    const l = lecturas[i];
+    // Las cifras del despacho son las del indicador que decide el estado (30 días o temporada de lluvias).
+    const p = (l && anomaliaDelEstado(l)) ?? l?.meteorologia?.precipitacionMm30d;
     const est = l ? estadoHidrico(l) : "sin_dato";
     const organismo = ORGANISMO_POR_ID[c.id] ?? `Municipio de ${c.nombre}`;
 
@@ -132,6 +151,8 @@ export async function GET() {
         lluviaNormalMm: p?.climatologia ?? 0,
         anomaliaPct: p?.porcentaje ?? 0,
         estado: est,
+        corteDatos: l.meteorologia?.ultimoDiaConDato ?? null,
+        desdeCache: l.fuenteCache,
         accionAutomatica: "enviada",
         canal,
         mensajeEnviado: alerta.resumen_oral,
@@ -147,6 +168,8 @@ export async function GET() {
         lluviaNormalMm: p?.climatologia ?? 0,
         anomaliaPct: p?.porcentaje ?? 0,
         estado: est,
+        corteDatos: l.meteorologia?.ultimoDiaConDato ?? null,
+        desdeCache: l.fuenteCache,
         accionAutomatica: "en_vigilancia",
         canal: "cola_institucional",
         mensajeEnviado: null,
@@ -164,6 +187,22 @@ export async function GET() {
     totalMunicipios: despachos.length,
     alertasDisparadas: despachos.filter((d) => d.accionAutomatica === "enviada").length,
     metaCloudConfigurado: metaConfigurado,
+    historial: await guardarBarrido(
+      despachos.map((d) => ({
+        fecha: fechaJujuy(ahora),
+        ejecutado_en: ahora,
+        comunidad_id: d.comunidadId,
+        estado: d.estado,
+        lluvia_observada_mm: d.lluviaObservadaMm,
+        lluvia_normal_mm: d.lluviaNormalMm,
+        anomalia_pct: d.anomaliaPct,
+        corte_datos: d.corteDatos,
+        desde_cache: d.desdeCache,
+        accion: d.accionAutomatica,
+        canal: d.canal,
+        mensaje: d.mensajeEnviado,
+      })),
+    ),
     despachos,
   };
 

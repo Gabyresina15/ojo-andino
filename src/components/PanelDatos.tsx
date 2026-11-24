@@ -13,6 +13,8 @@ type Props = {
   lectura: LecturaSatelital | null;
   modo: "comunidad" | "parametrico";
   onSeleccion?: (id: string) => void;
+  /** Lecturas en vivo por localidad; la que falte usa el cache del deploy. */
+  lecturas?: Record<string, LecturaSatelital>;
 };
 
 const fmt1 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -150,7 +152,7 @@ function GraficoLluvia({ serie }: { serie: DiaSerie[] }) {
   );
 }
 
-export default function PanelDatos({ comunidad, lectura, modo, onSeleccion }: Props) {
+export default function PanelDatos({ comunidad, lectura, modo, onSeleccion, lecturas }: Props) {
   if (!lectura) {
     return (
       <div className="amc-surface rounded-2xl p-6 text-xs text-[#9CA3AF]">
@@ -191,7 +193,7 @@ export default function PanelDatos({ comunidad, lectura, modo, onSeleccion }: Pr
   }
 
   const rankingRegional = COMUNIDADES.map((c) => {
-    const l = c.id === comunidad.id ? lectura : lecturaCacheada(c.id);
+    const l = c.id === comunidad.id ? lectura : (lecturas?.[c.id] ?? lecturaCacheada(c.id));
     const p = l?.meteorologia?.precipitacionMm30d;
     const est = l ? estadoHidrico(l) : "sin_dato";
     let accion = "Seguimiento municipal habitual";
@@ -234,7 +236,7 @@ export default function PanelDatos({ comunidad, lectura, modo, onSeleccion }: Pr
         </div>
 
         <button
-          onClick={() => descargarPdfProvincialConsolidado()}
+          onClick={() => descargarPdfProvincialConsolidado({ ...lecturas, [comunidad.id]: lectura })}
           className="min-h-[44px] inline-flex items-center gap-2 rounded-xl bg-[#F59E0B] hover:bg-[#F59E0B]/90 text-[#0B0D10] font-bold text-xs px-4 py-2.5 transition shadow cursor-pointer"
         >
           <span>📄</span>

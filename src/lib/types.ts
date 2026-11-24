@@ -91,4 +91,6 @@ export type AlertaRespuesta = {
     motivoFallback: string | null;
   };
   generadoEn: string;
+  /** Corte de los datos con que se redactó (ver `corteLectura`). */
+  corteDatos?: string;
 };

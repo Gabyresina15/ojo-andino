@@ -238,6 +238,11 @@ export function porPrioridad(a: { estado: string; pct: number }, b: { estado: st
   return Number(b.estado === "deficit") - Number(a.estado === "deficit") || a.pct - b.pct;
 }
 
+/** Identifica con qué corte de datos se hizo una lectura, para no mezclar un dictamen con cifras de otro corte. */
+export function corteLectura(l: LecturaSatelital): string {
+  return `${l.meteorologia?.ultimoDiaConDato ?? "-"}|${l.ndvi?.ultimoComposite?.modisDate ?? "-"}`;
+}
+
 /** Clasificación determinista: la verdad la decide el dato, no el LLM. */
 export function estadoHidrico(l: LecturaSatelital): "deficit" | "normal" | "superavit_reciente" | "sin_dato" {
   const p = l.meteorologia?.precipitacionMm30d.porcentaje;

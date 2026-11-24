@@ -76,3 +76,11 @@ test("un déficit de temporada se prioriza antes que un normal con desvío de 30
   ].sort(porPrioridad);
   assert.deepEqual(filas.map((f) => f.id), ["30d", "temporada", "normal"]);
 });
+
+test("el verificador no acepta el acumulado de 30 días presentado como el de la temporada", () => {
+  const c = getComunidad("abra-pampa")!;
+  const p = payloadUsuario(c, lectura(anom(12.2, 6.2), anom(361, 456)), "comunidad");
+  assert.deepEqual(validarNumeros("La temporada de lluvias dejó 361,0 mm frente a 456,0 mm.", p).noVerificados, []);
+  assert.notDeepEqual(validarNumeros("La temporada de lluvias dejó 12,2 mm.", p).noVerificados, []);
+  assert.notDeepEqual(validarNumeros("En los últimos 30 días cayeron 361,0 mm.", p).noVerificados, []);
+});
