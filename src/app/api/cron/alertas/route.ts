@@ -3,6 +3,7 @@ import { COMUNIDADES } from "@/lib/comunidades";
 import { lecturaServidor } from "@/lib/lectura-servidor";
 import { estadoHidrico } from "@/lib/lecturas";
 import { generarAlerta } from "@/lib/alerta";
+import { fechaJujuy, guardarBarrido, type EstadoHistorial } from "@/lib/historial";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -31,6 +32,8 @@ export type ResultadoBarrido = {
   totalMunicipios: number;
   alertasDisparadas: number;
   metaCloudConfigurado: boolean;
+  /** Si este barrido quedó registrado en el historial persistente. */
+  historial: EstadoHistorial;
   despachos: DespachoMunicipal[];
 };
 
@@ -175,6 +178,22 @@ export async function GET() {
     totalMunicipios: despachos.length,
     alertasDisparadas: despachos.filter((d) => d.accionAutomatica === "enviada").length,
     metaCloudConfigurado: metaConfigurado,
+    historial: await guardarBarrido(
+      despachos.map((d) => ({
+        fecha: fechaJujuy(ahora),
+        ejecutado_en: ahora,
+        comunidad_id: d.comunidadId,
+        estado: d.estado,
+        lluvia_observada_mm: d.lluviaObservadaMm,
+        lluvia_normal_mm: d.lluviaNormalMm,
+        anomalia_pct: d.anomaliaPct,
+        corte_datos: d.corteDatos,
+        desde_cache: d.desdeCache,
+        accion: d.accionAutomatica,
+        canal: d.canal,
+        mensaje: d.mensajeEnviado,
+      })),
+    ),
     despachos,
   };
 
