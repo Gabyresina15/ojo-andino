@@ -21,14 +21,18 @@ No se revisaron redes provinciales de Jujuy ni estaciones de empresas mineras.
 
 ## Qué dice la estación de INTA Abra Pampa
 
-Generado por `npm run estacion` en `src/data/estacion.json` (temporadas del 1/12 al 30/4, 2014 a 2026, 12 con datos completos).
+Generado por `npm run estacion` en `src/data/estacion.json` (temporadas del 1/12 al 30/4 entre 2014 y 2026; solo las 10 en que la estación tiene dato todos los días).
 
-- Las tres fuentes satelitales dan bastante más lluvia que la estación.
-- CHIRPS v3 es la que más se le parece, pero con 12 temporadas la diferencia entre fuentes no es concluyente.
+| Fuente | Lluvia de más frente a la estación | Correlación entre temporadas |
+|---|---:|---:|
+| NASA POWER | 126 % | 0,69 |
+| CHIRPS v3 | 48 % | 0,66 |
+
+- Las dos fuentes satelitales dan bastante más lluvia que la estación; CHIRPS v3 se aleja menos en cantidad.
+- En cómo ordenan las temporadas (correlación) las dos quedan parejas: con 10 temporadas no se puede decir que una sea mejor.
+- Última temporada frente al promedio de esas temporadas: estación -16,7 %, NASA POWER -4,7 %, CHIRPS v3 -4,2 %.
 - CHIRPS no usa esta estación como dato de entrada: en los listados de estaciones usadas de enero de 2016 y enero de 2026 (`diagnostics/list_of_stations_used` del Climate Hazards Center) las únicas de Jujuy son La Quiaca Obs., Jujuy Aero y Jujuy Univ. Nac. El contraste es independiente.
 - La estación está a unos 16 km de la coordenada de Abra Pampa que usa el tablero.
-
-Comparación hecha una sola vez con CHIRPS v2 (píxel de la localidad, no de la estación): correlación 0,67 y 65 % de exceso.
 
 ## Sentinel-1 contra la estación
 

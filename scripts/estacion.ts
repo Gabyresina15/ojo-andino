@@ -10,7 +10,7 @@ import { CHIRPS_VERSION, temporadasChirps } from "./chirps-temporadas";
 
 const SIGA = "https://siga.inta.gob.ar/MMidUDJTKj6MPyuA.php";
 const ID_ESTACION = 516;
-const MAX_DIAS_FALTANTES = 10;
+const MAX_DIAS_FALTANTES = 0;
 
 type Estacion = { id: number; nombre: string; latitud: number; longitud: number; altura: number };
 type Dia = { fechaHora: string; precDiaCrono?: number | null };
@@ -95,7 +95,7 @@ async function main() {
           nasa: "NASA POWER (PRECTOTCORR) en la coordenada de la estación",
           chirps: `CHIRPS v${CHIRPS_VERSION} (Climate Hazards Center, UCSB), píxel de la estación`,
         },
-        nota: `Totales del 1/12 al 30/4. Se omiten las temporadas con más de ${MAX_DIAS_FALTANTES} días sin dato de la estación. ultimaPct: última temporada frente al promedio de las temporadas listadas, en cada fuente.`,
+        nota: `Totales del 1/12 al 30/4. Solo temporadas en que la estación tiene dato todos los días, para que las tres fuentes cubran el mismo período. ultimaPct: última temporada frente al promedio de las temporadas listadas, en cada fuente.`,
         temporadas,
         resumen: { estacionUltimaPct: r1((e[e.length - 1] / media(e) - 1) * 100), nasa: resumen(col("nasaMm")), chirps: resumen(col("chirpsMm")) },
       },

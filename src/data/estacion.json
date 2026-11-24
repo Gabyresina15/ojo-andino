@@ -1,5 +1,5 @@
 {
- "generadoEn": "2026-11-24T23:38:58.670Z",
+ "generadoEn": "2026-11-24T23:47:04.216Z",
  "estacion": {
   "nombre": "Abra Pampa - EEA Abra Pampa",
   "organismo": "INTA",
@@ -13,22 +13,8 @@
   "nasa": "NASA POWER (PRECTOTCORR) en la coordenada de la estación",
   "chirps": "CHIRPS v3.0 (Climate Hazards Center, UCSB), píxel de la estación"
  },
- "nota": "Totales del 1/12 al 30/4. Se omiten las temporadas con más de 10 días sin dato de la estación. ultimaPct: última temporada frente al promedio de las temporadas listadas, en cada fuente.",
+ "nota": "Totales del 1/12 al 30/4. Solo temporadas en que la estación tiene dato todos los días, para que las tres fuentes cubran el mismo período. ultimaPct: última temporada frente al promedio de las temporadas listadas, en cada fuente.",
  "temporadas": [
-  {
-   "temporada": 2014,
-   "estacionMm": 267.8,
-   "diasSinDato": 2,
-   "nasaMm": 452.9,
-   "chirpsMm": 327.8
-  },
-  {
-   "temporada": 2015,
-   "estacionMm": 365.5,
-   "diasSinDato": 6,
-   "nasaMm": 516,
-   "chirpsMm": 449.8
-  },
   {
    "temporada": 2016,
    "estacionMm": 82,
@@ -101,16 +87,16 @@
   }
  ],
  "resumen": {
-  "estacionUltimaPct": -23,
+  "estacionUltimaPct": -16.7,
   "nasa": {
-   "correlacion": 0.62,
-   "excesoPct": 110,
-   "ultimaPct": -4.8
+   "correlacion": 0.69,
+   "excesoPct": 126,
+   "ultimaPct": -4.7
   },
   "chirps": {
-   "correlacion": 0.76,
-   "excesoPct": 42,
-   "ultimaPct": -7.8
+   "correlacion": 0.66,
+   "excesoPct": 48,
+   "ultimaPct": -4.2
   }
  }
 }
