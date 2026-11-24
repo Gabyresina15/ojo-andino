@@ -204,7 +204,7 @@ const KW_PICO = /pico|máximo diario|más fuerte|en 24 ?h/gi;
 const KW_SEMANA = /últim[oa]s? 7 días|últim[oa] semana|en 7 días/gi;
 
 const NUM = String.raw`(?<![\d.,])(\d+(?:[.,]\d+)?)`;
-const KW_SEMANA_DESPUES = /^[^.;,\d]{0,15}?(últim[oa]s? 7 días|últim[oa] semana)/i;
+const KW_SEMANA_DESPUES = /^\s*(?:en|durante|de)?\s*(?:l[oa]s?\s+)?(últim[oa]s? 7 días|últim[oa] semana)/i;
 
 const aNum = (s: string) => Number(s.replace(",", "."));
 const coincide = (n: number, ref: number) => Math.abs(n - ref) <= Math.max(0.11, Math.abs(ref) * 0.015);
