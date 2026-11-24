@@ -79,3 +79,19 @@ test("el día se toma en hora de Jujuy y el CSV escapa comillas", () => {
   assert.ok(cab.startsWith("fecha,ejecutado_en,comunidad_id"));
   assert.ok(datos.endsWith('"Llovió poco, ""muy"" poco"'));
 });
+
+test("la lectura pagina: no devuelve un historial cortado en 1000 filas", async () => {
+  process.env.NEXT_PUBLIC_SUPABASE_URL = "https://x.supabase.co";
+  process.env.SUPABASE_SERVICE_ROLE_KEY = "srv";
+  const total = 2300;
+  const offsets: number[] = [];
+  globalThis.fetch = (async (url: string | URL | Request) => {
+    const q = new URL(String(url)).searchParams;
+    const desde = Number(q.get("offset"));
+    offsets.push(desde);
+    const n = Math.max(0, Math.min(Number(q.get("limit")), total - desde));
+    return new Response(JSON.stringify(Array.from({ length: n }, () => fila)), { status: 200 });
+  }) as typeof fetch;
+  assert.equal((await leerHistorial({ dias: 366 }))!.length, total);
+  assert.deepEqual(offsets, [0, 1000, 2000]);
+});

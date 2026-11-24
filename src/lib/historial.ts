@@ -19,6 +19,9 @@ export type FilaHistorial = {
 
 export type EstadoHistorial = "guardado" | "no_configurado" | "error";
 
+const PAGINA = 1000;
+const MAX_PAGINAS = 20;
+
 const COLUMNAS =
   "fecha,ejecutado_en,comunidad_id,estado,lluvia_observada_mm,lluvia_normal_mm,anomalia_pct,corte_datos,desde_cache,accion,canal,mensaje";
 
@@ -56,11 +59,21 @@ export async function leerHistorial(opts: { comunidadId?: string; dias: number }
   const cx = conexion();
   if (!cx) return null;
   const desde = fechaJujuy(new Date(Date.now() - opts.dias * 86_400_000).toISOString());
-  const q = new URLSearchParams({ select: COLUMNAS, fecha: `gte.${desde}`, order: "fecha.desc,comunidad_id.asc", limit: "5000" });
+  const q = new URLSearchParams({ select: COLUMNAS, fecha: `gte.${desde}`, order: "fecha.desc,comunidad_id.asc" });
   if (opts.comunidadId) q.set("comunidad_id", `eq.${opts.comunidadId}`);
-  const r = await fetch(`${cx.base}?${q}`, { headers: cx.headers, cache: "no-store", signal: AbortSignal.timeout(8000) });
-  if (!r.ok) throw new Error(`historial ${r.status}`);
-  return (await r.json()) as FilaHistorial[];
+
+  // Supabase corta cada respuesta (1000 filas por defecto): se pagina hasta agotar el rango pedido.
+  const filas: FilaHistorial[] = [];
+  for (let pagina = 0; pagina < MAX_PAGINAS; pagina++) {
+    q.set("offset", String(filas.length));
+    q.set("limit", String(PAGINA));
+    const r = await fetch(`${cx.base}?${q}`, { headers: cx.headers, cache: "no-store", signal: AbortSignal.timeout(8000) });
+    if (!r.ok) throw new Error(`historial ${r.status}`);
+    const lote = (await r.json()) as FilaHistorial[];
+    filas.push(...lote);
+    if (lote.length < PAGINA) return filas;
+  }
+  throw new Error("historial incompleto");
 }
 
 const celda = (v: unknown) => {
