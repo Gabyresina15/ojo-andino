@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { AlertaRespuesta, Comunidad, LecturaSatelital } from "./types";
-import { baseEstado, estadoHidrico } from "./lecturas";
+import { anomaliaDelEstado, baseEstado, estadoHidrico } from "./lecturas";
 
 export const AlertaSchema = z.object({
   resumen_oral: z.string().min(80).max(1200),
@@ -320,7 +320,7 @@ export function alertaDeterminista(c: Comunidad, l: LecturaSatelital, modo: "com
   }
 
   const accion = esComunidad ? recomendacionComunidad(c, l) : recomendacionGobierno(c, l);
-  const p = porTemporada && t ? t : m?.precipitacionMm30d;
+  const p = anomaliaDelEstado(l);
   const desvioRedondeado = p?.porcentaje != null ? r1(p.porcentaje) : 0;
 
   return {

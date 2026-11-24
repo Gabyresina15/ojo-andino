@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { baseEstado, estadoHidrico, ventanaTemporada } from "../src/lib/lecturas";
+import { baseEstado, estadoHidrico, porPrioridad, ventanaTemporada } from "../src/lib/lecturas";
 import { alertaDeterminista, payloadUsuario, validarNumeros } from "../src/lib/alerta";
 import { lecturaCacheada } from "../src/lib/cache";
 import { getComunidad } from "../src/lib/comunidades";
@@ -61,4 +61,18 @@ test("el dictamen por temporada cita las cifras de la temporada y pasa el verifi
     const v = validarNumeros(`${a.resumen_oral} ${a.nota_parametrica}`, payloadUsuario(c, l, modo));
     assert.deepEqual(v.noVerificados, []);
   }
+});
+
+test("sin dato de temporada en época seca, la nota no cita el desvío de 30 días que no se usó", () => {
+  const a = alertaDeterminista(getComunidad("abra-pampa")!, lectura(anom(12.2, 6.2)), "parametrico");
+  assert.doesNotMatch(a.nota_parametrica, /desvío/);
+});
+
+test("un déficit de temporada se prioriza antes que un normal con desvío de 30 días más negativo", () => {
+  const filas = [
+    { id: "normal", estado: "normal", pct: -20 },
+    { id: "temporada", estado: "deficit", pct: 98 },
+    { id: "30d", estado: "deficit", pct: -79 },
+  ].sort(porPrioridad);
+  assert.deepEqual(filas.map((f) => f.id), ["30d", "temporada", "normal"]);
 });

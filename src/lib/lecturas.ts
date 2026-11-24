@@ -224,6 +224,20 @@ export function baseEstado(l: LecturaSatelital): "lluvia_30d" | "temporada_lluvi
   return m.precipitacionTemporada?.porcentaje != null ? "temporada_lluvias" : "epoca_seca_sin_temporada";
 }
 
+/** Anomalía que sostiene el estado; null si ninguna lo hace (época seca sin dato de temporada). */
+export function anomaliaDelEstado(l: LecturaSatelital): Anomalia | null {
+  const m = l.meteorologia;
+  if (!m) return null;
+  const base = baseEstado(l);
+  if (base === "lluvia_30d") return m.precipitacionMm30d;
+  return base === "temporada_lluvias" ? m.precipitacionTemporada! : null;
+}
+
+/** Orden de priorización: primero los déficits y, dentro de cada grupo, el desvío más negativo. */
+export function porPrioridad(a: { estado: string; pct: number }, b: { estado: string; pct: number }): number {
+  return Number(b.estado === "deficit") - Number(a.estado === "deficit") || a.pct - b.pct;
+}
+
 /** Clasificación determinista: la verdad la decide el dato, no el LLM. */
 export function estadoHidrico(l: LecturaSatelital): "deficit" | "normal" | "superavit_reciente" | "sin_dato" {
   const p = l.meteorologia?.precipitacionMm30d.porcentaje;
