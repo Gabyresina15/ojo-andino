@@ -29,7 +29,7 @@ export default function ResolucionSatelital({ producto }: { producto: ReturnType
         <div className="min-w-0 rounded-xl border border-[#10B981]/25 bg-[#10B981]/5 p-3.5 print:border-slate-300 print:bg-white">
           <h3 className="text-xs font-bold text-[#6EE7B7] print:text-black">MODIS {producto} · Vegetación local</h3>
           <p className="mt-1 font-mono text-xl font-bold text-[#F4F1EA] print:text-black">
-            250 m
+            250&nbsp;m
             <span className="ml-2 inline-block text-xs font-normal text-[#9CA3AF] print:text-slate-600">
               por píxel · resolución nominal
             </span>

@@ -250,8 +250,8 @@ export default function ExpedienteMunicipal({ comunidad }: { comunidad: Comunida
         {/* EVOLUCIÓN INTERANUAL DE PASTURAS (2025 vs 2026) Y ANTECEDENTES DE LA JURISDICCIÓN */}
         <section className="grid gap-4 lg:grid-cols-2">
           <div className="amc-surface rounded-2xl p-5 space-y-3 print:border print:border-slate-300 print:bg-white">
-            <h2 className="font-display text-base sm:text-lg font-bold text-[#F4F1EA] print:text-black">
-              🌱 Evolución Histórica del Índice de Vegetación (MODIS {productoNdvi(ndvi)} 250 m)
+            <h2 className="font-display text-balance text-base sm:text-lg font-bold text-[#F4F1EA] print:text-black">
+              🌱 Evolución Histórica del Índice de Vegetación (MODIS {productoNdvi(ndvi)} 250&nbsp;m)
             </h2>
             <p className="text-xs text-[#9CA3AF] print:text-slate-600">
               Comparación del vigor vegetal entre la primavera actual (2026) y el mismo período del año anterior (2025):

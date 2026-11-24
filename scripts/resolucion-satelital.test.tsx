@@ -8,6 +8,6 @@ test("la referencia espacial distingue estimaciones regionales de verdor por pí
     const html = renderToStaticMarkup(<ResolucionSatelital producto={producto} />);
     assert.match(html, /NASA POWER · Meteorología regional.*0,5° × 0,625°.*55 km de norte a sur.*misma celda.*no mediciones de una estación local/);
     assert.ok(html.includes(`MODIS ${producto} · Vegetación local`));
-    assert.match(html, /250 m.*por píxel.*ORNL TESViS.*compuesto de 16 días.*ni un promedio del municipio/);
+    assert.match(html, /250\u00a0m.*por píxel.*ORNL TESViS.*compuesto de 16 días.*ni un promedio del municipio/);
   }
 });
