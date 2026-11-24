@@ -7,7 +7,7 @@ import { lecturaCacheada } from "../src/lib/cache";
 const corteCache = lecturaCacheada("susques")!.meteorologia!.ultimoDiaConDato;
 
 test("el barrido usa lecturas en vivo, no el cache del deploy", async () => {
-  const r = await (await barrido()).json();
+  const r = await (await barrido(new Request("http://localhost/api/cron/alertas"))).json();
   assert.equal(r.totalMunicipios, 10);
   const vivos = r.despachos.filter((d: { desdeCache: boolean }) => !d.desdeCache);
   assert.ok(vivos.length > 0, "ninguna localidad se leyó en vivo");

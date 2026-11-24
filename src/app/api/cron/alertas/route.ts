@@ -94,7 +94,15 @@ async function enviarPorWebhook(payload: unknown): Promise<boolean> {
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
+  const secreto = process.env.CRON_SECRET;
+  if (!secreto && process.env.VERCEL_ENV === "production") {
+    return NextResponse.json({ error: "CRON_SECRET no configurado" }, { status: 503 });
+  }
+  if (secreto && req.headers.get("authorization") !== `Bearer ${secreto}`) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  }
+
   if (cacheBarrido && Date.now() - cacheBarrido.t < TTL_MS) {
     return NextResponse.json(cacheBarrido.res);
   }
