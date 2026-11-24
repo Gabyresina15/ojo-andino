@@ -55,7 +55,8 @@ export function agregarPorDia(pasos: PasoMet[], ahora: Date): DiaPronostico[] {
   return dias;
 }
 
-const memoria = new Map<string, { vence: number; p: Pronostico | null }>();
+// `dia`: fecha de Argentina en que se armó la ventana; al cambiar el día, los 7 días ya son otros.
+const memoria = new Map<string, { vence: number; dia: string; p: Pronostico | null }>();
 const TTL_MIN = 30 * 60 * 1000;
 const TTL_ERROR = 5 * 60 * 1000;
 const enVuelo = new Map<string, Promise<Pronostico | null>>();
@@ -63,7 +64,7 @@ const enVuelo = new Map<string, Promise<Pronostico | null>>();
 /** Pronóstico de lluvia de MET Norway (CC BY 4.0). `null` si la fuente no responde o no cubre los 7 días. */
 export async function pronosticoServidor(c: Comunidad): Promise<Pronostico | null> {
   const m = memoria.get(c.id);
-  if (m && Date.now() < m.vence) return m.p;
+  if (m && Date.now() < m.vence && m.dia === fechaLocal(Date.now())) return m.p;
   let p = enVuelo.get(c.id);
   if (!p) {
     p = consultar(c).finally(() => enVuelo.delete(c.id));
@@ -73,6 +74,8 @@ export async function pronosticoServidor(c: Comunidad): Promise<Pronostico | nul
 }
 
 async function consultar(c: Comunidad): Promise<Pronostico | null> {
+  const ahora = new Date();
+  const dia = fechaLocal(ahora.getTime());
   try {
     // La fuente pide no usar más de 4 decimales en las coordenadas.
     const r = await fetch(`${URL_MET}?lat=${c.lat.toFixed(4)}&lon=${c.lon.toFixed(4)}`, {
@@ -82,7 +85,7 @@ async function consultar(c: Comunidad): Promise<Pronostico | null> {
     });
     if (!r.ok) throw new Error(`MET ${r.status}`);
     const j = (await r.json()) as { properties: { meta: { updated_at: string }; timeseries: PasoMet[] } };
-    const dias = agregarPorDia(j.properties.timeseries, new Date());
+    const dias = agregarPorDia(j.properties.timeseries, ahora);
     if (dias.length < DIAS_PRONOSTICO) throw new Error("pronóstico incompleto");
     const p: Pronostico = {
       comunidadId: c.id,
@@ -92,10 +95,10 @@ async function consultar(c: Comunidad): Promise<Pronostico | null> {
     };
     // Se respeta el vencimiento que indica la fuente, con un mínimo propio.
     const expira = Date.parse(r.headers.get("expires") ?? "");
-    memoria.set(c.id, { vence: Math.max(Date.now() + TTL_MIN, Number.isFinite(expira) ? expira : 0), p });
+    memoria.set(c.id, { vence: Math.max(Date.now() + TTL_MIN, Number.isFinite(expira) ? expira : 0), dia, p });
     return p;
   } catch {
-    memoria.set(c.id, { vence: Date.now() + TTL_ERROR, p: null });
+    memoria.set(c.id, { vence: Date.now() + TTL_ERROR, dia, p: null });
     return null;
   }
 }
