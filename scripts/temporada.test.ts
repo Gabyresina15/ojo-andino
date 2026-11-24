@@ -45,6 +45,40 @@ test("época seca sin dato de temporada: estado sin_dato, no normal", () => {
   assert.equal(estadoHidrico(lectura(anom(0.5, 6.2))), "sin_dato");
 });
 
+test("Quebrada sin dato conserva la cautela vial sólo si el pico diario está concentrado", () => {
+  for (const id of ["tilcara", "abra-pampa"]) {
+    const c = getComunidad(id)!;
+    for (const base of ["seca", "mensual"] as const) {
+      for (const pico of [54, 55, null]) {
+        const l = lectura(anom(12.2, base === "seca" ? 6.2 : 20));
+        l.comunidadId = id;
+        if (base === "mensual") l.meteorologia!.precipitacionMm30d.porcentaje = null;
+        l.meteorologia!.serie = pico === null ? [] : l.meteorologia!.serie.map((d, i) => ({
+          ...d, lluviaMm: i === 0 ? pico : i === 1 ? 100 - pico : 0,
+        }));
+        assert.equal(estadoHidrico(l), "sin_dato");
+        for (const modo of ["parametrico", "comunidad"] as const) {
+          const p = payloadUsuario(c, l, modo);
+          const a = alertaDeterminista(c, l, modo);
+          assert.match(a.resumen_oral, /No hay datos suficientes/);
+          assert.match(a.resumen_oral, /no se puede afirmar sequía ni normalidad/);
+          const advertir = c.region === "quebrada" && p.escorrentia_concentrada;
+          assert.equal(p.escorrentia_concentrada, pico === 55);
+          assert.equal(a.resumen_oral.includes("antes de trasladar hacienda o insumos"), advertir);
+          if (advertir) {
+            assert.match(a.resumen_oral, modo === "parametrico"
+              ? /se recomienda revisar drenajes, badenes y caminos/
+              : /revisá drenajes, badenes y caminos/);
+            assert.match(a.resumen_oral, /sin dar por comprobadas crecidas/);
+          }
+          if (modo === "parametrico") assert.doesNotMatch(a.resumen_oral, /verificá|revisá|cuidá|podés|tenés|fijate|avisá/i);
+          assert.deepEqual(validarNumeros(`${a.resumen_oral} ${a.nota_parametrica}`, p).noVerificados, []);
+        }
+      }
+    }
+  }
+});
+
 test("sin temporada evaluable, diagnóstico, riesgo, recomendación y payload piden verificación sin afirmar normalidad", () => {
   for (const id of ["abra-pampa", "tilcara"]) {
     const c = getComunidad(id)!;

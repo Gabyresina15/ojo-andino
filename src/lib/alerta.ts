@@ -451,30 +451,33 @@ export function alertaDeterminista(c: Comunidad, l: LecturaSatelital, modo: "com
       ? `El índice de verdor pasó de ${fmt3(anterior.ndvi)} a ${fmt3(actual.ndvi)} (compuesto al ${actual.fecha}).`
       : `El índice de verdor es ${fmt3(actual.ndvi)} (compuesto al ${actual.fecha}).`);
   }
+  const picoConcentrado = patron != null && patron.concentracion_pico_pct >= 55;
   const riesgoComunidad = est === "sin_dato"
     ? c.region === "puna"
       ? "No hay datos suficientes para conocer el riesgo actual; revisá en campo las aguadas, las vegas y las reservas de forraje."
-      : "No hay datos suficientes para conocer el riesgo actual; revisá en campo el agua disponible, los drenajes y los accesos."
+      : "No hay datos suficientes para conocer el riesgo actual; revisá en campo el agua disponible, los drenajes y los accesos." +
+        (picoConcentrado ? " Por la concentración de lluvia, revisá drenajes, badenes y caminos antes de trasladar hacienda o insumos, sin dar por comprobadas crecidas." : "")
     : c.region === "puna"
     ? est === "deficit"
       ? "Puede faltar forraje y agua en aguadas y vegas; verificá reservas y estado de la hacienda."
       : est === "superavit_reciente"
         ? "La lluvia puede recargar aguadas y vegas, pero no garantiza forraje disponible; cuidá el rebrote antes de aumentar el pastoreo."
         : "Revisá agua de aguadas y vegas y reservas de forraje; el balance de lluvia no alcanza para asegurar su disponibilidad."
-    : est === "superavit_reciente" || (patron != null && patron.concentracion_pico_pct >= 55)
+    : est === "superavit_reciente" || picoConcentrado
       ? "Hay riesgo de escorrentía y corte de trazas, badenes y caminos; verificá accesos antes de trasladar hacienda o insumos, sin dar por comprobadas crecidas."
       : "Revisá drenajes, badenes y caminos antes de trasladar hacienda o insumos; no hay evidencia suficiente para afirmar cortes.";
   const riesgoGobierno = est === "sin_dato"
     ? c.region === "puna"
       ? "No hay datos suficientes para evaluar el riesgo actual. Se recomienda verificar en campo aguadas, vegas y reservas de forraje."
-      : "No hay datos suficientes para evaluar el riesgo actual. Se recomienda verificar en campo disponibilidad de agua, drenajes y accesos."
+      : "No hay datos suficientes para evaluar el riesgo actual. Se recomienda verificar en campo disponibilidad de agua, drenajes y accesos." +
+        (picoConcentrado ? " Por la concentración de lluvia, se recomienda revisar drenajes, badenes y caminos antes de trasladar hacienda o insumos, sin dar por comprobadas crecidas." : "")
     : c.region === "puna"
     ? est === "deficit"
       ? "Puede faltar forraje y agua en aguadas y vegas. Se recomienda verificar reservas y estado de la hacienda."
       : est === "superavit_reciente"
         ? "La lluvia puede recargar aguadas y vegas, pero no garantiza forraje disponible. Se recomienda proteger el rebrote antes de aumentar el pastoreo."
         : "El balance de lluvia no permite asegurar la disponibilidad de agua y forraje. Se recomienda revisar aguadas, vegas y reservas."
-    : est === "superavit_reciente" || (patron != null && patron.concentracion_pico_pct >= 55)
+    : est === "superavit_reciente" || picoConcentrado
       ? "Existe riesgo de escorrentía y corte de trazas, badenes y caminos. Se recomienda verificar accesos antes de trasladar hacienda o insumos, sin dar por comprobadas crecidas."
       : "Se recomienda revisar drenajes, badenes y caminos antes de trasladar hacienda o insumos; no hay evidencia suficiente para afirmar cortes.";
   const riesgo = esComunidad ? riesgoComunidad : riesgoGobierno;
