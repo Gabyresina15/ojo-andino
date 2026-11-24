@@ -87,7 +87,7 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
     fetch("/api/alerta", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: comunidad.id, modo: modoDictamen, lectura }),
+      body: JSON.stringify({ id: comunidad.id, modo: modoDictamen }),
     })
       .then((r) => (r.ok ? r.json() : null))
       .then((data: AlertaRespuesta | null) => {

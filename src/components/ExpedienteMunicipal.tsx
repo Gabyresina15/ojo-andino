@@ -50,7 +50,7 @@ export default function ExpedienteMunicipal({ comunidad }: { comunidad: Comunida
     fetch("/api/alerta", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: comunidad.id, modo: "comunidad", lectura }),
+      body: JSON.stringify({ id: comunidad.id, modo: "comunidad" }),
     })
       .then((r) => (r.ok ? r.json() : null))
       .then((a: AlertaRespuesta | null) => {
