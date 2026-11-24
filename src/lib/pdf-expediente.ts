@@ -2,6 +2,7 @@ import { jsPDF } from "jspdf";
 import type { AlertaRespuesta, Comunidad, LecturaSatelital } from "./types";
 import { COMUNIDADES } from "./comunidades";
 import { lecturaCacheada } from "./cache";
+import { sintesisRegional } from "./sintesis";
 import { alertaDeterminista, calcularPatronDiario, recomendacionGobierno } from "./alerta";
 import { estadoHidrico } from "./lecturas";
 
@@ -309,7 +310,7 @@ export function descargarPdfExpediente(
   doc.save(`Expediente-Jujuy-${comunidad.id}-${m?.ultimoDiaConDato ?? "2026-11-22"}.pdf`);
 }
 
-export function descargarPdfProvincialConsolidado() {
+export function descargarPdfProvincialConsolidado(lecturas?: Record<string, LecturaSatelital>) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const fechaEmision = new Date().toLocaleString("es-AR", { timeZone: "America/Argentina/Jujuy" });
 
@@ -337,7 +338,7 @@ export function descargarPdfProvincialConsolidado() {
   );
 
   const filas = COMUNIDADES.map((c) => {
-    const l = lecturaCacheada(c.id);
+    const l = lecturas?.[c.id] ?? lecturaCacheada(c.id);
     const p = l?.meteorologia?.precipitacionMm30d;
     const pat = l ? calcularPatronDiario(l) : null;
     const est = l ? estadoHidrico(l) : "normal";
@@ -355,23 +356,26 @@ export function descargarPdfProvincialConsolidado() {
     };
   }).sort((a, b) => a.pct - b.pct);
 
+  const sint = sintesisRegional(lecturas);
+  doc.setFontSize(8);
+  const lineasSintesis: string[] = doc.splitTextToSize(
+    `${sint.deficit.length} en Déficit de Forraje/Agua${sint.deficit.length ? ` (${sint.deficit.map((f) => `${f.c.nombre} ${fmt1(f.pct)}%`).join(", ")})` : ""}  |  ${sint.normal.length} en Rango Normal  |  ${sint.punaConLluvia.length} Puna con lluvia sobre lo normal  |  ${sint.vial.length} Quebrada en Alerta Vial/Drenajes.`,
+    174,
+  );
+  const altoSintesis = 12 + lineasSintesis.length * 4;
   let y = 40;
   doc.setFillColor(248, 249, 251);
   doc.setDrawColor(215, 220, 228);
-  doc.roundedRect(14, y, 182, 16, 2, 2, "FD");
+  doc.roundedRect(14, y, 182, altoSintesis, 2, 2, "FD");
   doc.setTextColor(25, 30, 40);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8.5);
   doc.text("SÍNTESIS EJECUTIVA PARA ASIGNACIÓN PRESUPUESTARIA Y LOGÍSTICA:", 18, y + 6);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
-  doc.text(
-    "1 jurisdicción en Déficit Crítico de Forraje/Agua (Susques -78,9%)  |  3 en Rango Normal  |  3 Puna Recuperada  |  3 Quebrada en Alerta Vial/Drenajes.",
-    18,
-    y + 12,
-  );
+  doc.text(lineasSintesis, 18, y + 12);
 
-  y = 62;
+  y = 46 + altoSintesis;
   doc.setFillColor(25, 32, 44);
   doc.rect(14, y, 182, 7, "F");
   doc.setTextColor(255, 255, 255);

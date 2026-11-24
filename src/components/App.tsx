@@ -8,6 +8,7 @@ import { lecturaCacheada } from "@/lib/cache";
 import { lecturaMasReciente } from "@/lib/lectura-reciente";
 import { simularPriorizacion } from "@/lib/priorizacion";
 import SimuladorPriorizacion from "./SimuladorPriorizacion";
+import { nombres, sintesisRegional } from "@/lib/sintesis";
 import RadarOrbital, { type RadarSnapshot } from "./RadarOrbital";
 import PanelDatos from "./PanelDatos";
 import PanelAlerta from "./PanelAlerta";
@@ -49,6 +50,8 @@ function leerLocal(id: string): LecturaSatelital | null {
     return null;
   }
 }
+
+const fmt1 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 type DetalleTab = "priorizacion" | "satelite" | "cultura";
 
@@ -100,23 +103,46 @@ export default function App() {
     return () => ctrl.abort();
   }, [seleccion]);
 
+  // Las 10 localidades en vivo para el mapa y la tabla regional; no pisa la lectura ya pedida de la seleccionada.
+  useEffect(() => {
+    const ctrl = new AbortController();
+    fetch("/api/lecturas", { signal: ctrl.signal })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((todas: LecturaSatelital[]) => {
+        const nuevas = Object.fromEntries(todas.filter((l) => l.meteorologia && !l.fuenteCache).map((l) => [l.comunidadId, l]));
+        setVivas((v) => ({ ...nuevas, ...v }));
+        for (const l of Object.values(nuevas)) localStorage.setItem(LS_KEY(l.comunidadId), JSON.stringify(l));
+      })
+      .catch(() => {});
+    return () => ctrl.abort();
+  }, []);
+
   const observador = useMemo(
     () => ({ lat: comunidad.lat, lon: comunidad.lon, altKm: CENTRO_JUJUY.altKm, etiqueta: comunidad.nombre }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [comunidad.id],
   );
 
+  // Cada localidad usa siempre la misma fuente, esté o no seleccionada: en vivo, o la última guardada en este navegador.
+  const regionales = useMemo(() => {
+    const r: Record<string, LecturaSatelital> = {};
+    for (const c of COMUNIDADES) {
+      const local = montado ? leerLocal(c.id) : null;
+      const l = vivas[c.id] ?? lecturaMasReciente(local, lecturaCacheada(c.id));
+      if (l) r[c.id] = l;
+    }
+    return r;
+  }, [vivas, montado]);
+  const sint = useMemo(() => sintesisRegional({ ...regionales, [seleccion]: lectura }), [regionales, seleccion, lectura]);
+
   const pueblosPuna = COMUNIDADES.filter((c) => c.region === "puna");
   const pueblosQuebrada = COMUNIDADES.filter((c) => c.region === "quebrada");
   const nodosPuna = useMemo(
-    () => COMUNIDADES.filter((comunidad) => comunidad.region === "puna").map((comunidad) => {
-      const local = montado ? leerLocal(comunidad.id) : null;
-      return {
-        comunidad,
-        lectura: vivas[comunidad.id] ?? lecturaMasReciente(local, lecturaCacheada(comunidad.id)),
-      };
-    }),
-    [vivas, montado],
+    () => COMUNIDADES.filter((comunidad) => comunidad.region === "puna").map((comunidad) => ({
+      comunidad,
+      lectura: regionales[comunidad.id] ?? null,
+    })),
+    [regionales],
   );
   const priorizacion = simularPriorizacion(nodosPuna, 40);
 
@@ -176,35 +202,43 @@ export default function App() {
           {/* TIRA EJECUTIVA PROVINCIAL (4 KPIs de Impacto Presupuestario y Territorial) */}
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <button
-              onClick={() => setSeleccion("susques")}
+              onClick={() => sint.deficit[0] && setSeleccion(sint.deficit[0].c.id)}
               className="amc-surface rounded-2xl p-3.5 text-left border hover:border-[#D95D39]/60 transition cursor-pointer"
             >
-              <div className="text-[11px] font-mono uppercase text-[#D95D39] font-bold">🔴 Emergencia Forrajera Hoy</div>
-              <div className="font-display text-xl font-extrabold text-[#F4F1EA] mt-0.5">1 de 10 municipios</div>
+              <div className="text-[11px] font-mono uppercase text-[#D95D39] font-bold">🔴 Déficit de lluvia hoy</div>
+              <div className="font-display text-xl font-extrabold text-[#F4F1EA] mt-0.5">
+                {sint.deficit.length} de {COMUNIDADES.length} municipios
+              </div>
               <div className="text-xs text-[#9CA3AF] mt-0.5">
-                <strong className="text-[#F4F1EA]">Susques (-78,9%)</strong> · 27 de 30 días secos
+                <strong className="text-[#F4F1EA]">
+                  {sint.deficit.map((f) => `${f.c.nombre} (${fmt1(f.pct)}%)`).join(", ") || "Ninguno"}
+                </strong>
               </div>
             </button>
 
             <button
-              onClick={() => setSeleccion("volcan")}
+              onClick={() => sint.vial[0] && setSeleccion(sint.vial[0].c.id)}
               className="amc-surface rounded-2xl p-3.5 text-left border hover:border-[#2DD4BF]/60 transition cursor-pointer"
             >
               <div className="text-[11px] font-mono uppercase text-[#2DD4BF] font-bold">🚧 Alerta Vial / Drenajes</div>
-              <div className="font-display text-xl font-extrabold text-[#F4F1EA] mt-0.5">3 de 10 municipios</div>
+              <div className="font-display text-xl font-extrabold text-[#F4F1EA] mt-0.5">
+                {sint.vial.length} de {COMUNIDADES.length} municipios
+              </div>
               <div className="text-xs text-[#9CA3AF] mt-0.5">
-                <strong className="text-[#F4F1EA]">Volcán, Tumbaya, Humahuaca</strong> · lluvias altas
+                <strong className="text-[#F4F1EA]">{nombres(sint.vial)}</strong> · lluvias altas en Quebrada
               </div>
             </button>
 
             <button
-              onClick={() => setSeleccion("abra-pampa")}
+              onClick={() => sint.punaConLluvia[0] && setSeleccion(sint.punaConLluvia[0].c.id)}
               className="amc-surface rounded-2xl p-3.5 text-left border hover:border-[#10B981]/60 transition cursor-pointer"
             >
-              <div className="text-[11px] font-mono uppercase text-[#10B981] font-bold">🌱 Puna Recuperada en Nov</div>
-              <div className="font-display text-xl font-extrabold text-[#F4F1EA] mt-0.5">3 de 10 municipios</div>
+              <div className="text-[11px] font-mono uppercase text-[#10B981] font-bold">🌱 Puna con lluvia sobre lo normal</div>
+              <div className="font-display text-xl font-extrabold text-[#F4F1EA] mt-0.5">
+                {sint.punaConLluvia.length} de {COMUNIDADES.length} municipios
+              </div>
               <div className="text-xs text-[#9CA3AF] mt-0.5">
-                <strong className="text-[#F4F1EA]">Abra Pampa, La Quiaca, Yavi</strong> · &gt;+87% lluvia
+                <strong className="text-[#F4F1EA]">{nombres(sint.punaConLluvia)}</strong>
               </div>
             </button>
 
@@ -233,7 +267,7 @@ export default function App() {
             </div>
 
             <div className="h-[260px] sm:h-[300px]">
-              <Mapa seleccion={seleccion} onSeleccion={setSeleccion} fix={null} radar={radar} />
+              <Mapa seleccion={seleccion} onSeleccion={setSeleccion} fix={null} radar={radar} lecturas={regionales} />
             </div>
 
             {/* Leyenda cromática del Semáforo en el Mapa */}
@@ -338,13 +372,13 @@ export default function App() {
           </div>
 
           {tabDetalle === "priorizacion" && (
-            <PanelDatos comunidad={comunidad} lectura={lectura} modo="parametrico" onSeleccion={setSeleccion} />
+            <PanelDatos comunidad={comunidad} lectura={lectura} modo="parametrico" onSeleccion={setSeleccion} lecturas={regionales} />
           )}
 
           {tabDetalle === "satelite" && (
             <div className="grid gap-5 lg:grid-cols-[380px_1fr]">
               <RadarOrbital observador={observador} onSnapshot={setRadar} />
-              <PanelDatos comunidad={comunidad} lectura={lectura} modo="comunidad" onSeleccion={setSeleccion} />
+              <PanelDatos comunidad={comunidad} lectura={lectura} modo="comunidad" onSeleccion={setSeleccion} lecturas={regionales} />
             </div>
           )}
 
