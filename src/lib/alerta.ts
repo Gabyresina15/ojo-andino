@@ -191,8 +191,138 @@ export function validarNumeros(texto: string, payload: unknown) {
   return {
     numerosEncontrados: encontrados.length,
     numerosVerificados: encontrados.length - noVerificados.length,
-    noVerificados,
+    noVerificados: [...noVerificados, ...validarAfirmaciones(texto, payload)],
   };
+}
+
+type PayloadAlerta = Partial<ReturnType<typeof payloadUsuario>>;
+
+const MESES_ES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+const RE_FECHA_LARGA = new RegExp(`\\b(\\d{1,2}) de (${MESES_ES.join("|")})\\b`, "gi");
+const RE_FECHA_CORTA = /\b(\d{1,2})\/(\d{1,2})\b/g;
+const KW_PICO = /pico|máximo diario|más fuerte|en 24 ?h/gi;
+const KW_SEMANA = /últim[oa]s? 7 días|últim[oa] semana|en 7 días/gi;
+
+const aNum = (s: string) => Number(s.replace(",", "."));
+const coincide = (n: number, ref: number) => Math.abs(n - ref) <= Math.max(0.11, Math.abs(ref) * 0.015);
+const ddmmDe = (d: number, m: number) => `${String(d).padStart(2, "0")}/${String(m).padStart(2, "0")}`;
+const esNumero = (n: unknown): n is number => typeof n === "number" && Number.isFinite(n);
+
+function ultimaPosicion(texto: string, re: RegExp): number {
+  let pos = -1;
+  for (const m of texto.matchAll(re)) pos = m.index;
+  return pos;
+}
+
+function inicioOracion(texto: string, i: number): number {
+  let ini = 0;
+  for (const m of texto.slice(0, i).matchAll(/[.;!?](?=\s)/g)) ini = m.index + 1;
+  return ini;
+}
+
+function fechaDe(dia: string, mes: string): string {
+  return ddmmDe(Number(dia), Number.isNaN(Number(mes)) ? MESES_ES.indexOf(mes.toLowerCase()) + 1 : Number(mes));
+}
+
+function fechasDelPayload(payload: unknown): Set<string> {
+  const out = new Set<string>();
+  const walk = (v: unknown) => {
+    if (typeof v === "string") {
+      for (const m of v.matchAll(/(\d{4})-(\d{2})-(\d{2})/g)) out.add(`${m[3]}/${m[2]}`);
+      for (const m of v.matchAll(RE_FECHA_CORTA)) out.add(fechaDe(m[1], m[2]));
+      for (const m of v.matchAll(RE_FECHA_LARGA)) out.add(fechaDe(m[1], m[2]));
+    } else if (v && typeof v === "object") {
+      Object.values(v).forEach(walk);
+    }
+  };
+  walk(payload);
+  return out;
+}
+
+/** Verifica que cada cifra esté atada al dato correcto (no solo que exista en algún lugar del payload). */
+export function validarAfirmaciones(texto: string, payload: unknown): string[] {
+  const { patron_diario: pat, lluvia, temperatura: temp, ndvi } = (payload ?? {}) as PayloadAlerta;
+  const errores: string[] = [];
+
+  if (pat) {
+    for (const m of texto.matchAll(/(\d+) días?\b/g)) {
+      const ini = m.index;
+      const fin = ini + m[0].length;
+      const previo = texto.slice(0, ini).search(/\d[^\d]*$/);
+      const antes = texto.slice(Math.max(ini - 40, previo + 1, inicioOracion(texto, ini)), ini);
+      const siguiente = texto.slice(fin).search(/\d/);
+      const despues = texto.slice(fin, fin + Math.min(30, siguiente < 0 ? 30 : siguiente));
+      const n = Number(m[1]);
+      if (/racha/i.test(antes) || /^\s*(seguid|consecutiv)/i.test(despues)) {
+        if (n !== pat.racha_seca_maxima_dias) errores.push(`racha seca de ${n} días (dato: ${pat.racha_seca_maxima_dias})`);
+      } else if (/^\s*(secos|sin lluvia|sin una gota|sin llover)/i.test(despues)) {
+        if (n !== pat.dias_secos && n !== pat.racha_seca_maxima_dias) errores.push(`${n} días secos (dato: ${pat.dias_secos})`);
+      } else if (/^\s*(con lluvia|de lluvia|activos|con precipitaci)/i.test(despues)) {
+        if (n !== pat.dias_con_lluvia_significativa) {
+          errores.push(`${n} días con lluvia (dato: ${pat.dias_con_lluvia_significativa})`);
+        }
+      }
+    }
+  }
+
+  if (lluvia || pat) {
+    const refs = [lluvia?.observado_mm, lluvia?.climatologia_mm, pat?.lluvia_ultimos_7d_mm, pat?.pico_maximo_mm, 1].filter(esNumero);
+    let corte = 0;
+    for (const m of texto.matchAll(/(\d+(?:,\d+)?)\s?mm\b/g)) {
+      const ini = m.index;
+      const fin = ini + m[0].length;
+      const seg = texto.slice(Math.max(corte, inicioOracion(texto, ini)), ini);
+      corte = fin;
+      const n = aNum(m[1]);
+      const pPico = ultimaPosicion(seg, KW_PICO);
+      const pSemana = ultimaPosicion(seg, KW_SEMANA);
+      if (pat && pPico > pSemana) {
+        if (!coincide(n, pat.pico_maximo_mm)) errores.push(`pico de ${m[0]} (dato: ${pat.pico_maximo_mm} mm)`);
+        const fecha = [...texto.slice(fin, fin + 25).matchAll(new RegExp(`${RE_FECHA_LARGA.source}|${RE_FECHA_CORTA.source}`, "gi"))][0];
+        if (fecha) {
+          const f = fecha[1] ? fechaDe(fecha[1], fecha[2]) : fechaDe(fecha[3], fecha[4]);
+          if (f !== pat.pico_maximo_dia) errores.push(`pico el ${fecha[0]} (dato: ${pat.pico_maximo_dia})`);
+        }
+      } else if (pat && pSemana > pPico) {
+        if (!coincide(n, pat.lluvia_ultimos_7d_mm)) errores.push(`${m[0]} en 7 días (dato: ${pat.lluvia_ultimos_7d_mm} mm)`);
+      } else if (!refs.some((r) => coincide(n, r))) {
+        errores.push(`${m[0]} no corresponde a ningún acumulado de la fuente`);
+      }
+    }
+  }
+
+  if (temp) {
+    const refs = [temp.diferencia_termica_c, temp.media_7d_c, temp.climatologia_mes_c].filter(esNumero);
+    for (const m of texto.matchAll(/(\d+(?:,\d+)?)\s?(?:°\s?C|grados)/g)) {
+      if (!refs.some((r) => coincide(aNum(m[1]), r))) errores.push(`${m[0]} no corresponde a la temperatura de la fuente`);
+    }
+  }
+
+  const refsPct = [lluvia?.anomalia_pct, pat?.concentracion_pico_pct, ndvi?.variacion_vs_anterior_pct, 25]
+    .filter(esNumero)
+    .map(Math.abs);
+  for (const m of texto.matchAll(/(\d+(?:,\d+)?)\s?%/g)) {
+    const n = aNum(m[1]);
+    if (!refsPct.some((r) => coincide(n, r) || Math.round(r) === n)) errores.push(`${m[0]} no corresponde a ningún porcentaje de la fuente`);
+  }
+
+  if (ndvi) {
+    const refs = [ndvi.ultimo, ndvi.anterior, ndvi.mismo_periodo_anio_anterior].map((c) => c?.ndvi).filter(esNumero);
+    for (const m of texto.matchAll(/\b0,(\d{2,3})\b/g)) {
+      const dec = m[1].length;
+      const n = aNum(m[0]);
+      if (!refs.some((r) => Math.abs(Number(r.toFixed(dec)) - n) < 1e-9)) errores.push(`índice verde ${m[0]} no corresponde al NDVI de la fuente`);
+    }
+  }
+
+  const fechas = fechasDelPayload(payload);
+  for (const re of [RE_FECHA_LARGA, RE_FECHA_CORTA]) {
+    for (const m of texto.matchAll(re)) {
+      if (!fechas.has(fechaDe(m[1], m[2]))) errores.push(`fecha ${m[0]} no figura en la fuente`);
+    }
+  }
+
+  return errores;
 }
 
 const fmt1 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });

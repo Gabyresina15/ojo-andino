@@ -87,7 +87,12 @@ async function enviarPorWebhook(payload: unknown): Promise<boolean> {
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
+  const secreto = process.env.CRON_SECRET;
+  if (secreto && req.headers.get("authorization") !== `Bearer ${secreto}`) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  }
+
   if (cacheBarrido && Date.now() - cacheBarrido.t < TTL_MS) {
     return NextResponse.json(cacheBarrido.res);
   }
