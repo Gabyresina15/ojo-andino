@@ -4,7 +4,7 @@ self.addEventListener("install", (e) => {
   e.waitUntil(
     caches
       .open(CACHE)
-      .then((c) => c.addAll(["/"]))
+      .then((c) => c.addAll(["/", "/metodologia"]))
       .then(() => self.skipWaiting()),
   );
 });

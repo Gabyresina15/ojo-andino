@@ -46,6 +46,8 @@ type PowerClim = {
 export const PISO_NORMAL_30D_MM = 10;
 /** Desvío de la temporada de lluvias que se considera déficit. Provisorio: falta calibrarlo con registros de emergencia. */
 export const UMBRAL_TEMPORADA_PCT = -20;
+/** Desvío de la lluvia de 30 días (en valor absoluto) que separa déficit o superávit de lo normal. Sin calibrar. */
+export const UMBRAL_30D_PCT = 25;
 const MIN_DIAS_TEMPORADA_EN_CURSO = 60;
 const COBERTURA_MINIMA = 0.9;
 
@@ -252,7 +254,7 @@ export function estadoHidrico(l: LecturaSatelital): "deficit" | "normal" | "supe
     return l.meteorologia!.precipitacionTemporada!.porcentaje! <= UMBRAL_TEMPORADA_PCT ? "deficit" : "normal";
   }
   if (base === "epoca_seca_sin_temporada") return "normal";
-  if (p <= -25) return "deficit";
-  if (p >= 25) return "superavit_reciente";
+  if (p <= -UMBRAL_30D_PCT) return "deficit";
+  if (p >= UMBRAL_30D_PCT) return "superavit_reciente";
   return "normal";
 }

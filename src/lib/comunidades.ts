@@ -181,6 +181,13 @@ export const PARADAS_TREN = ["volcan", "tumbaya", "purmamarca", "maimara", "tilc
   .map((id) => COMUNIDADES.find((c) => c.id === id)!)
   .filter(Boolean);
 
+const COMISIONES_MUNICIPALES = new Set(["susques", "yavi", "maimara", "purmamarca", "tumbaya", "volcan"]);
+
+/** Gobierno local de la localidad, sin áreas internas: no hay un destinatario institucional acordado. */
+export function jurisdiccionDe(c: Comunidad): string {
+  return `${COMISIONES_MUNICIPALES.has(c.id) ? "Comisión Municipal" : "Municipalidad"} de ${c.nombre}`;
+}
+
 export function getComunidad(id: string | null | undefined): Comunidad | undefined {
   return COMUNIDADES.find((c) => c.id === id);
 }

@@ -2,11 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import dynamic from "next/dynamic";
-import { COMUNIDADES, CENTRO_JUJUY, getComunidad } from "@/lib/comunidades";
+import Link from "next/link";
+import { COMUNIDADES, getComunidad } from "@/lib/comunidades";
 import type { LecturaSatelital } from "@/lib/types";
 import { lecturaCacheada } from "@/lib/cache";
 import { nombres, sintesisRegional } from "@/lib/sintesis";
-import RadarOrbital, { type RadarSnapshot } from "./RadarOrbital";
 import PanelDatos from "./PanelDatos";
 import PanelAlerta from "./PanelAlerta";
 import FichaCultural from "./FichaCultural";
@@ -60,7 +60,6 @@ export default function App() {
   const seleccion = elegida ?? parametroC ?? "susques";
   const [vivas, setVivas] = useState<Record<string, LecturaSatelital>>({});
   const [terminada, setTerminada] = useState<string | null>(null);
-  const [radar, setRadar] = useState<RadarSnapshot | null>(null);
   const [tabDetalle, setTabDetalle] = useState<DetalleTab>("priorizacion");
   const pedido = useRef(0);
 
@@ -114,12 +113,6 @@ export default function App() {
     return () => ctrl.abort();
   }, []);
 
-  const observador = useMemo(
-    () => ({ lat: comunidad.lat, lon: comunidad.lon, altKm: CENTRO_JUJUY.altKm, etiqueta: comunidad.nombre }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [comunidad.id],
-  );
-
   // Cada localidad usa siempre la misma fuente, esté o no seleccionada: en vivo, o la última guardada en este navegador.
   const regionales = useMemo(() => {
     const r: Record<string, LecturaSatelital> = {};
@@ -168,6 +161,9 @@ export default function App() {
             >
               {online ? "● Datos NASA / MODIS activos" : "● Modo sin conexión"}
             </span>
+            <Link href="/metodologia" className="text-[11px] rounded-xl px-2.5 py-1.5 border border-white/15 text-[#F4F1EA] font-medium hover:border-[#F59E0B]/60">
+              Metodología
+            </Link>
           </div>
         </div>
       </header>
@@ -184,7 +180,7 @@ export default function App() {
             </h2>
             <p className="text-sm sm:text-base text-[#9CA3AF] leading-relaxed">
               Traduce datos satelitales de lluvia y vegetación en un{" "}
-              <strong className="text-[#F4F1EA]">expediente oficial auditable por municipio</strong> para decidir dónde enviar
+              <strong className="text-[#F4F1EA]">informe técnico trazable por localidad</strong> para decidir dónde enviar
               camiones de forraje y agua en la Puna o dónde vigilar drenajes y caminos por exceso de lluvia en la Quebrada.
             </p>
           </div>
@@ -246,7 +242,7 @@ export default function App() {
           </div>
         </section>
 
-        {/* BLOQUE PRINCIPAL: MAPA DE LAS 10 JURISDICCIONES + PARTE OFICIAL DE LA JURISDICCIÓN SELECCIONADA */}
+        {/* BLOQUE PRINCIPAL: MAPA DE LAS 10 JURISDICCIONES + INFORME DE LA JURISDICCIÓN SELECCIONADA */}
         <section className="grid gap-5 lg:grid-cols-[400px_1fr] items-start">
           <div className="amc-surface rounded-3xl overflow-hidden shadow-xl">
             <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
@@ -255,7 +251,7 @@ export default function App() {
             </div>
 
             <div className="h-[260px] sm:h-[300px]">
-              <Mapa seleccion={seleccion} onSeleccion={setSeleccion} fix={null} radar={radar} lecturas={regionales} />
+              <Mapa seleccion={seleccion} onSeleccion={setSeleccion} lecturas={regionales} />
             </div>
 
             {/* Leyenda cromática del Semáforo en el Mapa */}
@@ -341,7 +337,7 @@ export default function App() {
                   : "amc-surface text-[#F4F1EA] hover:border-[#2DD4BF]/50"
               }`}
             >
-              <span>📊 Gráfico de Lluvia (30 días) y Satélite SAOCOM</span>
+              <span>📊 Gráfico de Lluvia (30 días) y Vegetación</span>
               <span>●</span>
             </button>
 
@@ -364,10 +360,7 @@ export default function App() {
           )}
 
           {tabDetalle === "satelite" && (
-            <div className="grid gap-5 lg:grid-cols-[380px_1fr]">
-              <RadarOrbital observador={observador} onSnapshot={setRadar} />
-              <PanelDatos comunidad={comunidad} lectura={lectura} modo="comunidad" onSeleccion={setSeleccion} lecturas={regionales} />
-            </div>
+            <PanelDatos comunidad={comunidad} lectura={lectura} modo="comunidad" onSeleccion={setSeleccion} lecturas={regionales} />
           )}
 
           {tabDetalle === "cultura" && <FichaCultural comunidad={comunidad} />}
@@ -375,8 +368,10 @@ export default function App() {
       </main>
 
       <footer className="mx-auto max-w-6xl px-4 pb-8 pt-4 text-[11px] text-[#9CA3AF] border-t border-white/10">
-        Datos públicos verificados: NASA POWER (climatología 2001–2025) · MODIS MOD13Q1 (ORNL DAAC) · Órbitas SAOCOM 1A/1B
-        (CelesTrak) · Redacción y voz con Grok AI (xAI). Cursor Hackathon Jujuy · Tren Solar de la Quebrada (22/11/2026).
+        Fuentes públicas: NASA POWER (climatología 2001–2025) · MODIS MOD13Q1 (ORNL DAAC) · Redacción y voz con Grok AI (xAI).{" "}
+        <Link href="/metodologia" className="underline text-[#F4F1EA] hover:text-[#F59E0B]">
+          Metodología y límites del indicador
+        </Link>
       </footer>
     </div>
   );

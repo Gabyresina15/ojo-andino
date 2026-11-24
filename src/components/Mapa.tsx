@@ -1,26 +1,21 @@
 "use client";
 
-import { CircleMarker, MapContainer, Polyline, TileLayer, Tooltip } from "react-leaflet";
-import { COMUNIDADES, PARADAS_TREN } from "@/lib/comunidades";
+import { CircleMarker, MapContainer, TileLayer, Tooltip } from "react-leaflet";
+import { COMUNIDADES } from "@/lib/comunidades";
 import { lecturaCacheada } from "@/lib/cache";
-import { estadoHidrico } from "@/lib/lecturas";
-import type { Fix } from "./PanelGps";
-import type { RadarSnapshot } from "./RadarOrbital";
+import { anomaliaDelEstado, estadoHidrico } from "@/lib/lecturas";
 import type { LecturaSatelital } from "@/lib/types";
 
 type Props = {
   seleccion: string;
   onSeleccion: (id: string) => void;
-  fix: Fix | null;
-  radar: RadarSnapshot | null;
   /** Lecturas en vivo por localidad; la que falte usa el cache del deploy. */
   lecturas?: Record<string, LecturaSatelital>;
 };
 
-const TRAZA_TREN: [number, number][] = PARADAS_TREN.map((p) => [p.lat, p.lon]);
 const fmt1 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
-export default function Mapa({ seleccion, onSeleccion, fix, radar, lecturas }: Props) {
+export default function Mapa({ seleccion, onSeleccion, lecturas }: Props) {
   return (
     <MapContainer center={[-23.1, -65.6]} zoom={8} className="h-full w-full z-0" scrollWheelZoom={false}>
       <TileLayer
@@ -28,46 +23,12 @@ export default function Mapa({ seleccion, onSeleccion, fix, radar, lecturas }: P
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
 
-      {/* Corredor ferroviario Quebrada */}
-      <Polyline positions={TRAZA_TREN} pathOptions={{ color: "#F59E0B", weight: 2.5, dashArray: "6 6", opacity: 0.75 }} />
-
-      {/* Próxima pasada orbital de SAOCOM si cae en la región */}
-      {radar?.proxima?.traza.length ? (
-        <Polyline positions={radar.proxima.traza} pathOptions={{ color: "#2DD4BF", weight: 2, opacity: 0.7 }} />
-      ) : null}
-
-      {/* Posición en vivo de SAOCOM 1A/1B */}
-      {radar?.estados.map((s) => (
-        <CircleMarker
-          key={s.norad}
-          center={[s.lat, s.lon]}
-          radius={6}
-          pathOptions={{ color: "#2DD4BF", fillColor: "#0284c7", fillOpacity: 0.9, weight: 2 }}
-        >
-          <Tooltip direction="top">
-            🛰️ {s.nombre} ({s.altKm.toFixed(0)} km alt)
-          </Tooltip>
-        </CircleMarker>
-      ))}
-
-      {fix && (
-        <CircleMarker
-          center={[fix.lat, fix.lon]}
-          radius={7}
-          pathOptions={{ color: "#ffffff", fillColor: "#10b981", fillOpacity: 1, weight: 2 }}
-        >
-          <Tooltip direction="top" permanent>
-            📍 Posición GPS
-          </Tooltip>
-        </CircleMarker>
-      )}
-
       {/* 10 Jurisdicciones Municipales coloreadas por su Semáforo Hídrico Real */}
       {COMUNIDADES.map((c) => {
         const activa = c.id === seleccion;
         const l = lecturas?.[c.id] ?? lecturaCacheada(c.id);
         const est = l ? estadoHidrico(l) : "normal";
-        const pct = l?.meteorologia?.precipitacionMm30d.porcentaje ?? 0;
+        const pct = (l && anomaliaDelEstado(l)?.porcentaje) ?? l?.meteorologia?.precipitacionMm30d.porcentaje ?? 0;
 
         const paleta =
           est === "deficit"
