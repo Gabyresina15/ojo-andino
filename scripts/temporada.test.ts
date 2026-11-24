@@ -119,3 +119,27 @@ test("Puna con lluvia reciente y temporada cerrada en déficit: el texto y la re
   m.precipitacionTemporada = { ...m.precipitacionTemporada!, porcentaje: -5 };
   assert.match(alertaDeterminista(c, l, "parametrico").resumen_oral, /reasignar fletes/);
 });
+
+test("un texto de Grok que descarta forraje con la temporada cerrada en déficit se rechaza", async () => {
+  const { lecturaCacheada } = await import("../src/lib/cache");
+  const { COMUNIDADES } = await import("../src/lib/comunidades");
+  const c = COMUNIDADES.find((x) => x.id === "abra-pampa")!;
+  const l = structuredClone(lecturaCacheada("abra-pampa")!);
+  const m = l.meteorologia!;
+  m.precipitacionMm30d = { ...m.precipitacionMm30d, observado: 80, climatologia: 40, porcentaje: 100 };
+  m.precipitacionTemporada = { ...m.precipitacionTemporada!, enCurso: false, porcentaje: -21 };
+  const payload = payloadUsuario(c, l, "parametrico");
+  assert.equal(payload.temporada_cerrada_en_deficit, true);
+  for (const t of [
+    "La recarga permite evitar gasto innecesario de fardos de emergencia.",
+    "No se requiere envío de forraje esta semana.",
+    "Conviene reasignar los fletes a otras zonas.",
+    "Se puede esperar el rebrote natural del pastizal.",
+  ]) {
+    assert.ok(validarNumeros(t, payload).noVerificados.length > 0, t);
+  }
+  const det = alertaDeterminista(c, l, "parametrico");
+  assert.deepEqual(validarNumeros(`${det.resumen_oral} ${det.nota_parametrica}`, payload).noVerificados, []);
+  m.precipitacionTemporada = { ...m.precipitacionTemporada!, porcentaje: -5 };
+  assert.deepEqual(validarNumeros("Conviene reasignar los fletes a otras zonas.", payloadUsuario(c, l, "parametrico")).noVerificados, []);
+});

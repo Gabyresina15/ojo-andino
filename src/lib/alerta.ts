@@ -40,13 +40,14 @@ Tu trabajo NO es repetir de memoria los promedios que ya muestran las tarjetas s
 
 1. ADAPTACIÓN POR "modo":
    - Si modo === "comunidad": hablá directo, claro y respetuoso a familias productoras, pastores y referentes comunitarios. Explicá qué significa la lluvia y el estado del pastizal para las aguadas, el ganado (llamas, ovejas, cabras) o los cultivos, integrando de forma natural el contexto cultural local ("contexto") sin jerga burocrática ni menciones a ministerios o expedientes.
-   - Si modo === "parametrico": redactá un dictamen técnico de expediente para el Gobierno de Jujuy (Producción, Recursos Hídricos, Vialidad) y Municipios, justificando asignación de fletes de forraje, alertas viales/drenajes o activación de asistencia.
+   - Si modo === "parametrico": redactá un informe técnico para el Gobierno de Jujuy y los Municipios que fundamente la recomendación (forraje, drenajes y caminos, o seguimiento habitual). Es una recomendación, no una orden ni un documento oficial.
 
 2. ANÁLISIS HIDROLÓGICO OBLIGATORIO EN "resumen_oral" (4 a 5 oraciones en castellano de Argentina):
    - Citá el comportamiento interno del mes usando "patron_diario": cuántos días estuvieron secos ("dias_secos"), cuál fue la racha seca consecutiva más larga ("racha_seca_maxima_dias"), cuánto cayó en los últimos 7 días ("lluvia_ultimos_7d_mm") y el pico máximo en 24h ("pico_maximo_mm" el "pico_maximo_dia", que representa "concentracion_pico_pct"% del agua del mes).
    - Cruzalo con "region" y "estado_hidrico_calculado":
      * deficit: días secos seguidos + anomalía térmica aceleran evaporación de aguadas y frenan rebrote del pastizal -> urgencia de agua y forraje.
-     * superavit_reciente en puna: recarga superficial tras meses secos -> monitorear rebrote natural y evitar gasto innecesario de fardos de emergencia.
+     * superavit_reciente en puna con "temporada_cerrada_en_deficit" false: recarga superficial tras meses secos -> monitorear rebrote natural y evitar gasto innecesario de fardos de emergencia.
+     * superavit_reciente en puna con "temporada_cerrada_en_deficit" true: llovió sobre lo normal en 30 días, pero la última temporada de lluvias cerró en déficit -> decí que hay que verificar en campo antes de decidir envíos de forraje. PROHIBIDO afirmar que no hace falta forraje, que se puede esperar el rebrote o que conviene reasignar fletes.
      * superavit_reciente en quebrada (o concentracion_pico_pct >= 55% en pendiente): lluvia concentrada en pocas horas genera escorrentía rápida -> alerta de drenajes, badenes, caminos rurales y obras.
      * normal: acompaña el ciclo histórico de inicio de temporada húmeda.
    - Si "estado_basado_en" es "temporada_lluvias" o "epoca_seca_sin_temporada", es época seca: lo normal en 30 días es casi cero y "lluvia.anomalia_pct" NO indica ni sequía ni exceso; no la cites como señal. Con "temporada_lluvias", explicá el estado con "temporada_lluvias" (observado_mm, climatologia_mm, anomalia_pct): de esa lluvia dependen las pasturas y aguadas hasta la próxima temporada.
@@ -130,6 +131,7 @@ export function payloadUsuario(c: Comunidad, l: LecturaSatelital, modo: "comunid
     fecha_hoy_art: new Date().toLocaleDateString("es-AR", { timeZone: "America/Argentina/Jujuy" }),
     estado_hidrico_calculado: estadoHidrico(l),
     estado_basado_en: baseEstado(l),
+    temporada_cerrada_en_deficit: temporadaCerradaEnDeficit(l),
     temporada_lluvias: m?.precipitacionTemporada
       ? {
           ventana: m.precipitacionTemporada.ventana,
@@ -211,6 +213,9 @@ type PayloadAlerta = Partial<ReturnType<typeof payloadUsuario>>;
 const MESES_ES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 const RE_FECHA_LARGA = new RegExp(`\\b(\\d{1,2}) de (${MESES_ES.join("|")})\\b`, "gi");
 const RE_FECHA_CORTA = /\b(\d{1,2})\/(\d{1,2})\b/g;
+/** Frases que descartan el envío de forraje; no valen si la última temporada de lluvias cerró en déficit. */
+const RE_DESCARTA_FORRAJE =
+  /no (?:se )?(?:requiere|necesita|hace falta|justifica)[^.;]{0,40}(?:forraje|fardos|alfalfa|flete|asistencia)|reasignar[^.;]{0,25}(?:fletes|camiones|forraje|fardos)|(?:evitar|sin)[^.;]{0,40}(?:fardos|forraje)[^.;]{0,15}(?:de )?emergencia|gasto innecesario|esperar (?:el|al) rebrote/i;
 const KW_PICO = /pico|máximo diario|más fuerte|en 24 ?h/gi;
 const KW_SEMANA = /últim[oa]s? 7 días|últim[oa] semana|en 7 días/gi;
 
@@ -257,6 +262,12 @@ function fechasDelPayload(payload: unknown): Set<string> {
 export function validarAfirmaciones(texto: string, payload: unknown): string[] {
   const { patron_diario: pat, lluvia, temperatura: temp, ndvi, temporada_lluvias: temporada } = (payload ?? {}) as PayloadAlerta;
   const errores: string[] = [];
+
+  const p = (payload ?? {}) as PayloadAlerta;
+  if (p.temporada_cerrada_en_deficit && p.estado_hidrico_calculado === "superavit_reciente" && p.region === "puna") {
+    const descarta = texto.match(RE_DESCARTA_FORRAJE);
+    if (descarta) errores.push(`"${descarta[0]}" con la última temporada de lluvias en déficit`);
+  }
 
   if (pat) {
     for (const m of texto.matchAll(/(\d+) días?\b/g)) {
