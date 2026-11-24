@@ -9,6 +9,7 @@
     "lint": "eslint",
     "precache": "tsx scripts/precache.ts",
     "chirps": "tsx scripts/chirps-temporadas.ts",
+    "estacion": "tsx scripts/estacion.ts",
     "backtest": "tsx scripts/backtest.ts",
     "typecheck": "tsc --noEmit"
   },
@@ -33,6 +34,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.4.6",
+    "geotiff": "^3.0.5",
     "tailwindcss": "4.3.3",
     "tsx": "^4.19.0",
     "typescript": "^5"

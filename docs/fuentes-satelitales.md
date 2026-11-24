@@ -17,7 +17,7 @@ durante el año fiscal 2027; después habrá que migrar a VIIRS, que el servicio
 |---|---|---|---|---|---|
 | NASA POWER | Lluvia y temperatura diarias, climatología 2001–2025 | Grilla regional (~50 km) / 2–3 días | API sin clave | Política de datos abiertos de NASA: sin período de acceso exclusivo. NASA pide no sugerir que avala un producto | En uso |
 | MODIS MYD13Q1 (ORNL DAAC) | NDVI | 250 m / compuesto de 16 días | API sin clave | Datos NASA, misma política | En uso |
-| CHIRPS v2 (UCSB) vía ClimateSERV | Lluvia diaria | ~5 km / semanas | API sin clave | Dominio público (declarado en chc.ucsb.edu). v2 deja de producirse después de 12/2026 | En uso, solo temporadas cerradas |
+| CHIRPS v3 (UCSB), totales mensuales en GeoTIFF | Lluvia mensual | ~5 km / el mes cierra en la tercera semana del mes siguiente | Archivos públicos en data.chc.ucsb.edu, sin clave. El servidor rechaza conexiones de a ratos: el script reintenta | Dominio público (declarado en chc.ucsb.edu). Reemplaza a v2, que deja de producirse después de 12/2026 | En uso, solo temporadas cerradas |
 | MET Norway locationforecast | Pronóstico de lluvia | Modelo global / 9 días | API sin clave, exige User-Agent | CC BY 4.0 (verificado en una revisión anterior) | En uso, solo pronóstico |
 | CelesTrak (TLE) | Órbita de SAOCOM 1A/1B | — | Descarga pública | Sin verificar | En uso, solo horarios de pasada |
 

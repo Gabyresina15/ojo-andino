@@ -6,7 +6,7 @@
 import { writeFileSync } from "node:fs";
 import { estadoHidrico, fetchJson, leerMeteorologia, UMBRAL_30D_PCT, UMBRAL_TEMPORADA_PCT } from "../src/lib/lecturas";
 import type { LecturaSatelital } from "../src/lib/types";
-import { temporadasChirps } from "./chirps-temporadas";
+import { CHIRPS_VERSION, temporadasChirps } from "./chirps-temporadas";
 
 const EVENTO = {
   fecha: "2026-09-23",
@@ -69,7 +69,7 @@ async function main() {
     const lectura = { comunidadId: cod, meteorologia: m } as LecturaSatelital;
     const p30 = m.precipitacionMm30d;
     const nasa = await temporadasNasa(lat, lon, anio);
-    const chirps = await temporadasChirps(lat, lon, anio);
+    const chirps = (await temporadasChirps([{ id: cod, lat, lon }], anio))[cod];
     filas.push({
       lugar: p.fna,
       departamento: p.nom_depto,
@@ -97,9 +97,9 @@ async function main() {
         fuentes: {
           coordenadas: "Base de Asentamientos Humanos de la República Argentina (BAHRA), IGN/INDEC, vía WFS del IGN",
           lluvia: "NASA POWER (PRECTOTCORR), serie hasta la fecha del evento",
-          segundaFuente: "CHIRPS (Climate Hazards Center, UCSB) vía ClimateSERV, celda de ~5 km",
+          segundaFuente: `CHIRPS v${CHIRPS_VERSION} (Climate Hazards Center, UCSB), totales mensuales, píxel de ~5 km`,
         },
-        nota: `temporadaNasaPct: desvío frente a la climatología mensual de NASA POWER, como en el tablero. chirpsPct, temporadaAnterior y correlacionTemporadas: totales del 1/12 al 30/4 frente al promedio ${CLIMA[0]}–${CLIMA[1]} de cada fuente.`,
+        nota: `temporadaNasaPct: desvío frente a la climatología mensual de NASA POWER, como en el tablero. chirpsPct, temporadaAnterior y correlacionTemporadas: totales del 1/12 al 30/4 frente al promedio ${CLIMA[0]}–${CLIMA[1]} de cada fuente. CHIRPS: suma de los meses de diciembre a abril.`,
         filas,
       },
       null,

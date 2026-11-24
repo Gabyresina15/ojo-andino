@@ -91,13 +91,13 @@ test("el cruce con CHIRPS solo aplica a temporadas cerradas y dice si coincide c
   base.meteorologia!.ultimoDiaConDato = "2026-09-23";
   const c = cruceTemporada(base)!;
   assert.equal(c.temporada, 2026);
-  assert.equal(c.observado, 372.5);
-  assert.ok(c.porcentaje > -20 && c.porcentaje < 0);
-  assert.equal(c.coincide, false);
+  assert.equal(c.observado, 273.6);
+  assert.ok(c.porcentaje <= -20);
+  assert.equal(c.coincide, true);
 
   const normal = lectura(anom(12.2, 6.2), anom(430, 446));
   normal.meteorologia!.ultimoDiaConDato = "2026-09-23";
-  assert.equal(cruceTemporada(normal)!.coincide, true);
+  assert.equal(cruceTemporada(normal)!.coincide, false);
 
   const enCurso = lectura(anom(60, 80), anom(100, 150));
   enCurso.meteorologia!.ultimoDiaConDato = "2027-02-15";

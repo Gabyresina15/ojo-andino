@@ -1,5 +1,5 @@
 {
- "generadoEn": "2026-11-24T20:00:25.755Z",
+ "generadoEn": "2026-11-24T23:34:30.608Z",
  "evento": {
   "fecha": "2026-09-23",
   "descripcion": "Entrega de alfalfa de la Provincia en los cinco departamentos puneños por sequía"
@@ -11,9 +11,9 @@
  "fuentes": {
   "coordenadas": "Base de Asentamientos Humanos de la República Argentina (BAHRA), IGN/INDEC, vía WFS del IGN",
   "lluvia": "NASA POWER (PRECTOTCORR), serie hasta la fecha del evento",
-  "segundaFuente": "CHIRPS (Climate Hazards Center, UCSB) vía ClimateSERV, celda de ~5 km"
+  "segundaFuente": "CHIRPS v3.0 (Climate Hazards Center, UCSB), totales mensuales, píxel de ~5 km"
  },
- "nota": "temporadaNasaPct: desvío frente a la climatología mensual de NASA POWER, como en el tablero. chirpsPct, temporadaAnterior y correlacionTemporadas: totales del 1/12 al 30/4 frente al promedio 2001–2025 de cada fuente.",
+ "nota": "temporadaNasaPct: desvío frente a la climatología mensual de NASA POWER, como en el tablero. chirpsPct, temporadaAnterior y correlacionTemporadas: totales del 1/12 al 30/4 frente al promedio 2001–2025 de cada fuente. CHIRPS: suma de los meses de diciembre a abril.",
  "filas": [
   {
    "lugar": "Abra Pampa",
@@ -30,12 +30,12 @@
    "estadoRegla30d": "superavit_reciente",
    "temporadaNasaPct": -21,
    "estadoReglaActual": "deficit",
-   "chirpsPct": -7.2,
+   "chirpsPct": -25.2,
    "temporadaAnterior": {
     "nasaPct": -30.7,
-    "chirpsPct": -16.1
+    "chirpsPct": -10.7
    },
-   "correlacionTemporadas": 0.49
+   "correlacionTemporadas": 0.54
   },
   {
    "lugar": "Susques",
@@ -52,12 +52,12 @@
    "estadoRegla30d": "superavit_reciente",
    "temporadaNasaPct": -10.6,
    "estadoReglaActual": "normal",
-   "chirpsPct": -0.2,
+   "chirpsPct": -3.5,
    "temporadaAnterior": {
     "nasaPct": -34.5,
-    "chirpsPct": -13.5
+    "chirpsPct": -2.5
    },
-   "correlacionTemporadas": 0.38
+   "correlacionTemporadas": 0.32
   },
   {
    "lugar": "La Quiaca",
@@ -74,12 +74,12 @@
    "estadoRegla30d": "superavit_reciente",
    "temporadaNasaPct": -24.3,
    "estadoReglaActual": "deficit",
-   "chirpsPct": -8.1,
+   "chirpsPct": -20.9,
    "temporadaAnterior": {
     "nasaPct": -28.5,
-    "chirpsPct": -24.3
+    "chirpsPct": -25.4
    },
-   "correlacionTemporadas": 0.48
+   "correlacionTemporadas": 0.58
   },
   {
    "lugar": "Santa Catalina",
@@ -96,12 +96,12 @@
    "estadoRegla30d": "superavit_reciente",
    "temporadaNasaPct": -38.5,
    "estadoReglaActual": "deficit",
-   "chirpsPct": -6.1,
+   "chirpsPct": -10.1,
    "temporadaAnterior": {
     "nasaPct": -36.3,
-    "chirpsPct": -25.9
+    "chirpsPct": -19.6
    },
-   "correlacionTemporadas": 0.73
+   "correlacionTemporadas": 0.61
   },
   {
    "lugar": "Rinconada",
@@ -118,12 +118,12 @@
    "estadoRegla30d": "superavit_reciente",
    "temporadaNasaPct": -23.8,
    "estadoReglaActual": "deficit",
-   "chirpsPct": -12.5,
+   "chirpsPct": -9.4,
    "temporadaAnterior": {
     "nasaPct": -33.2,
-    "chirpsPct": -25.5
+    "chirpsPct": -13.9
    },
-   "correlacionTemporadas": 0.64
+   "correlacionTemporadas": 0.47
   }
  ]
 }
