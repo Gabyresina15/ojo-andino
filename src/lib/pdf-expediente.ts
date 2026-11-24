@@ -82,7 +82,7 @@ export function descargarPdfExpediente(
   doc.setFontSize(8);
   doc.setTextColor(80, 86, 98);
   doc.text(
-    `Serie climatológica base: 2001–2025 (25 años, NASA MERRA-2/GEOS-IT)  |  Vegetación: MODIS MOD13Q1 250m (${ndvi?.ultimoComposite.fecha ?? "s/d"})`,
+    `Serie climatológica base: 2001–2025 (25 años, NASA MERRA-2/GEOS-IT)  |  Vegetación: MODIS MYD13Q1 250m (${ndvi?.ultimoComposite.fecha ?? "s/d"})`,
     18,
     y + 13.5,
   );
@@ -364,7 +364,7 @@ export function descargarPdfProvincialConsolidado(lecturas?: Record<string, Lect
       : `${fechaCorta(cortes[0])} a ${fechaCorta(cortes[cortes.length - 1])} según la localidad`;
   doc.text(`Emisión: ${fechaEmision} (hora de Argentina)  |  Datos de lluvia hasta: ${textoCorte}`, 14, 25);
   doc.setFontSize(7.5);
-  doc.text("Fuentes: NASA POWER (climatología 2001–2025) y MODIS MOD13Q1 250m", 14, 29.5);
+  doc.text("Fuentes: NASA POWER (climatología 2001–2025) y MODIS MYD13Q1 250m", 14, 29.5);
 
   const sint = sintesisRegional(lecturas);
   doc.setFontSize(8);

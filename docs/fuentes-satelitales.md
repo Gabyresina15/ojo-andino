@@ -9,10 +9,14 @@ que los publica. El aval local (INTA, SMN, CONAE, UNJu) es un trámite aparte.
 
 ## En uso
 
+El satélite Terra deja de tomar datos el 01/12/2026 (aviso de NASA en terra.nasa.gov, leído el 24/11/2026). Por eso
+vegetación y focos de calor usan los productos equivalentes del satélite Aqua (MYD). NASA recomendó continuar Aqua
+durante el año fiscal 2027; después habrá que migrar a VIIRS, que el servicio de ORNL hoy solo entrega hasta 05/2024.
+
 | Fuente | Qué da | Resolución / demora | Acceso | Licencia | Estado |
 |---|---|---|---|---|---|
 | NASA POWER | Lluvia y temperatura diarias, climatología 2001–2025 | Grilla regional (~50 km) / 2–3 días | API sin clave | Política de datos abiertos de NASA: sin período de acceso exclusivo. NASA pide no sugerir que avala un producto | En uso |
-| MODIS MOD13Q1 (ORNL DAAC) | NDVI | 250 m / compuesto de 16 días | API sin clave | Datos NASA, misma política | En uso |
+| MODIS MYD13Q1 (ORNL DAAC) | NDVI | 250 m / compuesto de 16 días | API sin clave | Datos NASA, misma política | En uso |
 | CHIRPS v2 (UCSB) vía ClimateSERV | Lluvia diaria | ~5 km / semanas | API sin clave | Dominio público (declarado en chc.ucsb.edu). v2 deja de producirse después de 12/2026 | En uso, solo temporadas cerradas |
 | MET Norway locationforecast | Pronóstico de lluvia | Modelo global / 9 días | API sin clave, exige User-Agent | CC BY 4.0 (verificado en una revisión anterior) | En uso, solo pronóstico |
 | CelesTrak (TLE) | Órbita de SAOCOM 1A/1B | — | Descarga pública | Sin verificar | En uso, solo horarios de pasada |
@@ -25,7 +29,7 @@ que los publica. El aval local (INTA, SMN, CONAE, UNJu) es un trámite aparte.
 | Sentinel-1 GRD (ESA/Copernicus) vía Earth Search | Radar SAR banda C | 10 m / 6–12 días. Última escena sobre Abra Pampa: 19/11/2026 | STAC sin clave | Mismo aviso legal de Copernicus | En uso solo para informar las fechas de las imágenes. Humedad de suelo requiere procesamiento propio y validación |
 | MODIS MOD11A2 (ORNL) | Temperatura de superficie | 1 km / 8 días. Último dato: 09/11/2026 | API sin clave | Datos NASA | Descartada para comparar años: la hora de pasada de Terra se corrió de ~10:20 (2019) a ~8:25 (2026), así que la temperatura de día baja por la hora y no por el clima |
 | MODIS MOD16A2GF (ORNL) | Evapotranspiración | 500 m / 8 días. Último dato: 27/12/2025 | API sin clave | Datos NASA | Balance hídrico, con un año de atraso. En suelo desnudo devuelve valor de relleno |
-| MODIS MOD14A2 (ORNL) | Focos de calor | 1 km / 8 días. Último dato: 09/11/2026 | API sin clave | Datos NASA | En uso como contexto desde este PR |
+| MODIS MYD14A2 (ORNL), satélite Aqua | Focos de calor | 1 km / 8 días. Último dato: 09/11/2026 | API sin clave | Datos NASA | En uso como contexto desde este PR |
 | NASA POWER GWETTOP / GWETROOT | Humedad de suelo | Grilla regional / 2–3 días | API sin clave | Datos NASA | En uso como contexto. Sale de un modelo (GEOS), no de una medición satelital directa. No se compara con años anteriores porque la serie mezcla dos modelos (MERRA-2 y GEOS-IT) |
 | BAHRA (IGN/INDEC) | Coordenadas oficiales de localidades | — | WFS del IGN sin clave | Sin verificar | Ya se usa en la prueba retrospectiva |
 | IGN, capa "vegetación hidrófila" | 467 polígonos de pajonal/juncal/totoral en la Puna jujeña | — | WFS del IGN sin clave | Sin verificar | Ver "Vegas" |

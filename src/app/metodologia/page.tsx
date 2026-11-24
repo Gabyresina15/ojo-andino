@@ -17,7 +17,7 @@ const FUENTES = [
       "Es una grilla global de alrededor de 50 km de lado, no una estación en el lugar. Localidades vecinas pueden caer en la misma celda y mostrar la misma lluvia. Los datos llegan con 2 a 3 días de demora.",
   },
   {
-    nombre: "MODIS MOD13Q1 (ORNL DAAC)",
+    nombre: "MODIS MYD13Q1 (ORNL DAAC)",
     uso: "Índice de vegetación NDVI, píxel de 250 m sobre la coordenada de la localidad.",
     limite:
       "Es un compuesto de 16 días: no cambia de un día para otro. Se muestra como contexto y no interviene en el estado hídrico.",
@@ -35,7 +35,7 @@ const FUENTES = [
       "No interviene en el estado hídrico ni en la recomendación. Es un modelo global, no una estación del lugar, y no está verificado contra lluvia medida en la Puna. No sirve como alerta de crecidas o tormentas.",
   },
   {
-    nombre: "MODIS MOD14A2 (NASA), Sentinel-1 (ESA/Copernicus) y humedad de suelo de NASA POWER",
+    nombre: "MODIS MYD14A2 (NASA), Sentinel-1 (ESA/Copernicus) y humedad de suelo de NASA POWER",
     uso: "Contexto que se muestra aparte en cada localidad: focos de calor en píxeles de 1 km, fechas de las últimas imágenes de radar tomadas sobre el lugar, y humedad de suelo.",
     limite:
       "Nada de esto interviene en el estado hídrico ni en la recomendación. Los focos chicos o bajo nubes pueden no detectarse. De Sentinel-1 solo se informa que la imagen existe: Ojo Andino no la procesa. La humedad de suelo la calcula un modelo (GEOS) sobre una grilla regional: no es una medición.",

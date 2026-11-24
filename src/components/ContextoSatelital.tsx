@@ -49,7 +49,7 @@ export function ContextoSatelital({ comunidadId }: { comunidadId: string }) {
         <div className="grid gap-3 mt-3 sm:grid-cols-3">
           <Bloque
             titulo="Focos de calor"
-            fuente={`MODIS Terra MOD14A2 (NASA), píxeles de 1 km en un cuadrado de ${RADIO_FOCOS_KM} km hacia cada lado. Los fuegos chicos o bajo nubes pueden no detectarse.`}
+            fuente={`MODIS Aqua MYD14A2 (NASA), píxeles de 1 km en un cuadrado de ${RADIO_FOCOS_KM} km hacia cada lado. Los fuegos chicos o bajo nubes pueden no detectarse.`}
           >
             {f?.desactualizado ? (
               <div className="text-[#FBBF24] print:text-black">

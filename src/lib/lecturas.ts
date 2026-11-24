@@ -1,7 +1,7 @@
 import type { Anomalia, AnomaliaTemporada, CompositeNdvi, LecturaSatelital } from "./types";
 
 const POWER = "https://power.larc.nasa.gov/api/temporal";
-const ORNL = "https://modis.ornl.gov/rst/api/v1/MOD13Q1";
+const ORNL = "https://modis.ornl.gov/rst/api/v1/MYD13Q1";
 const MESES = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
 const FILL = -999;
 
@@ -186,7 +186,7 @@ export async function leerNdvi(lat: number, lon: number): Promise<NonNullable<Le
   const ultimo = toComp(actual, last.modis_date);
   if (!ultimo) throw new Error("ORNL sin valor NDVI válido");
   return {
-    fuente: "MODIS MOD13Q1 vía ORNL TESViS",
+    fuente: "MODIS MYD13Q1 vía ORNL TESViS",
     ultimoComposite: ultimo,
     compositeAnterior: prev ? toComp(actual, prev.modis_date) : null,
     compositeAnioAnterior: yearAgo ? toComp(anio, yearAgo.modis_date) : null,

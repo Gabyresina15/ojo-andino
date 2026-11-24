@@ -378,7 +378,7 @@ export default function App() {
       </main>
 
       <footer className="mx-auto max-w-6xl px-4 pb-8 pt-4 text-[11px] text-[#9CA3AF] border-t border-white/10">
-        Fuentes públicas: NASA POWER (climatología 2001–2025) · MODIS MOD13Q1 (ORNL DAAC) · Redacción y voz con Grok AI (xAI).{" "}
+        Fuentes públicas: NASA POWER (climatología 2001–2025) · MODIS MYD13Q1 (ORNL DAAC) · Redacción y voz con Grok AI (xAI).{" "}
         <Link href="/metodologia" className="underline text-[#F4F1EA] hover:text-[#F59E0B]">
           Metodología y límites del indicador
         </Link>

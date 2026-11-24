@@ -13,7 +13,7 @@ const STAC = "https://earth-search.aws.element84.com/v1/search";
 export const RADIO_FOCOS_KM = 10;
 /** Un compuesto de 8 días suele publicarse con unas dos semanas de demora; pasado este plazo ya no describe el presente. */
 export const DIAS_FOCOS_VIGENTES = 30;
-/** Clases de FireMask de MOD14A2: 7, 8 y 9 son fuego con confianza baja, nominal y alta. */
+/** Clases de FireMask de MYD14A2: 7, 8 y 9 son fuego con confianza baja, nominal y alta. */
 const FOCO_MIN = 7;
 const FOCO_NOMINAL = 8;
 
@@ -85,11 +85,11 @@ export function resumirHumedad(top: Record<string, number>, raiz: Record<string,
 
 async function leerFocos(c: Comunidad): Promise<FocosCalor | null> {
   const pt = `latitude=${c.lat}&longitude=${c.lon}`;
-  const { dates } = await fetchJson<{ dates: Fecha[] }>(`${ORNL}/MOD14A2/dates?${pt}`, 12_000);
+  const { dates } = await fetchJson<{ dates: Fecha[] }>(`${ORNL}/MYD14A2/dates?${pt}`, 12_000);
   const ult = dates.slice(-5);
   if (!ult.length) return null;
   const s = await fetchJson<Subset>(
-    `${ORNL}/MOD14A2/subset?${pt}&startDate=${ult[0].modis_date}&endDate=${ult[ult.length - 1].modis_date}` +
+    `${ORNL}/MYD14A2/subset?${pt}&startDate=${ult[0].modis_date}&endDate=${ult[ult.length - 1].modis_date}` +
       `&kmAboveBelow=${RADIO_FOCOS_KM}&kmLeftRight=${RADIO_FOCOS_KM}&band=FireMask`,
     20_000,
   );

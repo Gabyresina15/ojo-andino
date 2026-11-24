@@ -375,7 +375,7 @@ export default function ExpedienteMunicipal({ comunidad }: { comunidad: Comunida
 
         <footer className="text-[11px] text-[#9CA3AF] print:text-slate-600 border-t border-white/10 print:border-slate-300 pt-4">
           Informe técnico generado automáticamente por Ojo Andino sobre {jurisdiccion}. No es un documento oficial. Fuentes:
-          NASA/POWER (serie 2001–2025) y MODIS MOD13Q1 (ORNL DAAC).
+          NASA/POWER (serie 2001–2025) y MODIS MYD13Q1 (ORNL DAAC).
         </footer>
       </main>
     </div>

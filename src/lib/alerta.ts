@@ -53,7 +53,7 @@ Tu trabajo NO es repetir de memoria los promedios que ya muestran las tarjetas s
 
 3. REGLAS ANTI-ALUCINACIÓN (ESTRICTO):
    - Respondé SOLO con el JSON del esquema. Cero markdown.
-   - PROHIBIDO meter siglas técnicas como "MOD13Q1" o "PRECTOTCORR" dentro de "resumen_oral" (van solo en "fuentes").
+   - PROHIBIDO meter siglas técnicas como "MYD13Q1" o "PRECTOTCORR" dentro de "resumen_oral" (van solo en "fuentes").
    - PROHIBIDO inventar números o calcular porcentajes nuevos: usá exclusivamente las cifras exactas presentes en el JSON del usuario.
    - "estado_hidrico" DEBE ser idéntico a "estado_hidrico_calculado".`;
 
@@ -471,7 +471,7 @@ export function alertaDeterminista(c: Comunidad, l: LecturaSatelital, modo: "com
     nota_parametrica: p
       ? `${accion} (Ventana: ${p.ventana}, desvío ${desvioRedondeado >= 0 ? "+" : ""}${fmt1(desvioRedondeado)} % vs serie 2001–2025).`
       : accion,
-    fuentes: `NASA POWER (corte ${m?.ultimoDiaConDato ?? "s/d"}, demora oficial 2–3 días) y MODIS MOD13Q1 (compuesto 16 días al ${l.ndvi?.ultimoComposite.fecha ?? "s/d"}).`,
+    fuentes: `NASA POWER (corte ${m?.ultimoDiaConDato ?? "s/d"}, demora oficial 2–3 días) y MODIS MYD13Q1 (compuesto 16 días al ${l.ndvi?.ultimoComposite.fecha ?? "s/d"}).`,
   };
 }
 
