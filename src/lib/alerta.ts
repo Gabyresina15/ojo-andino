@@ -1,9 +1,9 @@
 import { z } from "zod";
 import type { AlertaRespuesta, Comunidad, LecturaSatelital } from "./types";
-import { anomaliaDelEstado, baseEstado, estadoHidrico, UMBRAL_TEMPORADA_PCT } from "./lecturas";
+import { anomaliaDelEstado, baseEstado, estadoHidrico, UMBRAL_DEFICIT_PCT, UMBRAL_SUPERAVIT_PCT, UMBRAL_TEMPORADA_PCT } from "./lecturas";
 
 export const AlertaSchema = z.object({
-  resumen_oral: z.string().min(80).max(1200),
+  resumen_oral: z.string().min(80).max(1600),
   estado_hidrico: z.enum(["deficit", "normal", "superavit_reciente", "sin_dato"]),
   nota_parametrica: z.string().min(15).max(700),
   fuentes: z.string().min(5).max(300),
@@ -21,41 +21,55 @@ const JSON_SCHEMA = {
       resumen_oral: {
         type: "string",
         description:
-          "Dictamen de 4 a 5 oraciones adaptado al modo ('comunidad' para productores/pueblo o 'parametrico' para gestión pública/aseguradoras). Analiza distribución diaria (días secos, racha seca máxima, pico diario y concentración) y su impacto real en terreno.",
+          "Prosa sin markdown para voz y WhatsApp. En parametrico: Diagnóstico, Riesgo operativo y Recomendación verificable. En comunidad: explicación directa del agua, pastoreo y cuidados locales. Interpretá racha y concentración sin inventar impactos observados.",
       },
       estado_hidrico: { type: "string", enum: ["deficit", "normal", "superavit_reciente", "sin_dato"] },
       nota_parametrica: {
         type: "string",
         description:
-          "1 a 2 oraciones con recomendación accionable concreta (manejo de agua/forraje para comunidad, o directiva logística/gatillo paramétrico para Gobierno).",
+          "Acción anclada en recomendacion_base, sin contradecirla. En parametrico explicitá el gatillo y cómo verificar la decisión logística o presupuestaria; en comunidad indicá qué podés revisar o cuidar.",
       },
-      fuentes: { type: "string", description: "Fuentes satelitales y fecha del último dato." },
+      fuentes: { type: "string", description: "Solo NASA POWER y MODIS MOD13Q1 y fechas disponibles en el payload." },
     },
   },
 };
 
-export const SYSTEM_PROMPT = `Sos el Analista Principal de Riesgo Hídrico, Agroclimático y Territorial de Ojo Andino en Jujuy (Puna y Quebrada de Humahuaca).
+export const SYSTEM_PROMPT = `Sos analista de riesgo hídrico de Ojo Andino para Puna y Quebrada de Jujuy. Escribí en castellano argentino, sin adornos turísticos ni burocracia vacía. En modo parametrico, el registro de resumen_oral y nota_parametrica es formal e impersonal, sin voseo. El voseo se usa solo en modo comunidad.
 
-Tu trabajo NO es repetir de memoria los promedios que ya muestran las tarjetas superiores. Tu trabajo es interpretar el régimen diario de los últimos 30 días ("patron_diario"), la racha seca consecutiva, la temperatura y la vegetación ("ndvi") según el campo "modo":
+Glosario del JSON de entrada:
+pueblo y region ubican el análisis; modo define destinatario; fecha_hoy_art no es la fecha de medición. contexto es contexto local, no evidencia de condiciones actuales ni autorización para citar instituciones.
+lluvia contiene ventana, acumulado observado, climatología, anomalía y último día con dato. estado_hidrico_calculado es la clasificación determinista.
+estado_basado_en identifica el indicador usado. Si es temporada_lluvias o epoca_seca_sin_temporada, es época seca: lluvia.anomalia_pct no indica sequía ni exceso y no debe citarse como señal. Con temporada_lluvias, explicá el estado con su ventana, observado_mm, climatologia_mm y anomalia_pct; de esa lluvia dependen pasturas y aguadas hasta la próxima temporada. epoca_seca_sin_temporada implica estado_hidrico sin_dato y gatillo no evaluable: no afirmes normalidad ni descartes asistencia; recomendá verificar necesidades en campo y recuperar datos. Sin temporada disponible, no inventes una anomalía ni un gatillo evaluado.
+patron_diario describe días secos (sin lluvia significativa), días de lluvia de 1 mm o más, racha seca máxima, lluvia reciente, pico diario, fecha y concentración del total en ese día. No permite afirmar intensidad horaria.
+temperatura contiene media, referencia y diferencia térmica con signo; no supongas calor si la diferencia es negativa.
+ndvi es índice de verdor con fechas de compuestos, no disponibilidad medida de forraje ni agua.
+gatillo contiene umbral_deficit_pct, umbral_superavit_pct, estado y activado: déficit o superávit activan una señal del índice, no un pago automático ni una emergencia comprobada.
+riesgo_operativo_foco orienta el riesgo territorial; escorrentia_concentrada indica concentración del pico >= 55, no una crecida observada.
+recomendacion_base es la acción determinista según modo. Anclá nota_parametrica en ella: podés reformularla, nunca contradecirla.
 
-1. ADAPTACIÓN POR "modo":
-   - Si modo === "comunidad": hablá directo, claro y respetuoso a familias productoras, pastores y referentes comunitarios. Explicá qué significa la lluvia y el estado del pastizal para las aguadas, el ganado (llamas, ovejas, cabras) o los cultivos, integrando de forma natural el contexto cultural local ("contexto") sin jerga burocrática ni menciones a ministerios o expedientes.
-   - Si modo === "parametrico": redactá un dictamen técnico de expediente y gatillo paramétrico para el Gobierno de Jujuy (Producción, Recursos Hídricos, Vialidad) y Municipios, justificando asignación de fletes de forraje, alertas viales/drenajes o activación de asistencia.
+Salida por modo:
+parametrico: redactá un Dictamen de Decisión Logística y Gatillo Paramétrico. resumen_oral lleva las etiquetas en prosa "Diagnóstico: ... Riesgo operativo: ... Recomendación: ... Gatillo: ...". Diagnóstico interpreta estado, racha y concentración disponibles; Riesgo operativo distingue posibilidad de daño observado; Recomendación define una decisión logística/presupuestaria verificable. Después de Recomendación, explicitá en resumen_oral el estado del gatillo y el desvío frente al umbral disponible: ese texto se entrega por voz y WhatsApp sin la nota. nota_parametrica explica el gatillo y cómo verificar en campo o registro la decisión anclada en recomendacion_base, sin montos ni frases idénticas a resumen_oral.
+comunidad: resumen_oral son frases claras, directas y respetuosas para familias que cuidan hacienda, pastoreo, vegas y aguadas. Explicá qué significa el patrón de lluvia y qué podés revisar; nota_parametrica da una acción práctica de recomendacion_base, sin lenguaje de expediente.
 
-2. ANÁLISIS HIDROLÓGICO OBLIGATORIO EN "resumen_oral" (4 a 5 oraciones en castellano de Argentina):
-   - Citá el comportamiento interno del mes usando "patron_diario": cuántos días estuvieron secos ("dias_secos"), cuál fue la racha seca consecutiva más larga ("racha_seca_maxima_dias"), cuánto cayó en los últimos 7 días ("lluvia_ultimos_7d_mm") y el pico máximo en 24h ("pico_maximo_mm" el "pico_maximo_dia", que representa "concentracion_pico_pct"% del agua del mes).
-   - Cruzalo con "region" y "estado_hidrico_calculado":
-     * deficit: días secos seguidos + anomalía térmica aceleran evaporación de aguadas y frenan rebrote del pastizal -> urgencia de agua y forraje.
-     * superavit_reciente en puna: recarga superficial tras meses secos -> monitorear rebrote natural y evitar gasto innecesario de fardos de emergencia.
-     * superavit_reciente en quebrada (o concentracion_pico_pct >= 55% en pendiente): lluvia concentrada en pocas horas genera escorrentía rápida -> alerta de drenajes, badenes, caminos rurales y obras.
-     * normal: acompaña el ciclo histórico de inicio de temporada húmeda.
-   - Si "estado_basado_en" es "temporada_lluvias" o "epoca_seca_sin_temporada", es época seca: lo normal en 30 días es casi cero y "lluvia.anomalia_pct" NO indica ni sequía ni exceso; no la cites como señal. Con "temporada_lluvias", explicá el estado con "temporada_lluvias" (observado_mm, climatologia_mm, anomalia_pct): de esa lluvia dependen las pasturas y aguadas hasta la próxima temporada.
+Tabla de decisión estado × región:
+deficit / puna: riesgo de menor agua en aguadas y vegas y falta de forraje; priorizá asistencia de agua y forraje, verificando reservas y entregas.
+deficit / quebrada: menor agua disponible; además revisá escorrentía y acceso vial si hay concentración; priorizá asistencia con registro de necesidades y accesos.
+superavit_reciente / puna: posible recarga superficial, no garantía de rebrote ni de agua segura; evitá fletes de emergencia innecesarios, verificá aguadas y evolución del verdor.
+superavit_reciente / quebrada: sin señal de sequía; riesgo de escorrentía, corte de trazas, badenes y caminos; inspeccioná drenajes y registrá transitabilidad.
+normal / puna: balance cercano al histórico, no garantiza pasto; monitoreá aguadas, vegas y reservas sin operativo extraordinario.
+normal / quebrada: balance cercano al histórico, no descarta escorrentía concentrada; control habitual de drenajes, badenes y caminos.
+sin_dato / puna: no diagnostiques sequía ni normalidad; verificá agua y forraje en campo y recuperá datos antes de decidir.
+sin_dato / quebrada: no diagnostiques sequía ni normalidad; verificá drenajes y accesos y recuperá datos antes de decidir.
+Si escorrentia_concentrada es verdadero en Quebrada, advertí riesgo vial incluso con balance normal o déficit. Sin serie diaria, declará la limitación sin inventar rachas.
 
-3. REGLAS ANTI-ALUCINACIÓN (ESTRICTO):
-   - Respondé SOLO con el JSON del esquema. Cero markdown.
-   - PROHIBIDO meter siglas técnicas como "MOD13Q1" o "PRECTOTCORR" dentro de "resumen_oral" (van solo en "fuentes").
-   - PROHIBIDO inventar números o calcular porcentajes nuevos: usá exclusivamente las cifras exactas presentes en el JSON del usuario.
-   - "estado_hidrico" DEBE ser idéntico a "estado_hidrico_calculado".`;
+Reglas estrictas:
+Respondé SOLO JSON del esquema, sin markdown, listas ni viñetas: resumen_oral se lee por TTS y se manda por WhatsApp.
+estado_hidrico === estado_hidrico_calculado.
+Usá números solo literalmente presentes en el payload; no calcules números, porcentajes nuevos ni conversiones.
+Nunca traduzcas NDVI a "% de pasto" ni a porcentaje de pastura. Nunca afirmes disponer de imágenes SAR de SAOCOM.
+No inventes precios USD/ARS, instituciones, convenios, sensores, estaciones ni fuentes. Solo NASA POWER y MODIS MOD13Q1.
+No uses siglas como MOD13Q1 o PRECTOTCORR en resumen_oral ni nota_parametrica; las fuentes van en fuentes.
+No infieras crecidas, cortes, rebrote o pérdidas comprobadas a partir de promedios o índices.`;
 
 export type PatronDiario = {
   dias_totales: number;
@@ -127,8 +141,22 @@ export function payloadUsuario(c: Comunidad, l: LecturaSatelital, modo: "comunid
     pueblo: c.nombre,
     region: c.region,
     modo,
+    fuentes_datos: {
+      meteorologia: "NASA POWER, demora oficial 2–3 días",
+      vegetacion: "MODIS MOD13Q1, compuesto de 16 días",
+    },
     fecha_hoy_art: new Date().toLocaleDateString("es-AR", { timeZone: "America/Argentina/Jujuy" }),
     estado_hidrico_calculado: estadoHidrico(l),
+    gatillo: {
+      umbral_deficit_pct: baseEstado(l) === "temporada_lluvias" ? UMBRAL_TEMPORADA_PCT : UMBRAL_DEFICIT_PCT,
+      umbral_superavit_pct: UMBRAL_SUPERAVIT_PCT,
+      umbral_temporada_pct: UMBRAL_TEMPORADA_PCT,
+      estado: estadoHidrico(l),
+      activado: estadoHidrico(l) === "deficit" || estadoHidrico(l) === "superavit_reciente",
+    },
+    riesgo_operativo_foco: c.region === "puna" ? "forraje y agua de aguadas y vegas" : "escorrentía, corte de trazas, badenes y caminos",
+    escorrentia_concentrada: patron != null && patron.concentracion_pico_pct >= 55,
+    recomendacion_base: modo === "parametrico" ? recomendacionGobierno(c, l) : recomendacionComunidad(c, l),
     estado_basado_en: baseEstado(l),
     temporada_lluvias: m?.precipitacionTemporada
       ? {
@@ -353,11 +381,14 @@ const fmt3 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 3
 
 export function recomendacionGobierno(c: Comunidad, l: LecturaSatelital): string {
   const est = estadoHidrico(l);
+  if (est === "sin_dato") {
+    return `Sin datos suficientes para decidir asistencia en ${c.nombre}. Verificar necesidades en campo y recuperar la lectura antes de autorizar un operativo.`;
+  }
   if (est === "deficit") {
     return `Priorizar a ${c.nombre} en la asignación provincial de camiones de forraje (alfalfa) y asistencia de agua para productores.`;
   }
   if (est === "superavit_reciente" && c.region === "puna") {
-    return `No requiere envío de forraje de emergencia esta semana: las lluvias recientes permiten esperar el rebrote natural y reasignar fletes a zonas deficitarias.`;
+    return `No priorizar envío de forraje de emergencia por este índice; verificar aguadas, reservas y rebrote en campo antes de reasignar fletes a zonas deficitarias.`;
   }
   if (est === "superavit_reciente" && c.region === "quebrada") {
     return `Sin emergencia por sequía. Por picos de lluvia en pendiente, se recomienda al Municipio inspeccionar drenajes urbanos, badenes, obras y caminos.`;
@@ -367,6 +398,9 @@ export function recomendacionGobierno(c: Comunidad, l: LecturaSatelital): string
 
 export function recomendacionComunidad(c: Comunidad, l: LecturaSatelital): string {
   const est = estadoHidrico(l);
+  if (est === "sin_dato") {
+    return `Faltan datos para ${c.nombre}: revisá las aguadas y la hacienda y avisá si falta agua o forraje; no des por hecho que el campo está bien.`;
+  }
   if (est === "deficit") {
     return `Cuidar las aguadas y vegas disponibles en ${c.nombre}, racionar reservas de pasto y coordinar con la comisión municipal el pedido de forraje y agua.`;
   }
@@ -376,101 +410,119 @@ export function recomendacionComunidad(c: Comunidad, l: LecturaSatelital): strin
   if (est === "superavit_reciente" && c.region === "quebrada") {
     return `Precaución en ${c.nombre} por crecidas repentinas en quebradas, badenes y acequias tras lluvias fuertes en pocas horas.`;
   }
-  return `Las lluvias y pasturas en ${c.nombre} siguen el ritmo esperado para esta época del año; mantener el manejo habitual de aguadas y rodeos.`;
+  return `La lluvia en ${c.nombre} está cerca del promedio; revisá igual las aguadas, las vegas y las reservas de pasto antes de mover la hacienda.`;
 }
 
 export function alertaDeterminista(c: Comunidad, l: LecturaSatelital, modo: "comunidad" | "parametrico"): AlertaLLM {
   const m = l.meteorologia;
   const est = estadoHidrico(l);
   const patron = calcularPatronDiario(l);
-  const partes: string[] = [];
   const esComunidad = modo === "comunidad";
-  const porTemporada = baseEstado(l) === "temporada_lluvias";
-  const t = m?.precipitacionTemporada;
-
-  if (m && patron) {
-    const deltaTemp = fmt1(Math.abs(m.temperaturaC7d.mediaObservada - m.temperaturaC7d.climatologiaMes));
-    const ndviAct = l.ndvi ? fmt3(l.ndvi.ultimoComposite.ndvi) : null;
-    const ndviPrev = l.ndvi?.compositeAnterior ? fmt3(l.ndvi.compositeAnterior.ndvi) : null;
-
-    if (est === "deficit" && porTemporada && t) {
-      partes.push(
-        `En ${c.nombre} la temporada de lluvias (${t.ventana}) dejó ${fmt1(t.observado)} mm frente a ${fmt1(t.climatologia)} mm de lo normal, un ${fmt1(Math.abs(t.porcentaje ?? 0))} % menos.`,
-      );
-      partes.push(
-        `Ahora es época seca: en los últimos ${patron.dias_totales} días hubo ${patron.dias_secos} días sin lluvia útil y cayeron ${fmt1(patron.lluvia_ultimos_7d_mm)} mm en la última semana, que no alcanzan para recuperar pasturas ni aguadas${ndviAct ? ` (índice verde ${ndviAct})` : ""}.`,
-      );
-      if (!esComunidad) {
-        partes.push(
-          `Gatillo operativo: se justifica priorizar a ${c.nombre} en el despacho de alfalfa y agua de emergencia.`,
-        );
-      }
-    } else if (est === "deficit") {
-      partes.push(
-        esComunidad
-          ? `Reporte para ${c.nombre}: en los últimos ${patron.dias_totales} días hubo ${patron.dias_secos} días sin lluvia útil, con una racha seca de ${patron.racha_seca_maxima_dias} días seguidos y apenas ${fmt1(patron.lluvia_ultimos_7d_mm)} mm en la última semana.`
-          : `Análisis de régimen diario para ${c.nombre}: de ${patron.dias_totales} días evaluados, ${patron.dias_secos} fueron secos (racha máxima de ${patron.racha_seca_maxima_dias} días seguidos sin lluvia >= 1 mm; máximo diario de ${fmt1(patron.pico_maximo_mm)} mm el ${patron.pico_maximo_dia}).`,
-      );
-      partes.push(
-        `Con ${fmt1(patron.lluvia_ultimos_7d_mm)} mm en 7 días y temperatura ${deltaTemp} °C sobre lo normal, aumenta la evaporación de aguadas y el pastizal sigue bajo${ndviAct ? ` (índice verde ${ndviAct})` : ""}.`,
-      );
-      if (!esComunidad) {
-        partes.push(
-          `Gatillo operativo: se justifica priorizar a ${c.nombre} en el despacho de alfalfa y agua de emergencia.`,
-        );
-      }
-    } else if (est === "superavit_reciente" && c.region === "puna") {
-      partes.push(
-        `En ${c.nombre} se registraron ${patron.dias_con_lluvia_significativa} días con lluvia activa, acumulando ${fmt1(patron.lluvia_ultimos_7d_mm)} mm en los últimos 7 días con un pico de ${fmt1(patron.pico_maximo_mm)} mm el ${patron.pico_maximo_dia}.`,
-      );
-      partes.push(
-        ndviAct && ndviPrev
-          ? `Esta recarga de humedad mejora la condición del campo respecto al corte previo (${ndviPrev} a ${ndviAct}).`
-          : `Esta recarga de humedad superficial favorece el rebrote natural del pastizal en la Puna.`,
-      );
-      if (!esComunidad) {
-        partes.push(
-          `Gatillo operativo: no requiere fardos de emergencia esta semana; conviene reasignar fletes hacia zonas con déficit activo.`,
-        );
-      }
-    } else if (est === "superavit_reciente" && c.region === "quebrada") {
-      partes.push(
-        `En ${c.nombre} la lluvia acumulada superó el promedio histórico, con ${patron.dias_con_lluvia_significativa} días de lluvia de 1 mm o más, un pico de ${fmt1(patron.pico_maximo_mm)} mm el ${patron.pico_maximo_dia} (${patron.concentracion_pico_pct} % del total en un solo día) y ${fmt1(patron.lluvia_ultimos_7d_mm)} mm en la última semana.`,
-      );
-      partes.push(
-        `En terreno de Quebrada, esa concentración en pocas horas genera escorrentía rápida sobre laderas, badenes y caminos.`,
-      );
-      if (!esComunidad) {
-        partes.push(
-          `Gatillo operativo: sin sequía activa; priorizar limpieza preventiva de drenajes pluviales y control vial.`,
-        );
-      }
+  const base = baseEstado(l);
+  const temporada = m?.precipitacionTemporada;
+  const partes: string[] = [];
+  if (est === "sin_dato") {
+    partes.push(base === "epoca_seca_sin_temporada"
+      ? `En ${c.nombre} es época seca y falta el dato de la temporada de lluvias. La lluvia de 30 días no alcanza para clasificar el balance; no se puede afirmar sequía ni normalidad.`
+      : `En ${c.nombre} faltan datos para clasificar el balance de lluvia; no se puede afirmar sequía ni normalidad.`);
+  } else if (m) {
+    if (base === "temporada_lluvias" && temporada) {
+      partes.push(`En ${c.nombre} la temporada de lluvias (${temporada.ventana}) dejó ${fmt1(temporada.observado)} mm frente a ${fmt1(temporada.climatologia)} mm de lo normal. Es época seca; ${est === "deficit" ? "la temporada presenta señal de déficit" : "la temporada no presenta señal de déficit"}.`);
+    } else if (est === "superavit_reciente" && c.region === "quebrada" && patron) {
+      partes.push(`En ${c.nombre} la lluvia acumulada superó el promedio histórico, con ${patron.dias_con_lluvia_significativa} días de lluvia de 1 mm o más, un pico de ${fmt1(patron.pico_maximo_mm)} mm el ${patron.pico_maximo_dia} (${patron.concentracion_pico_pct} % del total en un solo día) y ${fmt1(patron.lluvia_ultimos_7d_mm)} mm en la última semana.`);
     } else {
-      partes.push(
-        `En ${c.nombre} la lluvia se repartió en ${patron.dias_con_lluvia_significativa} días activos (pico de ${fmt1(patron.pico_maximo_mm)} mm el ${patron.pico_maximo_dia} y ${fmt1(patron.lluvia_ultimos_7d_mm)} mm en los últimos 7 días).`,
-      );
-      partes.push(
-        porTemporada && t
-          ? `Es época seca y la última temporada de lluvias (${t.ventana}) dejó ${fmt1(t.observado)} mm frente a ${fmt1(t.climatologia)} mm de lo normal: no hay señal de déficit.`
-          : baseEstado(l) === "epoca_seca_sin_temporada"
-            ? `Es época seca: con una normal tan baja, la lluvia de 30 días no alcanza para indicar ni sequía ni exceso.`
-            : `El balance hídrico acompaña el promedio histórico de los últimos 25 años para el inicio de la temporada húmeda.`,
-      );
+      const balance = est === "deficit" ? "quedó por debajo del promedio histórico" : est === "superavit_reciente" ? "superó el promedio histórico" : "estuvo cerca del promedio histórico";
+      partes.push(`En ${c.nombre} la lluvia acumulada ${balance}.`);
     }
-  } else {
-    partes.push(`Sin serie diaria suficiente para ${c.nombre}.`);
+    if (patron) {
+      partes.push(`Hubo ${patron.dias_secos} días sin lluvia de 1 mm o más y una racha seca máxima de ${patron.racha_seca_maxima_dias} días.`);
+      if (!(est === "superavit_reciente" && c.region === "quebrada")) {
+        partes.push(`El pico fue de ${fmt1(patron.pico_maximo_mm)} mm el ${patron.pico_maximo_dia} (${patron.concentracion_pico_pct} % del total en un solo día), con ${fmt1(patron.lluvia_ultimos_7d_mm)} mm en la última semana.`);
+      }
+    }
+    const delta = r1(m.temperaturaC7d.mediaObservada - m.temperaturaC7d.climatologiaMes);
+    partes.push(`La temperatura estuvo ${fmt1(Math.abs(delta))} °C ${delta >= 0 ? "por encima" : "por debajo"} de la referencia.`);
   }
+  if (!patron) partes.push("Sin serie diaria suficiente para evaluar rachas y concentración.");
+  if (l.ndvi) {
+    const actual = l.ndvi.ultimoComposite;
+    const anterior = l.ndvi.compositeAnterior;
+    partes.push(anterior
+      ? `El índice de verdor pasó de ${fmt3(anterior.ndvi)} a ${fmt3(actual.ndvi)} (compuesto al ${actual.fecha}).`
+      : `El índice de verdor es ${fmt3(actual.ndvi)} (compuesto al ${actual.fecha}).`);
+  }
+  const picoConcentrado = patron != null && patron.concentracion_pico_pct >= 55;
+  const riesgoComunidad = est === "sin_dato"
+    ? c.region === "puna"
+      ? "No hay datos suficientes para conocer el riesgo actual; revisá en campo las aguadas, las vegas y las reservas de forraje."
+      : "No hay datos suficientes para conocer el riesgo actual; revisá en campo el agua disponible, los drenajes y los accesos." +
+        (picoConcentrado ? " Por la concentración de lluvia, revisá drenajes, badenes y caminos antes de trasladar hacienda o insumos, sin dar por comprobadas crecidas." : "")
+    : c.region === "puna"
+    ? est === "deficit"
+      ? "Puede faltar forraje y agua en aguadas y vegas; verificá reservas y estado de la hacienda."
+      : est === "superavit_reciente"
+        ? "La lluvia puede recargar aguadas y vegas, pero no garantiza forraje disponible; cuidá el rebrote antes de aumentar el pastoreo."
+        : "Revisá agua de aguadas y vegas y reservas de forraje; el balance de lluvia no alcanza para asegurar su disponibilidad."
+    : est === "superavit_reciente" || picoConcentrado
+      ? "Hay riesgo de escorrentía y corte de trazas, badenes y caminos; verificá accesos antes de trasladar hacienda o insumos, sin dar por comprobadas crecidas."
+      : "Revisá drenajes, badenes y caminos antes de trasladar hacienda o insumos; no hay evidencia suficiente para afirmar cortes.";
+  const riesgoGobierno = est === "sin_dato"
+    ? c.region === "puna"
+      ? "No hay datos suficientes para evaluar el riesgo actual. Se recomienda verificar en campo aguadas, vegas y reservas de forraje."
+      : "No hay datos suficientes para evaluar el riesgo actual. Se recomienda verificar en campo disponibilidad de agua, drenajes y accesos." +
+        (picoConcentrado ? " Por la concentración de lluvia, se recomienda revisar drenajes, badenes y caminos antes de trasladar hacienda o insumos, sin dar por comprobadas crecidas." : "")
+    : c.region === "puna"
+    ? est === "deficit"
+      ? "Puede faltar forraje y agua en aguadas y vegas. Se recomienda verificar reservas y estado de la hacienda."
+      : est === "superavit_reciente"
+        ? "La lluvia puede recargar aguadas y vegas, pero no garantiza forraje disponible. Se recomienda proteger el rebrote antes de aumentar el pastoreo."
+        : "El balance de lluvia no permite asegurar la disponibilidad de agua y forraje. Se recomienda revisar aguadas, vegas y reservas."
+    : est === "superavit_reciente" || picoConcentrado
+      ? "Existe riesgo de escorrentía y corte de trazas, badenes y caminos. Se recomienda verificar accesos antes de trasladar hacienda o insumos, sin dar por comprobadas crecidas."
+      : "Se recomienda revisar drenajes, badenes y caminos antes de trasladar hacienda o insumos; no hay evidencia suficiente para afirmar cortes.";
+  const riesgo = esComunidad ? riesgoComunidad : riesgoGobierno;
 
   const accion = esComunidad ? recomendacionComunidad(c, l) : recomendacionGobierno(c, l);
   const p = anomaliaDelEstado(l);
   const desvioRedondeado = p?.porcentaje != null ? r1(p.porcentaje) : 0;
+  const desvio = `${desvioRedondeado >= 0 ? "+" : ""}${fmt1(desvioRedondeado)} %`;
+  const umbral = est === "deficit" ? `${base === "temporada_lluvias" ? UMBRAL_TEMPORADA_PCT : UMBRAL_DEFICIT_PCT}` : `+${UMBRAL_SUPERAVIT_PCT}`;
+  const rango = `±${UMBRAL_SUPERAVIT_PCT}`;
+  const gatillo = base === "epoca_seca_sin_temporada"
+    ? "No es posible evaluar el gatillo sin datos de la temporada de lluvias en época seca."
+    : est === "sin_dato"
+      ? "No es posible evaluar el gatillo por falta de datos de lluvia."
+      : base === "temporada_lluvias" && est === "normal"
+        ? `El gatillo de déficit de temporada permanece inactivo: desvío ${desvio} frente al umbral de ${UMBRAL_TEMPORADA_PCT} %.`
+    : est === "normal"
+      ? `El gatillo permanece inactivo: el desvío de ${desvio} se encuentra dentro del rango de ${rango} %.`
+      : `Se activa el gatillo de ${est === "deficit" ? "déficit" : "exceso hídrico"}: desvío ${desvio} frente al umbral de ${umbral} %; señal del índice, no pago automático.`;
+  const verificacion = c.region === "puna"
+    ? "Verificar en campo aguadas y reservas de forraje y dejar registro."
+    : "Verificar drenajes y transitabilidad de badenes y dejar registro.";
+  const gatilloOral = base === "epoca_seca_sin_temporada"
+    ? "Gatillo paramétrico no evaluable: sin dato de temporada en época seca."
+    : est === "sin_dato"
+      ? "Gatillo paramétrico no evaluable: sin dato de lluvia."
+      : base === "temporada_lluvias" && est === "normal"
+        ? `Gatillo paramétrico no activado por déficit de temporada: desvío de ${desvio} frente al umbral de ${UMBRAL_TEMPORADA_PCT} %.`
+    : est === "normal"
+      ? `Gatillo paramétrico no activado: desvío de ${desvio}, dentro del rango de ${rango} %.`
+      : `Gatillo paramétrico activado por ${est === "deficit" ? "déficit" : "exceso hídrico"}: desvío de ${desvio} frente al umbral de ${umbral} %.`;
+  const nota = esComunidad
+    ? accion
+    : `${gatillo} ${verificacion}`;
 
   return {
-    resumen_oral: partes.join(" "),
+    resumen_oral: esComunidad
+      ? `${partes.join(" ")} ${riesgo}`
+      : `Diagnóstico: ${partes.join(" ")} Riesgo operativo: ${riesgo} Recomendación: ${accion} ${gatilloOral}`,
     estado_hidrico: est,
-    nota_parametrica: p
-      ? `${accion} (Ventana: ${p.ventana}, desvío ${desvioRedondeado >= 0 ? "+" : ""}${fmt1(desvioRedondeado)} % vs serie 2001–2025).`
-      : accion,
+    nota_parametrica: p && est !== "sin_dato"
+      ? esComunidad
+        ? `${nota} (Ventana: ${p.ventana}, desvío ${desvio} vs serie 2001–2025).`
+        : `${nota} (Ventana: ${p.ventana}).`
+      : nota,
     fuentes: `NASA POWER (corte ${m?.ultimoDiaConDato ?? "s/d"}, demora oficial 2–3 días) y MODIS MOD13Q1 (compuesto 16 días al ${l.ndvi?.ultimoComposite.fecha ?? "s/d"}).`,
   };
 }

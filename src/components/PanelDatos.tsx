@@ -197,7 +197,9 @@ export default function PanelDatos({ comunidad, lectura, modo, onSeleccion, lect
     const p = l?.meteorologia?.precipitacionMm30d;
     const est = l ? estadoHidrico(l) : "sin_dato";
     let accion = "Seguimiento municipal habitual";
-    if (est === "deficit") {
+    if (est === "sin_dato") {
+      accion = "Verificar en campo antes de asistir";
+    } else if (est === "deficit") {
       accion = "🚚 Priorizar envío de forraje (alfalfa) y agua";
     } else if (est === "superavit_reciente" && c.region === "quebrada") {
       accion = "🚧 Vigilar drenajes urbanos, obras y escorrentía en caminos";
@@ -285,7 +287,7 @@ export default function PanelDatos({ comunidad, lectura, modo, onSeleccion, lect
                             : "bg-[#F59E0B]/15 text-[#F59E0B] border border-[#F59E0B]/40"
                       }`}
                     >
-                      {r.estado === "deficit" ? "🔴 Déficit" : r.estado === "superavit_reciente" ? "🟢 Superávit" : "🟡 Normal"}
+                      {r.estado === "sin_dato" ? "⚪ Sin dato" : r.estado === "deficit" ? "🔴 Déficit" : r.estado === "superavit_reciente" ? "🟢 Superávit" : "🟡 Normal"}
                       {r.pctEstado != null &&
                         ` (${r.pctEstado >= 0 ? "+" : ""}${fmt1(r.pctEstado)}%${r.porTemporada ? " temporada" : ""})`}
                     </span>

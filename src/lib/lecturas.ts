@@ -214,6 +214,9 @@ export async function leerTodo(id: string, lat: number, lon: number): Promise<Le
   };
 }
 
+export const UMBRAL_DEFICIT_PCT = -25;
+export const UMBRAL_SUPERAVIT_PCT = 25;
+
 /**
  * Qué indicador decide el estado: la lluvia de 30 días, salvo en época seca (normal de 30 días bajo el piso),
  * donde decide la temporada de lluvias. "epoca_seca_sin_temporada" = época seca y no hay dato de temporada.
@@ -251,8 +254,8 @@ export function estadoHidrico(l: LecturaSatelital): "deficit" | "normal" | "supe
   if (base === "temporada_lluvias") {
     return l.meteorologia!.precipitacionTemporada!.porcentaje! <= UMBRAL_TEMPORADA_PCT ? "deficit" : "normal";
   }
-  if (base === "epoca_seca_sin_temporada") return "normal";
-  if (p <= -25) return "deficit";
-  if (p >= 25) return "superavit_reciente";
+  if (base === "epoca_seca_sin_temporada") return "sin_dato";
+  if (p <= UMBRAL_DEFICIT_PCT) return "deficit";
+  if (p >= UMBRAL_SUPERAVIT_PCT) return "superavit_reciente";
   return "normal";
 }
