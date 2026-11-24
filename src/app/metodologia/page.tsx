@@ -40,7 +40,7 @@ const BACKTEST = [
 
 const NO_MIDE = [
   "No mide el agua de un campo, una aguada o una vega en particular.",
-  "No usa imágenes de radar SAOCOM ni datos de estaciones meteorológicas locales.",
+  "No usa imágenes de radar SAOCOM ni datos de estaciones meteorológicas locales. El panel de pasadas solo calcula cuándo pasan esos satélites.",
   "No sirve para emergencias de horas (crecidas, tormentas): los datos tienen 2 a 3 días de demora.",
   "No pronostica: describe lo que ya llovió frente a lo normal.",
   "No reemplaza la verificación en el territorio ni la decisión del organismo competente.",

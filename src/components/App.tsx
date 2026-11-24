@@ -3,10 +3,11 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { COMUNIDADES, getComunidad } from "@/lib/comunidades";
+import { CENTRO_JUJUY, COMUNIDADES, getComunidad } from "@/lib/comunidades";
 import type { LecturaSatelital } from "@/lib/types";
 import { lecturaCacheada } from "@/lib/cache";
 import { nombres, sintesisRegional } from "@/lib/sintesis";
+import RadarOrbital from "./RadarOrbital";
 import PanelDatos from "./PanelDatos";
 import PanelAlerta from "./PanelAlerta";
 import FichaCultural from "./FichaCultural";
@@ -112,6 +113,12 @@ export default function App() {
       .catch(() => {});
     return () => ctrl.abort();
   }, []);
+
+  const observador = useMemo(
+    () => ({ lat: comunidad.lat, lon: comunidad.lon, altKm: CENTRO_JUJUY.altKm, etiqueta: comunidad.nombre }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [comunidad.id],
+  );
 
   // Cada localidad usa siempre la misma fuente, esté o no seleccionada: en vivo, o la última guardada en este navegador.
   const regionales = useMemo(() => {
@@ -337,7 +344,7 @@ export default function App() {
                   : "amc-surface text-[#F4F1EA] hover:border-[#2DD4BF]/50"
               }`}
             >
-              <span>📊 Gráfico de Lluvia (30 días) y Vegetación</span>
+              <span>📊 Gráfico de Lluvia (30 días), Vegetación y Pasadas SAOCOM</span>
               <span>●</span>
             </button>
 
@@ -360,7 +367,10 @@ export default function App() {
           )}
 
           {tabDetalle === "satelite" && (
-            <PanelDatos comunidad={comunidad} lectura={lectura} modo="comunidad" onSeleccion={setSeleccion} lecturas={regionales} />
+            <div className="grid gap-5 lg:grid-cols-[380px_1fr] items-start">
+              <RadarOrbital observador={observador} seleccion={seleccion} onSeleccion={setSeleccion} />
+              <PanelDatos comunidad={comunidad} lectura={lectura} modo="comunidad" onSeleccion={setSeleccion} lecturas={regionales} />
+            </div>
           )}
 
           {tabDetalle === "cultura" && <FichaCultural comunidad={comunidad} />}
