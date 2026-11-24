@@ -1,3 +1,4 @@
+import backtest from "@/data/backtest.json";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { COMUNIDADES } from "@/lib/comunidades";
@@ -16,10 +17,28 @@ const FUENTES = [
       "Es una grilla global de alrededor de 50 km de lado, no una estación en el lugar. Localidades vecinas pueden caer en la misma celda y mostrar la misma lluvia. Los datos llegan con 2 a 3 días de demora.",
   },
   {
-    nombre: "MODIS MOD13Q1 (ORNL DAAC)",
+    nombre: "MODIS MYD13Q1 (ORNL DAAC)",
     uso: "Índice de vegetación NDVI, píxel de 250 m sobre la coordenada de la localidad.",
     limite:
       "Es un compuesto de 16 días: no cambia de un día para otro. Se muestra como contexto y no interviene en el estado hídrico.",
+  },
+  {
+    nombre: "CHIRPS (Climate Hazards Center, UCSB)",
+    uso: "Segunda fuente de lluvia, grilla de unos 5 km. Se usa solo para cruzar el acumulado de la última temporada de lluvias cerrada.",
+    limite:
+      "No decide el estado: si no coincide con NASA POWER, se avisa que hay que verificar en campo. Llega con semanas de demora, así que no cubre los últimos 30 días ni la temporada en curso. También es una estimación satelital, no una estación.",
+  },
+  {
+    nombre: "MET Norway (api.met.no)",
+    uso: "Pronóstico de lluvia para los próximos 7 días. Se muestra aparte, rotulado como pronóstico. Licencia CC BY 4.0.",
+    limite:
+      "No interviene en el estado hídrico ni en la recomendación. Es un modelo global, no una estación del lugar, y no está verificado contra lluvia medida en la Puna. No sirve como alerta de crecidas o tormentas.",
+  },
+  {
+    nombre: "MODIS MYD14A2 (NASA), Sentinel-1 (ESA/Copernicus) y humedad de suelo de NASA POWER",
+    uso: "Contexto que se muestra aparte en cada localidad: focos de calor en píxeles de 1 km, fechas de las últimas imágenes de radar tomadas sobre el lugar, y humedad de suelo.",
+    limite:
+      "Nada de esto interviene en el estado hídrico ni en la recomendación. Los focos chicos o bajo nubes pueden no detectarse. De Sentinel-1 solo se informa que la imagen existe: Ojo Andino no la procesa. La humedad de suelo la calcula un modelo (GEOS) sobre una grilla regional: no es una medición.",
   },
   {
     nombre: "Grok (xAI)",
@@ -29,24 +48,23 @@ const FUENTES = [
   },
 ];
 
-// Prueba retrospectiva sobre la serie de NASA POWER al 23/09/2026 (una sola corrida).
-const BACKTEST = [
-  { lugar: "Abra Pampa", obs: 12.2, normal: 6.2, pct30: 98, temporada: -21 },
-  { lugar: "Susques", obs: 7.4, normal: 4.4, pct30: 70, temporada: -11 },
-  { lugar: "La Quiaca", obs: 12.5, normal: 5.2, pct30: 143, temporada: -24 },
-  { lugar: "Santa Catalina *", obs: 11.3, normal: 3.5, pct30: 225, temporada: -39 },
-  { lugar: "Rinconada *", obs: 14.4, normal: 4.2, pct30: 239, temporada: -24 },
-];
+const fmt1 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+// Generado por scripts/backtest.ts (npm run backtest): ninguna cifra de la prueba se escribe a mano.
+const BT = backtest.filas;
+const ESTADO: Record<string, string> = { deficit: "déficit", normal: "normal", superavit_reciente: "superávit", sin_dato: "sin dato" };
+const pct = (n: number | null) => (n === null ? "sin dato" : `${n > 0 ? "+" : ""}${fmt1(n)} %`);
+const lista = (v: string[]) => (v.length > 1 ? `${v.slice(0, -1).join(", ")} y ${v[v.length - 1]}` : (v[0] ?? "ninguna"));
+const fechaAr = (iso: string) => iso.slice(0, 10).split("-").reverse().join("/");
 
 const NO_MIDE = [
   "No mide el agua de un campo, una aguada o una vega en particular.",
-  "No usa imágenes de radar SAOCOM ni datos de estaciones meteorológicas locales.",
+  "No usa imágenes de radar SAOCOM ni datos de estaciones meteorológicas locales. La segunda fuente (CHIRPS) también es satelital, y el panel de pasadas solo calcula cuándo pasan los satélites.",
   "No sirve para emergencias de horas (crecidas, tormentas): los datos tienen 2 a 3 días de demora.",
-  "No pronostica: describe lo que ya llovió frente a lo normal.",
+  "El estado no pronostica: describe lo que ya llovió frente a lo normal. El pronóstico de 7 días se muestra aparte y no lo modifica.",
   "No reemplaza la verificación en el territorio ni la decisión del organismo competente.",
 ];
 
-const fmt1 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 function Seccion({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
@@ -58,7 +76,16 @@ function Seccion({ titulo, children }: { titulo: string; children: React.ReactNo
 }
 
 export default function MetodologiaPage() {
-  const estadoNuevo = (t: number) => (t <= UMBRAL_TEMPORADA_PCT ? "déficit" : "normal");
+  const anterior = BT.filter((b) => b.estadoRegla30d === "deficit");
+  const actual = BT.filter((b) => b.estadoReglaActual === "deficit");
+  const sinExplicar = BT.filter((b) => b.estadoReglaActual !== "deficit");
+  const nums = (v: (number | null)[]) => v.filter((x): x is number => x !== null);
+  const chirpsPcts = nums(BT.map((b) => b.chirpsPct));
+  const chirpsDef = chirpsPcts.filter((x) => x <= UMBRAL_TEMPORADA_PCT);
+  const antNasa = nums(BT.map((b) => b.temporadaAnterior.nasaPct));
+  const antChirps = nums(BT.map((b) => b.temporadaAnterior.chirpsPct));
+  const corr = nums(BT.map((b) => b.correlacionTemporadas));
+  const fmt2 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   return (
     <div className="min-h-screen amc-grid-bg text-[#F4F1EA]">
       <main className="mx-auto max-w-4xl px-4 py-8 space-y-5">
@@ -125,10 +152,11 @@ export default function MetodologiaPage() {
           </p>
         </Seccion>
 
-        <Seccion titulo="3. Prueba retrospectiva: entrega de alfalfa del 23/09/2026">
+        <Seccion titulo={`3. Prueba retrospectiva: ${fechaAr(backtest.evento.fecha)}`}>
           <p>
-            Se reconstruyó qué habría dicho el sistema el 23/09/2026, cuando la Provincia entregó alfalfa en los cinco departamentos
-            puneños por sequía.
+            Se reconstruyó qué habría dicho el sistema el {fechaAr(backtest.evento.fecha)}. Evento de referencia:{" "}
+            {backtest.evento.descripcion.toLowerCase()}. Se evalúa la cabecera de cada departamento, con la serie
+            completa hasta ese día; en la fecha real el último dato disponible habría sido de 2 a 3 días antes.
           </p>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs sm:text-sm">
@@ -138,30 +166,66 @@ export default function MetodologiaPage() {
                   <th className="py-2 pr-3">Lluvia 30 días vs normal</th>
                   <th className="py-2 pr-3">Regla anterior (solo 30 días)</th>
                   <th className="py-2 pr-3">Temporada vs normal</th>
-                  <th className="py-2">Regla actual</th>
+                  <th className="py-2 pr-3">Regla actual</th>
+                  <th className="py-2">Temporada según CHIRPS</th>
                 </tr>
               </thead>
               <tbody>
-                {BACKTEST.map((b) => (
-                  <tr key={b.lugar} className="border-b border-white/5">
+                {BT.map((b) => (
+                  <tr key={b.codBahra} className="border-b border-white/5">
                     <td className="py-2 pr-3 font-bold text-[#F4F1EA] whitespace-nowrap">{b.lugar}</td>
                     <td className="py-2 pr-3 whitespace-nowrap">
-                      {fmt1(b.obs)} vs {fmt1(b.normal)} mm (+{b.pct30} %)
+                      {fmt1(b.lluvia30d.observado)} vs {fmt1(b.lluvia30d.normal)} mm ({pct(b.lluvia30d.porcentaje)})
                     </td>
-                    <td className="py-2 pr-3">superávit</td>
-                    <td className="py-2 pr-3">{b.temporada} %</td>
-                    <td className="py-2 text-[#F4F1EA]">{estadoNuevo(b.temporada)}</td>
+                    <td className="py-2 pr-3">{ESTADO[b.estadoRegla30d]}</td>
+                    <td className="py-2 pr-3 whitespace-nowrap">{pct(b.temporadaNasaPct)}</td>
+                    <td className="py-2 pr-3 text-[#F4F1EA]">{ESTADO[b.estadoReglaActual]}</td>
+                    <td className="py-2 whitespace-nowrap">
+                      {pct(b.chirpsPct)}
+                      {b.chirpsPct !== null && ` (${b.chirpsPct <= UMBRAL_TEMPORADA_PCT ? "déficit" : "normal"})`}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
           <ul className="list-disc pl-5 space-y-1.5">
-            <li>La regla anterior falló en los cinco casos. La regla actual se agregó después de ver este resultado, así que la prueba no es independiente.</li>
-            <li>Susques recibió asistencia y su temporada fue casi normal según NASA POWER: la fuente no explica ese caso.</li>
-            <li>Tres de los cuatro déficits están entre −21 % y −24 %. Con un umbral de −25 % solo quedaría Santa Catalina.</li>
-            <li>Es un solo evento y una sola fuente. No alcanza para estimar aciertos ni falsas alarmas.</li>
-            <li>* Santa Catalina y Rinconada no están en el tablero y sus coordenadas en la prueba son aproximadas.</li>
+            <li>
+              La regla anterior marcó déficit en {anterior.length} de {BT.length} casos. La regla actual marca déficit en{" "}
+              {actual.length} de {BT.length} ({lista(actual.map((b) => b.lugar))}), pero se agregó después de ver este resultado, así
+              que la prueba no es independiente.
+            </li>
+            {sinExplicar.length > 0 && (
+              <li>
+                {lista(sinExplicar.map((b) => b.lugar))}: hubo asistencia y NASA POWER no marca déficit de temporada. La fuente no
+                explica ese caso.
+              </li>
+            )}
+            {actual.length > 0 && (
+              <li>
+                Los déficits de temporada van de {pct(Math.max(...actual.map((b) => b.temporadaNasaPct ?? 0)))} a{" "}
+                {pct(Math.min(...actual.map((b) => b.temporadaNasaPct ?? 0)))}, con el umbral en {UMBRAL_TEMPORADA_PCT} %. Con un umbral
+                5 puntos más exigente quedarían {actual.filter((b) => (b.temporadaNasaPct ?? 0) <= UMBRAL_TEMPORADA_PCT - 5).length} de{" "}
+                {actual.length}.
+              </li>
+            )}
+            <li>
+              <strong className="text-[#F4F1EA]">
+                La segunda fuente marca déficit en {chirpsDef.length} de {BT.length} localidades.
+              </strong>{" "}
+              CHIRPS (grilla de unos 5 km) da entre {pct(Math.min(...chirpsPcts))} y {pct(Math.max(...chirpsPcts))}. Para la temporada
+              anterior NASA POWER da entre {pct(Math.min(...antNasa))} y {pct(Math.max(...antNasa))}, y CHIRPS entre{" "}
+              {pct(Math.min(...antChirps))} y {pct(Math.max(...antChirps))}.
+            </li>
+            <li>
+              Entre 2001 y {backtest.evento.fecha.slice(0, 4)} los totales de temporada de NASA POWER y CHIRPS se parecen poco en estas
+              localidades (correlación de {fmt2(Math.min(...corr))} a {fmt2(Math.max(...corr))}). Sin estaciones en tierra no se puede
+              decir cuál de las dos acierta.
+            </li>
+            <li>Es un solo evento. No alcanza para estimar aciertos ni falsas alarmas.</li>
+            <li>
+              Tabla generada el {fechaAr(backtest.generadoEn)} con <code>npm run backtest</code>. Coordenadas: {backtest.fuentes.coordenadas}.
+            </li>
           </ul>
         </Seccion>
 

@@ -6,8 +6,20 @@ import { COMUNIDADES } from "./comunidades";
 import { lecturaCacheada } from "./cache";
 import { sintesisRegional } from "./sintesis";
 import { alertaDeterminista, calcularPatronDiario, recomendacionGobierno } from "./alerta";
-import { estadoHidrico, porPrioridad } from "./lecturas";
+import { PISO_NORMAL_30D_MM, baseEstado, estadoHidrico, fechaComposite, porPrioridad, productoNdvi } from "./lecturas";
 
+/** Hora en 24 h: el formato por defecto de es-AR es de 12 h y el PDF perdía el "p. m.". */
+const fechaHoraEmision = () =>
+  new Date().toLocaleString("es-AR", {
+    timeZone: "America/Argentina/Jujuy",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
+const fechaCorta = (iso: string) => iso.split("-").reverse().join("/");
 const fmt1 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const fmt2 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmt3 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
@@ -48,8 +60,8 @@ export function descargarPdfExpediente(
   const motorTexto = alertaActual?.origen === "grok" ? `Grok AI (${alertaActual.modelo}) + Validación Zod` : "Motor Hidrológico Determinista";
   const jurisdiccion = jurisdiccionDe(comunidad);
   const expedienteNro = `OA-${comunidad.id.toUpperCase()}`;
-  const urlExpediente = `${URL_PUBLICA}/municipio/${comunidad.id}`;
-  const fechaEmision = new Date().toLocaleString("es-AR", { timeZone: "America/Argentina/Jujuy" });
+  const urlInforme = `${URL_PUBLICA}/municipio/${comunidad.id}`;
+  const fechaEmision = fechaHoraEmision();
 
   // 1. ENCABEZADO INSTITUCIONAL (Banda oscura superior)
   doc.setFillColor(11, 13, 16);
@@ -75,7 +87,7 @@ export function descargarPdfExpediente(
     26,
   );
 
-  dibujarQr(doc, urlExpediente, 175, 3.5, 21);
+  dibujarQr(doc, urlInforme, 175, 3.5, 21);
   doc.setTextColor(245, 158, 11);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(5.5);
@@ -92,13 +104,13 @@ export function descargarPdfExpediente(
   doc.setFontSize(8);
   doc.text(`REFERENCIA: ${expedienteNro}`, 18, y + 6.5);
   doc.text(`ÚLTIMO CORTE NASA POWER: ${m?.ultimoDiaConDato ?? "s/d"}`, 85, y + 6.5);
-  doc.text(`EMISIÓN: ${fechaEmision} ART`, 145, y + 6.5);
+  doc.text(`EMISIÓN: ${fechaEmision} (ARG)`, 145, y + 6.5);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
   doc.setTextColor(80, 86, 98);
   doc.text(
-    `Serie climatológica base: 2001–2025 (25 años, NASA MERRA-2/GEOS-IT)  |  Vegetación: MODIS MOD13Q1 250m (${ndvi?.ultimoComposite.fecha ?? "s/d"})`,
+    `Serie climatológica base: 2001–2025 (25 años, NASA MERRA-2/GEOS-IT)  |  Vegetación: MODIS ${productoNdvi(ndvi)} 250m (${ndvi?.ultimoComposite.fecha ?? "s/d"})`,
     18,
     y + 13.5,
   );
@@ -164,7 +176,7 @@ export function descargarPdfExpediente(
     {
       label: "VEGETACIÓN MODIS (0-1)",
       val: ndvi ? fmt3(ndvi.ultimoComposite.ndvi) : "s/d",
-      sub: ndvi?.compositeAnioAnterior ? `Nov 2025: ${fmt3(ndvi.compositeAnioAnterior.ndvi)} | Oct 26: ${ndvi.compositeAnterior ? fmt3(ndvi.compositeAnterior.ndvi) : "s/d"}` : "",
+      sub: ndvi?.compositeAnioAnterior ? `${fechaComposite(ndvi.compositeAnioAnterior.fecha)}: ${fmt3(ndvi.compositeAnioAnterior.ndvi)}${ndvi.compositeAnterior ? ` | ${fechaComposite(ndvi.compositeAnterior.fecha)}: ${fmt3(ndvi.compositeAnterior.ndvi)}` : ""}` : "",
     },
   ];
 
@@ -184,7 +196,9 @@ export function descargarPdfExpediente(
 
     doc.setTextColor(90, 98, 110);
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(6.7);
+    let cuerpo = 6.7;
+    doc.setFontSize(cuerpo);
+    while (cuerpo > 5 && doc.getTextWidth(k.sub) > boxW - 6) doc.setFontSize((cuerpo -= 0.2));
     doc.text(k.sub, x + 3, y + 18.2);
   });
 
@@ -319,7 +333,7 @@ export function descargarPdfExpediente(
   doc.setTextColor(110, 116, 128);
   doc.text(
     doc.splitTextToSize(
-      `Documento técnico auditable generado con telemetría pública NASA/POWER y MODIS (ORNL DAAC). Verificar serie en ${urlExpediente}`,
+      `Documento técnico auditable generado con telemetría pública NASA/POWER y MODIS (ORNL DAAC). Verificar serie en ${urlInforme}`,
       182,
     ),
     14,
@@ -331,7 +345,7 @@ export function descargarPdfExpediente(
 
 export function descargarPdfProvincialConsolidado(lecturas?: Record<string, LecturaSatelital>) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  const fechaEmision = new Date().toLocaleString("es-AR", { timeZone: "America/Argentina/Jujuy" });
+  const fechaEmision = fechaHoraEmision();
 
   doc.setFillColor(11, 13, 16);
   doc.rect(0, 0, 210, 32, "F");
@@ -350,15 +364,10 @@ export function descargarPdfProvincialConsolidado(lecturas?: Record<string, Lect
   doc.setTextColor(180, 186, 196);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
-  doc.text(
-    `Emisión: ${fechaEmision} ART  |  Fuentes: NASA POWER (climatología 2001–2025) y MODIS MOD13Q1 250m`,
-    14,
-    26,
-  );
-
   const filas = COMUNIDADES.map((c) => {
     const l = lecturas?.[c.id] ?? lecturaCacheada(c.id);
     const p = l?.meteorologia?.precipitacionMm30d;
+    const t = l?.meteorologia?.precipitacionTemporada;
     const pat = l ? calcularPatronDiario(l) : null;
     const est = l ? estadoHidrico(l) : "normal";
     return {
@@ -367,6 +376,11 @@ export function descargarPdfProvincialConsolidado(lecturas?: Record<string, Lect
       obs: p?.observado ?? 0,
       clim: p?.climatologia ?? 0,
       pct: p?.porcentaje ?? 0,
+      temporadaPct: t?.porcentaje ?? null,
+      temporadaEnCurso: !!t?.enCurso,
+      decideTemporada: !!l && baseEstado(l) === "temporada_lluvias",
+      decide30d: !!l && baseEstado(l) === "lluvia_30d",
+      corte: l?.meteorologia?.ultimoDiaConDato ?? null,
       rachaSeca: pat?.racha_seca_maxima_dias ?? 0,
       pico24h: pat?.pico_maximo_mm ?? 0,
       ndvi: l?.ndvi?.ultimoComposite.ndvi ?? 0,
@@ -374,6 +388,23 @@ export function descargarPdfProvincialConsolidado(lecturas?: Record<string, Lect
       accion: l ? recomendacionGobierno(c, l) : "",
     };
   }).sort((a, b) => porPrioridad({ estado: a.est, pct: a.pct }, { estado: b.est, pct: b.pct }));
+
+  const cortes = [...new Set(filas.map((f) => f.corte).filter((c): c is string => !!c))].sort();
+  const textoCorte = !cortes.length
+    ? "sin dato"
+    : cortes.length === 1
+      ? fechaCorta(cortes[0])
+      : `${fechaCorta(cortes[0])} a ${fechaCorta(cortes[cortes.length - 1])} según la localidad`;
+  doc.text(`Emisión: ${fechaEmision} (hora de Argentina)  |  Datos de lluvia hasta: ${textoCorte}`, 14, 25);
+  doc.setFontSize(7.5);
+  const productos = [
+    ...new Set(
+      COMUNIDADES.map((c) => (lecturas?.[c.id] ?? lecturaCacheada(c.id))?.ndvi)
+        .filter((n) => !!n)
+        .map((n) => productoNdvi(n)),
+    ),
+  ];
+  doc.text(`Fuentes: NASA POWER (climatología 2001–2025) y MODIS ${productos.join(" / ") || "MYD13Q1"} 250m`, 14, 29.5);
 
   const sint = sintesisRegional(lecturas);
   doc.setFontSize(8);
@@ -401,13 +432,14 @@ export function descargarPdfProvincialConsolidado(lecturas?: Record<string, Lect
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7.2);
   doc.text("#  LOCALIDAD / JURISDICCIÓN", 16, y + 4.8);
-  doc.text("REGIÓN", 70, y + 4.8);
-  doc.text("LLUVIA 30D", 90, y + 4.8);
-  doc.text("NORMAL", 110, y + 4.8);
-  doc.text("DESVÍO", 128, y + 4.8);
-  doc.text("RACHA SECA", 146, y + 4.8);
-  doc.text("PICO 24H", 166, y + 4.8);
-  doc.text("NDVI", 183, y + 4.8);
+  doc.text("REGIÓN", 62, y + 4.8);
+  doc.text("LLUVIA 30D", 82, y + 4.8);
+  doc.text("NORMAL", 101, y + 4.8);
+  doc.text("DESVÍO 30D", 117, y + 4.8);
+  doc.text("TEMPORADA", 136, y + 4.8);
+  doc.text("RACHA SECA", 155, y + 4.8);
+  doc.text("PICO 24H", 173, y + 4.8);
+  doc.text("NDVI", 187, y + 4.8);
 
   filas.forEach((f, idx) => {
     const fy = y + 7 + idx * 16;
@@ -429,25 +461,50 @@ export function descargarPdfProvincialConsolidado(lecturas?: Record<string, Lect
 
     doc.setFontSize(7.5);
     doc.setTextColor(40, 45, 55);
-    doc.text(f.c.region.toUpperCase(), 70, fy + 5.5);
-    doc.text(`${fmt1(f.obs)} mm`, 90, fy + 5.5);
-    doc.text(`${fmt1(f.clim)} mm`, 110, fy + 5.5);
+    doc.text(f.c.region.toUpperCase(), 62, fy + 5.5);
+    doc.text(`${fmt1(f.obs)} mm`, 82, fy + 5.5);
+    doc.text(`${fmt1(f.clim)} mm`, 101, fy + 5.5);
 
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(f.pct <= -25 ? 200 : 16, f.pct <= -25 ? 55 : 130, f.pct <= -25 ? 40 : 90);
-    doc.text(`${f.pct >= 0 ? "+" : ""}${fmt1(f.pct)}%`, 128, fy + 5.5);
+    const conSigno = (n: number) => `${n >= 0 ? "+" : ""}${fmt1(n)}%`;
+    const colorDesvio = (n: number, decide: boolean) => {
+      if (!decide) doc.setTextColor(120, 126, 138);
+      else if (n < 0) doc.setTextColor(200, 55, 40);
+      else doc.setTextColor(16, 130, 90);
+    };
+    // En negrita y color, el desvío que decide el estado; el otro queda en gris.
+    doc.setFont("helvetica", f.decide30d ? "bold" : "normal");
+    colorDesvio(f.pct, f.decide30d);
+    doc.text(conSigno(f.pct), 117, fy + 5.5);
+    doc.setFont("helvetica", f.decideTemporada ? "bold" : "normal");
+    colorDesvio(f.temporadaPct ?? 0, f.decideTemporada);
+    doc.text(f.temporadaPct === null ? "s/d" : `${conSigno(f.temporadaPct)}${f.temporadaEnCurso ? " *" : ""}`, 136, fy + 5.5);
 
     doc.setFont("helvetica", "normal");
     doc.setTextColor(40, 45, 55);
-    doc.text(`${f.rachaSeca} días`, 146, fy + 5.5);
-    doc.text(`${fmt1(f.pico24h)} mm`, 166, fy + 5.5);
-    doc.text(fmt3(f.ndvi), 183, fy + 5.5);
+    doc.text(`${f.rachaSeca} días`, 155, fy + 5.5);
+    doc.text(`${fmt1(f.pico24h)} mm`, 173, fy + 5.5);
+    doc.text(fmt3(f.ndvi), 187, fy + 5.5);
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(7);
     doc.setTextColor(60, 68, 80);
-    doc.text(`Recomendación: ${f.accion}`, 16, fy + 14);
+    const textoAccion = `Recomendación: ${f.accion}`;
+    let cuerpo = 7;
+    while (cuerpo > 5 && doc.getTextWidth(textoAccion) > 178) doc.setFontSize((cuerpo -= 0.25));
+    doc.text(textoAccion, 16, fy + 14);
   });
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(6.8);
+  doc.setTextColor(95, 102, 114);
+  doc.text(
+    doc.splitTextToSize(
+      `TEMPORADA: lluvia acumulada de la última temporada de lluvias completa (1/12 al 30/4) frente a lo normal.${filas.some((f) => f.temporadaEnCurso) ? " * Temporada en curso: acumulado parcial desde el 1/12 hasta la fecha de corte, frente a lo normal de esos mismos días." : ""} En negrita, el desvío que decide el estado: el de temporada cuando la normal de 30 días es menor a ${PISO_NORMAL_30D_MM} mm (época seca); si no, el de 30 días. Umbrales provisorios, sin calibrar.`,
+      182,
+    ),
+    14,
+    y + 7 + filas.length * 16 + 5,
+  );
 
   const yFirma = 266;
   doc.setDrawColor(180, 186, 198);

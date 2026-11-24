@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { estado, formatoCuenta, parseTle, proximaPasada, type EstadoSat, type Observador, type Pasada } from "@/lib/orbita";
+import { CENTRO_JUJUY, COMUNIDADES } from "@/lib/comunidades";
 import tleLocal from "@/data/tle-saocom.json";
 import { ChakanaIcon } from "./AndeanMotifs";
 
@@ -15,7 +16,37 @@ export type RadarSnapshot = {
 type Props = {
   observador: Observador & { etiqueta: string };
   onSnapshot?: (s: RadarSnapshot) => void;
+  seleccion?: string;
+  onSeleccion?: (id: string) => void;
 };
+
+const HORAS_BUSQUEDA = 36;
+const ELEV_MINIMA = 10;
+const MARGEN_PASADA_MS = 15 * 60 * 1000;
+
+type SatTle = ReturnType<typeof parseTle>[number];
+
+/** Primera pasada que todavía no terminó. Arranca antes de `base` para no perder una pasada en curso que ya bajó de la elevación mínima. */
+function pasadaVigente(s: SatTle, base: Date, o: Observador): Pasada | null {
+  let desde = new Date(base.getTime() - MARGEN_PASADA_MS);
+  for (let i = 0; i < 3; i++) {
+    const p = proximaPasada(s, desde, o, HORAS_BUSQUEDA, ELEV_MINIMA);
+    if (!p || p.fin.getTime() >= base.getTime()) return p;
+    desde = new Date(p.fin.getTime() + 20_000);
+  }
+  return null;
+}
+
+const fechaHora = (d: Date) =>
+  d.toLocaleString("es-AR", {
+    timeZone: "America/Argentina/Jujuy",
+    weekday: "short",
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
 
 function puntoPolar(azDeg: number, elDeg: number, rMax = 48, cx = 64, cy = 64) {
   const elClamped = Math.max(0, Math.min(90, elDeg));
@@ -24,11 +55,13 @@ function puntoPolar(azDeg: number, elDeg: number, rMax = 48, cx = 64, cy = 64) {
   return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
 }
 
-export default function RadarOrbital({ observador, onSnapshot }: Props) {
+export default function RadarOrbital({ observador, onSnapshot, seleccion, onSeleccion }: Props) {
   const [tleTxt, setTleTxt] = useState<string>(tleLocal.tle || "");
   const [fuenteTle, setFuenteTle] = useState<"celestrak" | "cache">("cache");
   const [obtenidoEn, setObtenidoEn] = useState<string>(tleLocal.obtenidoEn || "");
   const [ahora, setAhora] = useState<Date>(() => new Date());
+  // Se incrementa cuando termina una pasada mostrada, para volver a buscar la siguiente.
+  const [epoca, setEpoca] = useState(0);
 
   useEffect(() => {
     fetch("/api/tle")
@@ -51,12 +84,34 @@ export default function RadarOrbital({ observador, onSnapshot }: Props) {
     if (!sats.length) return null;
     const base = new Date();
     const pasadas = sats
-      .map((s) => proximaPasada(s, base, observador, 36, 10))
+      .map((s) => pasadaVigente(s, base, observador))
       .filter((p): p is Pasada => !!p)
       .sort((a, b) => a.inicio.getTime() - b.inicio.getTime());
     return pasadas[0] ?? null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sats, latObs, lonObs]);
+  }, [sats, latObs, lonObs, epoca]);
+
+  // Próxima pasada de cualquiera de los dos satélites sobre cada localidad del tablero.
+  const porLocalidad = useMemo(() => {
+    if (!sats.length) return [];
+    const base = new Date();
+    return COMUNIDADES.map((c) => {
+      const o = { lat: c.lat, lon: c.lon, altKm: CENTRO_JUJUY.altKm };
+      const p = sats
+        .map((s) => pasadaVigente(s, base, o))
+        .filter((x): x is Pasada => !!x)
+        .sort((a, b) => a.inicio.getTime() - b.inicio.getTime())[0];
+      return { id: c.id, nombre: c.nombre, pasada: p ?? null };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sats, epoca]);
+
+  useEffect(() => {
+    const fines = [proxima, ...porLocalidad.map((f) => f.pasada)].filter((p): p is Pasada => !!p).map((p) => p.fin.getTime());
+    if (!fines.length) return;
+    const id = setTimeout(() => setEpoca((e) => e + 1), Math.max(1000, Math.min(...fines) - Date.now() + 1000));
+    return () => clearTimeout(id);
+  }, [proxima, porLocalidad]);
 
   useEffect(() => {
     const id = setInterval(() => setAhora(new Date()), 1000);
@@ -94,7 +149,7 @@ export default function RadarOrbital({ observador, onSnapshot }: Props) {
         <div>
           <span className="inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-[#2DD4BF] font-bold">
             <ChakanaIcon className="h-3.5 w-3.5 text-[#F59E0B]" />
-            TELEMETRÍA ORBITAL EN VIVO (1 HZ · SGP4)
+            ÓRBITA CALCULADA (SGP4) · NO ES FUENTE DE DATOS
           </span>
           <h2 className="font-display text-base font-bold text-[#F4F1EA]">Constelación SAOCOM 1A &amp; 1B (CONAE)</h2>
         </div>
@@ -108,6 +163,11 @@ export default function RadarOrbital({ observador, onSnapshot }: Props) {
           TLE: {fuenteTle === "celestrak" ? "CELESTRAK LIVE" : "CACHE LOCAL"}
         </span>
       </div>
+
+      <p className="text-[11px] leading-relaxed rounded-xl border border-[#F59E0B]/40 bg-[#F59E0B]/10 text-[#F4F1EA] px-3 py-2">
+        <strong>Solo muestra cuándo pasan los satélites.</strong> Ojo Andino no usa imágenes ni datos de SAOCOM: la lluvia sale de
+        NASA POWER y la vegetación de MODIS. Que el satélite pase no significa que haya tomado una imagen de la zona.
+      </p>
 
       {/* Domo Polar SVG (Sky-Plot) + Próxima pasada */}
       <div className="grid grid-cols-[128px_1fr] gap-3 items-center rounded-xl bg-[#0B0D10]/85 border border-white/10 p-3">
@@ -145,7 +205,7 @@ export default function RadarOrbital({ observador, onSnapshot }: Props) {
 
         <div className="space-y-1.5 text-xs">
           <div className="text-[11px] font-mono uppercase text-[#2DD4BF] font-bold">
-            Próximo barrido sobre {observador.etiqueta}
+            Próxima pasada sobre {observador.etiqueta}
           </div>
           {proxima ? (
             <>
@@ -157,6 +217,7 @@ export default function RadarOrbital({ observador, onSnapshot }: Props) {
                 {proxima.inicio.toLocaleTimeString("es-AR", {
                   hour: "2-digit",
                   minute: "2-digit",
+                  hourCycle: "h23",
                   timeZone: "America/Argentina/Jujuy",
                 })}{" "}
                 ART · Elev. máx <strong className="text-[#F4F1EA]">{proxima.maxElev.toFixed(0)}°</strong>
@@ -191,11 +252,62 @@ export default function RadarOrbital({ observador, onSnapshot }: Props) {
         ))}
       </div>
 
-      <p className="text-[11px] text-[#9CA3AF] leading-relaxed border-t border-white/10 pt-2.5">
-        <strong className="text-[#F4F1EA]">Valor para Gestión Hídrica:</strong> SAOCOM 1A/1B (CONAE) mide humedad superficial del
-        suelo mediante radar SAR Banda L incluso a través de nubosidad. Aquí propagamos su órbita real en vivo con{" "}
-        <code className="font-mono text-[#2DD4BF]">satellite.js</code> (no se exhibe imagen SAR cruda).
-      </p>
+      {/* Próxima pasada sobre cada localidad */}
+      <div className="rounded-xl bg-[#0B0D10]/85 border border-white/10 overflow-x-auto">
+        <div className="px-3 py-2 text-[11px] font-mono uppercase text-[#2DD4BF] font-bold border-b border-white/10">
+          Próxima pasada por localidad
+        </div>
+        <table className="w-full text-[11px]">
+          <thead className="text-[#9CA3AF] text-left">
+            <tr>
+              <th className="px-3 py-1.5 font-medium">Localidad</th>
+              <th className="px-2 py-1.5 font-medium">Satélite</th>
+              <th className="px-2 py-1.5 font-medium">Cuándo</th>
+              <th className="px-3 py-1.5 font-medium text-right">Elev. máx</th>
+            </tr>
+          </thead>
+          <tbody>
+            {porLocalidad.map((f) => (
+              <tr
+                key={f.id}
+                onClick={() => onSeleccion?.(f.id)}
+                className={`border-t border-white/5 ${onSeleccion ? "cursor-pointer hover:bg-white/5" : ""} ${
+                  f.id === seleccion ? "bg-[#2DD4BF]/10" : ""
+                }`}
+              >
+                <td className="px-3 py-1.5 font-bold text-[#F4F1EA] whitespace-nowrap">
+                  {onSeleccion ? (
+                    <button
+                      type="button"
+                      aria-pressed={f.id === seleccion}
+                      className="font-bold text-left cursor-pointer underline-offset-2 hover:underline"
+                    >
+                      {f.nombre}
+                    </button>
+                  ) : (
+                    f.nombre
+                  )}
+                </td>
+                {f.pasada ? (
+                  <>
+                    <td className="px-2 py-1.5 text-[#F59E0B] whitespace-nowrap">{f.pasada.nombre}</td>
+                    <td className="px-2 py-1.5 font-mono text-[#F4F1EA]/90 whitespace-nowrap">{fechaHora(f.pasada.inicio)}</td>
+                    <td className="px-3 py-1.5 font-mono text-[#F4F1EA]/90 text-right">{f.pasada.maxElev.toFixed(0)}°</td>
+                  </>
+                ) : (
+                  <td colSpan={3} className="px-2 py-1.5 text-[#9CA3AF]">
+                    Sin pasada en las próximas {HORAS_BUSQUEDA} h
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div className="px-3 py-2 text-[10px] text-[#9CA3AF] border-t border-white/10">
+          Hora de Argentina. Pasadas a más de {ELEV_MINIMA}° sobre el horizonte, calculadas con <code className="font-mono">satellite.js</code>{" "}
+          a partir de los elementos orbitales públicos de CelesTrak. Las localidades vecinas comparten casi la misma pasada.
+        </div>
+      </div>
     </div>
   );
 }

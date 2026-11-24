@@ -5,13 +5,13 @@ import QRCode from "qrcode";
 import { alertaDeterminista } from "../src/lib/alerta";
 import { lecturaCacheada } from "../src/lib/cache";
 import { getComunidad } from "../src/lib/comunidades";
-import { descargarPdfExpediente } from "../src/lib/pdf-expediente";
+import { descargarPdfExpediente, descargarPdfProvincialConsolidado } from "../src/lib/pdf-expediente";
 import type { AlertaRespuesta } from "../src/lib/types";
 
 const volcan = getComunidad("volcan")!;
 const lectura = lecturaCacheada(volcan.id)!;
 
-function capturarTexto(t: TestContext, alerta?: AlertaRespuesta) {
+function capturarTexto(t: TestContext, alerta?: AlertaRespuesta, generar?: () => void) {
   const textos: { texto: string; ancho: number; pagina: number; y: number }[] = [];
   const evento = ["initialized", function (this: jsPDF) {
     const dibujar = this.text.bind(this);
@@ -30,7 +30,8 @@ function capturarTexto(t: TestContext, alerta?: AlertaRespuesta) {
   }];
   jsPDF.API.events.push(evento);
   try {
-    descargarPdfExpediente(volcan, lectura, alerta);
+    if (generar) generar();
+    else descargarPdfExpediente(volcan, lectura, alerta);
   } finally {
     jsPDF.API.events.pop();
   }
@@ -109,7 +110,7 @@ function capturarQr(t: TestContext) {
   return { textos, enlaces, rects };
 }
 
-test("el expediente lleva un QR que abre /municipio/[id] en la banda del encabezado", (t) => {
+test("el informe lleva un QR que abre /municipio/[id] en la banda del encabezado", (t) => {
   const url = "https://ojo-andino.vercel.app/municipio/volcan";
   const { textos, enlaces, rects } = capturarQr(t);
   assert.equal(enlaces.length, 1);
@@ -139,5 +140,17 @@ test("el expediente lleva un QR que abre /municipio/[id] en la banda del encabez
   assert.ok(pie.some(({ texto }) => texto.includes(url)));
   for (const { texto, x, ancho } of pie) {
     assert.ok(x + ancho <= 196, `El pie excede el margen: ${texto}`);
+  }
+});
+
+test("las recomendaciones del informe consolidado no pasan el margen derecho", (t) => {
+  const susques = structuredClone(lecturaCacheada("susques")!);
+  susques.meteorologia!.precipitacionMm30d = { ...susques.meteorologia!.precipitacionMm30d, observado: 80, climatologia: 40, porcentaje: 100 };
+  const textos = capturarTexto(t, undefined, () => descargarPdfProvincialConsolidado({ susques }));
+  const recomendaciones = textos.filter(({ texto }) => texto.startsWith("Recomendación: "));
+  assert.equal(recomendaciones.length, 10);
+  assert.ok(recomendaciones.some(({ texto }) => texto.includes("No requiere envío de forraje")));
+  for (const { texto, ancho } of recomendaciones) {
+    assert.ok(ancho <= 178, `La recomendación excede el ancho de la fila: ${texto}`);
   }
 });
