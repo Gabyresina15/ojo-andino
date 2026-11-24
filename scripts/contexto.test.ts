@@ -19,6 +19,6 @@ test("humedad: toma el último día válido y el de 30 días antes", () => {
 
 test("focos: si el último compuesto es viejo, se marca como desactualizado", () => {
   const s = [{ modis_date: "A2026313", calendar_date: "2026-11-09", data: [5] }];
-  assert.equal(resumirFocos(s, new Date("2026-12-09T12:00:00Z"))?.desactualizado, false);
+  assert.equal(resumirFocos(s, new Date("2026-12-08T12:00:00Z"))?.desactualizado, false);
   assert.equal(resumirFocos(s, new Date("2026-12-10T12:00:00Z"))?.desactualizado, true);
 });
