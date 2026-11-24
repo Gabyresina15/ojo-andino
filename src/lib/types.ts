@@ -35,6 +35,9 @@ export type Anomalia = {
   diasConDato: number;
 };
 
+/** Temporada de lluvias (1/12 al 30/4). `enCurso` indica que todavía no terminó y el acumulado es parcial. */
+export type AnomaliaTemporada = Anomalia & { enCurso: boolean };
+
 export type CompositeNdvi = { fecha: string; modisDate: string; ndvi: number };
 
 export type LecturaSatelital = {
@@ -47,6 +50,10 @@ export type LecturaSatelital = {
     demoraDeclarada: string;
     climatologiaPeriodo: string;
     precipitacionMm30d: Anomalia;
+    /** Ventanas largas: ausentes en lecturas viejas (cache del deploy, localStorage) o si faltan días. */
+    precipitacionMm90d?: Anomalia;
+    precipitacionMm180d?: Anomalia;
+    precipitacionTemporada?: AnomaliaTemporada;
     temperaturaC7d: {
       mediaObservada: number;
       climatologiaMes: number;
@@ -56,7 +63,8 @@ export type LecturaSatelital = {
     serie: { fecha: string; lluviaMm: number | null; climaMm: number | null; t2m: number | null }[];
   } | null;
   ndvi: {
-    fuente: "MODIS MOD13Q1 vía ORNL TESViS";
+    /** MOD13Q1 (satélite Terra) solo queda en el cache del deploy anterior al 01/12/2026. */
+    fuente: "MODIS MYD13Q1 vía ORNL TESViS" | "MODIS MOD13Q1 vía ORNL TESViS";
     ultimoComposite: CompositeNdvi;
     compositeAnterior: CompositeNdvi | null;
     compositeAnioAnterior: CompositeNdvi | null;
@@ -84,4 +92,6 @@ export type AlertaRespuesta = {
     motivoFallback: string | null;
   };
   generadoEn: string;
+  /** Corte de los datos con que se redactó (ver `corteLectura`). */
+  corteDatos?: string;
 };

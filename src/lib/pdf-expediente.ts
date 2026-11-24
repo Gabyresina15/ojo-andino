@@ -1,27 +1,28 @@
+import { jurisdiccionDe } from "@/lib/comunidades";
 import { jsPDF } from "jspdf";
 import type { AlertaRespuesta, Comunidad, LecturaSatelital } from "./types";
 import { COMUNIDADES } from "./comunidades";
 import { lecturaCacheada } from "./cache";
+import { sintesisRegional } from "./sintesis";
 import { alertaDeterminista, calcularPatronDiario, recomendacionGobierno } from "./alerta";
-import { estadoHidrico } from "./lecturas";
+import { PISO_NORMAL_30D_MM, baseEstado, estadoHidrico, fechaComposite, porPrioridad, productoNdvi } from "./lecturas";
 
+/** Hora en 24 h: el formato por defecto de es-AR es de 12 h y el PDF perdía el "p. m.". */
+const fechaHoraEmision = () =>
+  new Date().toLocaleString("es-AR", {
+    timeZone: "America/Argentina/Jujuy",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
+const fechaCorta = (iso: string) => iso.split("-").reverse().join("/");
 const fmt1 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const fmt2 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmt3 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
 const ddmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
-
-const JURISDICCION: Record<string, string> = {
-  "susques": "Comisión Municipal de Susques",
-  "abra-pampa": "Municipalidad de Abra Pampa",
-  "la-quiaca": "Municipalidad de La Quiaca",
-  "yavi": "Comisión Municipal de Yavi",
-  "humahuaca": "Municipalidad de Humahuaca",
-  "tilcara": "Municipalidad de Tilcara",
-  "maimara": "Comisión Municipal de Maimará",
-  "purmamarca": "Comisión Municipal de Purmamarca",
-  "tumbaya": "Comisión Municipal de Tumbaya",
-  "volcan": "Comisión Municipal de Volcán",
-};
 
 export function descargarPdfExpediente(
   comunidad: Comunidad,
@@ -36,9 +37,9 @@ export function descargarPdfExpediente(
   const det = alertaDeterminista(comunidad, lectura, "comunidad");
   const textoDictamen = alertaActual?.resumen_oral ?? det.resumen_oral;
   const motorTexto = alertaActual?.origen === "grok" ? `Grok AI (${alertaActual.modelo}) + Validación Zod` : "Motor Hidrológico Determinista";
-  const jurisdiccion = JURISDICCION[comunidad.id] ?? `Municipio de ${comunidad.nombre}`;
-  const expedienteNro = `EXP-JUJ-2026-${comunidad.id.toUpperCase()}`;
-  const fechaEmision = new Date().toLocaleString("es-AR", { timeZone: "America/Argentina/Jujuy" });
+  const jurisdiccion = jurisdiccionDe(comunidad);
+  const expedienteNro = `OA-${comunidad.id.toUpperCase()}`;
+  const fechaEmision = fechaHoraEmision();
 
   // 1. ENCABEZADO INSTITUCIONAL (Banda oscura superior)
   doc.setFillColor(11, 13, 16);
@@ -49,11 +50,11 @@ export function descargarPdfExpediente(
   doc.setTextColor(245, 158, 11);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8.5);
-  doc.text("GOBIERNO DE LA PROVINCIA DE JUJUY · SISTEMA SATELITAL OJO ANDINO", 14, 11);
+  doc.text("OJO ANDINO · INFORME TÉCNICO AUTOMÁTICO · NO ES UN DOCUMENTO OFICIAL", 14, 11);
 
   doc.setTextColor(244, 241, 234);
   doc.setFontSize(15);
-  doc.text(`ANEXO TÉCNICO DE EXPEDIENTE · ${comunidad.nombre.toUpperCase()}`, 14, 19);
+  doc.text(`INFORME TÉCNICO HÍDRICO · ${comunidad.nombre.toUpperCase()}`, 14, 19);
 
   doc.setTextColor(180, 186, 196);
   doc.setFont("helvetica", "normal");
@@ -73,15 +74,15 @@ export function descargarPdfExpediente(
   doc.setTextColor(30, 35, 45);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
-  doc.text(`EXPEDIENTE N°: ${expedienteNro}`, 18, y + 6.5);
+  doc.text(`REFERENCIA: ${expedienteNro}`, 18, y + 6.5);
   doc.text(`ÚLTIMO CORTE NASA POWER: ${m?.ultimoDiaConDato ?? "s/d"}`, 85, y + 6.5);
-  doc.text(`EMISIÓN: ${fechaEmision} ART`, 145, y + 6.5);
+  doc.text(`EMISIÓN: ${fechaEmision} (ARG)`, 145, y + 6.5);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
   doc.setTextColor(80, 86, 98);
   doc.text(
-    `Serie climatológica base: 2001–2025 (25 años, NASA MERRA-2/GEOS-IT)  |  Vegetación: MODIS MOD13Q1 250m (${ndvi?.ultimoComposite.fecha ?? "s/d"})`,
+    `Serie climatológica base: 2001–2025 (25 años, NASA MERRA-2/GEOS-IT)  |  Vegetación: MODIS ${productoNdvi(ndvi)} 250m (${ndvi?.ultimoComposite.fecha ?? "s/d"})`,
     18,
     y + 13.5,
   );
@@ -147,7 +148,7 @@ export function descargarPdfExpediente(
     {
       label: "VEGETACIÓN MODIS (0-1)",
       val: ndvi ? fmt3(ndvi.ultimoComposite.ndvi) : "s/d",
-      sub: ndvi?.compositeAnioAnterior ? `Nov 2025: ${fmt3(ndvi.compositeAnioAnterior.ndvi)} | Oct 26: ${ndvi.compositeAnterior ? fmt3(ndvi.compositeAnterior.ndvi) : "s/d"}` : "",
+      sub: ndvi?.compositeAnioAnterior ? `${fechaComposite(ndvi.compositeAnioAnterior.fecha)}: ${fmt3(ndvi.compositeAnioAnterior.ndvi)}${ndvi.compositeAnterior ? ` | ${fechaComposite(ndvi.compositeAnterior.fecha)}: ${fmt3(ndvi.compositeAnterior.ndvi)}` : ""}` : "",
     },
   ];
 
@@ -167,7 +168,9 @@ export function descargarPdfExpediente(
 
     doc.setTextColor(90, 98, 110);
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(6.7);
+    let cuerpo = 6.7;
+    doc.setFontSize(cuerpo);
+    while (cuerpo > 5 && doc.getTextWidth(k.sub) > boxW - 6) doc.setFontSize((cuerpo -= 0.2));
     doc.text(k.sub, x + 3, y + 18.2);
   });
 
@@ -176,7 +179,7 @@ export function descargarPdfExpediente(
   doc.setTextColor(20, 25, 35);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
-  doc.text("1. DICTAMEN HIDROLÓGICO Y JUSTIFICACIÓN TÉCNICA DE EXPEDIENTE", 14, y);
+  doc.text("1. ANÁLISIS HIDROLÓGICO Y JUSTIFICACIÓN TÉCNICA", 14, y);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.5);
   doc.setTextColor(100, 108, 120);
@@ -197,7 +200,7 @@ export function descargarPdfExpediente(
   doc.setTextColor(20, 25, 35);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
-  doc.text("2. DIRECTIVA DE ASIGNACIÓN DE RECURSOS (PROVINCIA -> MUNICIPIO)", 14, y);
+  doc.text("2. RECOMENDACIÓN DE ASIGNACIÓN DE RECURSOS", 14, y);
 
   y += 3;
   const textoAccion = recomendacionGobierno(comunidad, lectura);
@@ -220,7 +223,7 @@ export function descargarPdfExpediente(
     doc.setTextColor(100, 108, 120);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
-    doc.text(`EXPEDIENTE N°: ${expedienteNro}`, 14, 14);
+    doc.text(`REFERENCIA: ${expedienteNro}`, 14, 14);
     y = 23;
   }
   doc.setTextColor(20, 25, 35);
@@ -294,8 +297,8 @@ export function descargarPdfExpediente(
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7.5);
   doc.setTextColor(40, 45, 55);
-  doc.text("DIRECCIÓN PROVINCIAL / MINISTERIO DE PRODUCCIÓN", 14, yFirma + 4.5);
-  doc.text(`RECEPCIÓN: ${jurisdiccion.toUpperCase()}`, 128, yFirma + 4.5);
+  doc.text("ELABORÓ: OJO ANDINO (INFORME AUTOMÁTICO)", 14, yFirma + 4.5);
+  doc.text(`RECIBIÓ: ${jurisdiccion.toUpperCase()}`, 128, yFirma + 4.5);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7);
@@ -306,12 +309,12 @@ export function descargarPdfExpediente(
     288,
   );
 
-  doc.save(`Expediente-Jujuy-${comunidad.id}-${m?.ultimoDiaConDato ?? "2026-11-22"}.pdf`);
+  doc.save(`Informe-OjoAndino-${comunidad.id}-${m?.ultimoDiaConDato ?? "2026-11-22"}.pdf`);
 }
 
-export function descargarPdfProvincialConsolidado() {
+export function descargarPdfProvincialConsolidado(lecturas?: Record<string, LecturaSatelital>) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  const fechaEmision = new Date().toLocaleString("es-AR", { timeZone: "America/Argentina/Jujuy" });
+  const fechaEmision = fechaHoraEmision();
 
   doc.setFillColor(11, 13, 16);
   doc.rect(0, 0, 210, 32, "F");
@@ -321,70 +324,91 @@ export function descargarPdfProvincialConsolidado() {
   doc.setTextColor(245, 158, 11);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8.5);
-  doc.text("GOBIERNO DE LA PROVINCIA DE JUJUY · SISTEMA SATELITAL OJO ANDINO", 14, 11);
+  doc.text("OJO ANDINO · INFORME TÉCNICO AUTOMÁTICO · NO ES UN DOCUMENTO OFICIAL", 14, 11);
 
   doc.setTextColor(244, 241, 234);
   doc.setFontSize(14.5);
-  doc.text("PARTE PROVINCIAL CONSOLIDADO · 10 JURISDICCIONES MUNICIPALES", 14, 19);
+  doc.text("INFORME CONSOLIDADO · 10 LOCALIDADES DE PUNA Y QUEBRADA", 14, 19);
 
   doc.setTextColor(180, 186, 196);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
-  doc.text(
-    `Emisión: ${fechaEmision} ART  |  Fuentes: NASA POWER (climatología 2001–2025) y MODIS MOD13Q1 250m`,
-    14,
-    26,
-  );
-
   const filas = COMUNIDADES.map((c) => {
-    const l = lecturaCacheada(c.id);
+    const l = lecturas?.[c.id] ?? lecturaCacheada(c.id);
     const p = l?.meteorologia?.precipitacionMm30d;
+    const t = l?.meteorologia?.precipitacionTemporada;
     const pat = l ? calcularPatronDiario(l) : null;
     const est = l ? estadoHidrico(l) : "normal";
     return {
       c,
-      jurisdiccion: JURISDICCION[c.id] ?? c.nombre,
+      jurisdiccion: jurisdiccionDe(c),
       obs: p?.observado ?? 0,
       clim: p?.climatologia ?? 0,
       pct: p?.porcentaje ?? 0,
+      temporadaPct: t?.porcentaje ?? null,
+      temporadaEnCurso: !!t?.enCurso,
+      decideTemporada: !!l && baseEstado(l) === "temporada_lluvias",
+      decide30d: !!l && baseEstado(l) === "lluvia_30d",
+      corte: l?.meteorologia?.ultimoDiaConDato ?? null,
       rachaSeca: pat?.racha_seca_maxima_dias ?? 0,
       pico24h: pat?.pico_maximo_mm ?? 0,
       ndvi: l?.ndvi?.ultimoComposite.ndvi ?? 0,
       est,
       accion: l ? recomendacionGobierno(c, l) : "",
     };
-  }).sort((a, b) => a.pct - b.pct);
+  }).sort((a, b) => porPrioridad({ estado: a.est, pct: a.pct }, { estado: b.est, pct: b.pct }));
 
+  const cortes = [...new Set(filas.map((f) => f.corte).filter((c): c is string => !!c))].sort();
+  const textoCorte = !cortes.length
+    ? "sin dato"
+    : cortes.length === 1
+      ? fechaCorta(cortes[0])
+      : `${fechaCorta(cortes[0])} a ${fechaCorta(cortes[cortes.length - 1])} según la localidad`;
+  doc.text(`Emisión: ${fechaEmision} (hora de Argentina)  |  Datos de lluvia hasta: ${textoCorte}`, 14, 25);
+  doc.setFontSize(7.5);
+  const productos = [
+    ...new Set(
+      COMUNIDADES.map((c) => (lecturas?.[c.id] ?? lecturaCacheada(c.id))?.ndvi)
+        .filter((n) => !!n)
+        .map((n) => productoNdvi(n)),
+    ),
+  ];
+  doc.text(`Fuentes: NASA POWER (climatología 2001–2025) y MODIS ${productos.join(" / ") || "MYD13Q1"} 250m`, 14, 29.5);
+
+  const sint = sintesisRegional(lecturas);
+  doc.setFontSize(8);
+  const lineasSintesis: string[] = doc.splitTextToSize(
+    `${sint.deficit.length} en Déficit de Forraje/Agua${sint.deficit.length ? ` (${sint.deficit.map((f) => `${f.c.nombre} ${fmt1(f.pct)}%`).join(", ")})` : ""}  |  ${sint.normal.length} en Rango Normal  |  ${sint.punaConLluvia.length} Puna con lluvia sobre lo normal  |  ${sint.vial.length} Quebrada en Alerta Vial/Drenajes.`,
+    174,
+  );
+  const altoSintesis = 12 + lineasSintesis.length * 4;
   let y = 40;
   doc.setFillColor(248, 249, 251);
   doc.setDrawColor(215, 220, 228);
-  doc.roundedRect(14, y, 182, 16, 2, 2, "FD");
+  doc.roundedRect(14, y, 182, altoSintesis, 2, 2, "FD");
   doc.setTextColor(25, 30, 40);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8.5);
   doc.text("SÍNTESIS EJECUTIVA PARA ASIGNACIÓN PRESUPUESTARIA Y LOGÍSTICA:", 18, y + 6);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
-  doc.text(
-    "1 jurisdicción en Déficit Crítico de Forraje/Agua (Susques -78,9%)  |  3 en Rango Normal  |  3 Puna Recuperada  |  3 Quebrada en Alerta Vial/Drenajes.",
-    18,
-    y + 12,
-  );
+  doc.text(lineasSintesis, 18, y + 12);
 
-  y = 62;
+  y = 46 + altoSintesis;
   doc.setFillColor(25, 32, 44);
   doc.rect(14, y, 182, 7, "F");
   doc.setTextColor(255, 255, 255);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7.2);
   doc.text("#  LOCALIDAD / JURISDICCIÓN", 16, y + 4.8);
-  doc.text("REGIÓN", 70, y + 4.8);
-  doc.text("LLUVIA 30D", 90, y + 4.8);
-  doc.text("NORMAL", 110, y + 4.8);
-  doc.text("DESVÍO", 128, y + 4.8);
-  doc.text("RACHA SECA", 146, y + 4.8);
-  doc.text("PICO 24H", 166, y + 4.8);
-  doc.text("NDVI", 183, y + 4.8);
+  doc.text("REGIÓN", 62, y + 4.8);
+  doc.text("LLUVIA 30D", 82, y + 4.8);
+  doc.text("NORMAL", 101, y + 4.8);
+  doc.text("DESVÍO 30D", 117, y + 4.8);
+  doc.text("TEMPORADA", 136, y + 4.8);
+  doc.text("RACHA SECA", 155, y + 4.8);
+  doc.text("PICO 24H", 173, y + 4.8);
+  doc.text("NDVI", 187, y + 4.8);
 
   filas.forEach((f, idx) => {
     const fy = y + 7 + idx * 16;
@@ -406,25 +430,50 @@ export function descargarPdfProvincialConsolidado() {
 
     doc.setFontSize(7.5);
     doc.setTextColor(40, 45, 55);
-    doc.text(f.c.region.toUpperCase(), 70, fy + 5.5);
-    doc.text(`${fmt1(f.obs)} mm`, 90, fy + 5.5);
-    doc.text(`${fmt1(f.clim)} mm`, 110, fy + 5.5);
+    doc.text(f.c.region.toUpperCase(), 62, fy + 5.5);
+    doc.text(`${fmt1(f.obs)} mm`, 82, fy + 5.5);
+    doc.text(`${fmt1(f.clim)} mm`, 101, fy + 5.5);
 
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(f.pct <= -25 ? 200 : 16, f.pct <= -25 ? 55 : 130, f.pct <= -25 ? 40 : 90);
-    doc.text(`${f.pct >= 0 ? "+" : ""}${fmt1(f.pct)}%`, 128, fy + 5.5);
+    const conSigno = (n: number) => `${n >= 0 ? "+" : ""}${fmt1(n)}%`;
+    const colorDesvio = (n: number, decide: boolean) => {
+      if (!decide) doc.setTextColor(120, 126, 138);
+      else if (n < 0) doc.setTextColor(200, 55, 40);
+      else doc.setTextColor(16, 130, 90);
+    };
+    // En negrita y color, el desvío que decide el estado; el otro queda en gris.
+    doc.setFont("helvetica", f.decide30d ? "bold" : "normal");
+    colorDesvio(f.pct, f.decide30d);
+    doc.text(conSigno(f.pct), 117, fy + 5.5);
+    doc.setFont("helvetica", f.decideTemporada ? "bold" : "normal");
+    colorDesvio(f.temporadaPct ?? 0, f.decideTemporada);
+    doc.text(f.temporadaPct === null ? "s/d" : `${conSigno(f.temporadaPct)}${f.temporadaEnCurso ? " *" : ""}`, 136, fy + 5.5);
 
     doc.setFont("helvetica", "normal");
     doc.setTextColor(40, 45, 55);
-    doc.text(`${f.rachaSeca} días`, 146, fy + 5.5);
-    doc.text(`${fmt1(f.pico24h)} mm`, 166, fy + 5.5);
-    doc.text(fmt3(f.ndvi), 183, fy + 5.5);
+    doc.text(`${f.rachaSeca} días`, 155, fy + 5.5);
+    doc.text(`${fmt1(f.pico24h)} mm`, 173, fy + 5.5);
+    doc.text(fmt3(f.ndvi), 187, fy + 5.5);
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(7);
     doc.setTextColor(60, 68, 80);
-    doc.text(`Directiva: ${f.accion}`, 16, fy + 14);
+    const textoAccion = `Recomendación: ${f.accion}`;
+    let cuerpo = 7;
+    while (cuerpo > 5 && doc.getTextWidth(textoAccion) > 178) doc.setFontSize((cuerpo -= 0.25));
+    doc.text(textoAccion, 16, fy + 14);
   });
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(6.8);
+  doc.setTextColor(95, 102, 114);
+  doc.text(
+    doc.splitTextToSize(
+      `TEMPORADA: lluvia acumulada de la última temporada de lluvias completa (1/12 al 30/4) frente a lo normal.${filas.some((f) => f.temporadaEnCurso) ? " * Temporada en curso: acumulado parcial desde el 1/12 hasta la fecha de corte, frente a lo normal de esos mismos días." : ""} En negrita, el desvío que decide el estado: el de temporada cuando la normal de 30 días es menor a ${PISO_NORMAL_30D_MM} mm (época seca); si no, el de 30 días. Umbrales provisorios, sin calibrar.`,
+      182,
+    ),
+    14,
+    y + 7 + filas.length * 16 + 5,
+  );
 
   const yFirma = 266;
   doc.setDrawColor(180, 186, 198);
@@ -433,8 +482,8 @@ export function descargarPdfProvincialConsolidado() {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7.5);
   doc.setTextColor(40, 45, 55);
-  doc.text("MINISTERIO DE DESARROLLO ECONÓMICO Y PRODUCCIÓN", 14, yFirma + 4.5);
-  doc.text("MINISTERIO DE INFRAESTRUCTURA / RECURSOS HÍDRICOS", 122, yFirma + 4.5);
+  doc.text("ELABORÓ: OJO ANDINO (INFORME AUTOMÁTICO)", 14, yFirma + 4.5);
+  doc.text("RECIBIÓ:", 122, yFirma + 4.5);
 
-  doc.save("Parte-Provincial-Jujuy-10-Municipios-2026-11-22.pdf");
+  doc.save("Informe-OjoAndino-10-Localidades.pdf");
 }

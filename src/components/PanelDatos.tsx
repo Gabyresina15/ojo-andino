@@ -3,9 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { Comunidad, LecturaSatelital } from "@/lib/types";
-import { COMUNIDADES } from "@/lib/comunidades";
+import { COMUNIDADES, jurisdiccionDe } from "@/lib/comunidades";
 import { lecturaCacheada } from "@/lib/cache";
-import { estadoHidrico } from "@/lib/lecturas";
+import { anomaliaDelEstado, baseEstado, estadoHidrico, porPrioridad } from "@/lib/lecturas";
 import { descargarPdfExpediente, descargarPdfProvincialConsolidado } from "@/lib/pdf-expediente";
 
 type Props = {
@@ -13,6 +13,8 @@ type Props = {
   lectura: LecturaSatelital | null;
   modo: "comunidad" | "parametrico";
   onSeleccion?: (id: string) => void;
+  /** Lecturas en vivo por localidad; la que falte usa el cache del deploy. */
+  lecturas?: Record<string, LecturaSatelital>;
 };
 
 const fmt1 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -21,19 +23,6 @@ const fmt2 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 2
 type DiaSerie = NonNullable<LecturaSatelital["meteorologia"]>["serie"][number];
 
 const ddmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
-
-const ORGANISMO_POR_ID: Record<string, string> = {
-  "susques": "Comisión Municipal de Susques",
-  "abra-pampa": "Municipalidad de Abra Pampa",
-  "la-quiaca": "Municipalidad de La Quiaca",
-  "yavi": "Comisión Municipal de Yavi",
-  "humahuaca": "Municipalidad de Humahuaca",
-  "tilcara": "Municipalidad de Tilcara",
-  "maimara": "Comisión Municipal de Maimará",
-  "purmamarca": "Comisión Municipal de Purmamarca",
-  "tumbaya": "Comisión Municipal de Tumbaya",
-  "volcan": "Comisión Municipal de Volcán",
-};
 
 function GraficoLluvia({ serie }: { serie: DiaSerie[] }) {
   const [activo, setActivo] = useState<number | null>(null);
@@ -150,7 +139,7 @@ function GraficoLluvia({ serie }: { serie: DiaSerie[] }) {
   );
 }
 
-export default function PanelDatos({ comunidad, lectura, modo, onSeleccion }: Props) {
+export default function PanelDatos({ comunidad, lectura, modo, onSeleccion, lecturas }: Props) {
   if (!lectura) {
     return (
       <div className="amc-surface rounded-2xl p-6 text-xs text-[#9CA3AF]">
@@ -178,7 +167,7 @@ export default function PanelDatos({ comunidad, lectura, modo, onSeleccion }: Pr
             className="min-h-[40px] inline-flex items-center gap-1.5 rounded-xl bg-[#F59E0B] hover:bg-[#F59E0B]/90 text-[#0B0D10] font-bold text-xs px-3.5 py-2 transition cursor-pointer"
           >
             <span>📄</span>
-            <span>Descargar Dictamen Oficial (.PDF)</span>
+            <span>Descargar Informe Técnico (.PDF)</span>
           </button>
         </div>
         {m && m.serie.length > 1 ? (
@@ -191,7 +180,7 @@ export default function PanelDatos({ comunidad, lectura, modo, onSeleccion }: Pr
   }
 
   const rankingRegional = COMUNIDADES.map((c) => {
-    const l = c.id === comunidad.id ? lectura : lecturaCacheada(c.id);
+    const l = c.id === comunidad.id ? lectura : (lecturas?.[c.id] ?? lecturaCacheada(c.id));
     const p = l?.meteorologia?.precipitacionMm30d;
     const est = l ? estadoHidrico(l) : "sin_dato";
     let accion = "Seguimiento municipal habitual";
@@ -206,37 +195,39 @@ export default function PanelDatos({ comunidad, lectura, modo, onSeleccion }: Pr
     return {
       comunidad: c,
       lectura: l,
-      organismo: ORGANISMO_POR_ID[c.id] ?? `Municipio de ${c.nombre}`,
+      organismo: jurisdiccionDe(c),
       obs: p?.observado ?? 0,
       clim: p?.climatologia ?? 0,
       pct: p?.porcentaje ?? 0,
+      pctEstado: (l && anomaliaDelEstado(l)?.porcentaje) ?? null,
+      porTemporada: !!l && baseEstado(l) === "temporada_lluvias",
       estado: est,
       accion,
     };
-  }).sort((a, b) => a.pct - b.pct);
+  }).sort(porPrioridad);
 
   return (
     <div className="amc-surface rounded-2xl p-5 sm:p-6 space-y-4 shadow-xl">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <span className="text-[11px] uppercase tracking-wider font-bold text-[#F59E0B]">
-            🏛️ Tablero Provincial de Asignación de Recursos · Gobierno de Jujuy
+            🏛️ Tablero de Priorización de Recursos · 10 localidades
           </span>
           <h3 className="font-display text-lg sm:text-xl font-bold text-[#F4F1EA]">
             Priorización de los 10 Municipios y Comisiones Municipales
           </h3>
           <p className="text-xs text-[#9CA3AF] mt-0.5">
             Ordenado automáticamente desde la jurisdicción con mayor déficit de agua hasta la de mayor lluvia acumulada.
-            Descargá el parte provincial consolidado en PDF o el expediente individual de cada municipio.
+            Descargá el informe consolidado en PDF o el informe individual de cada municipio.
           </p>
         </div>
 
         <button
-          onClick={() => descargarPdfProvincialConsolidado()}
+          onClick={() => descargarPdfProvincialConsolidado({ ...lecturas, [comunidad.id]: lectura })}
           className="min-h-[44px] inline-flex items-center gap-2 rounded-xl bg-[#F59E0B] hover:bg-[#F59E0B]/90 text-[#0B0D10] font-bold text-xs px-4 py-2.5 transition shadow cursor-pointer"
         >
           <span>📄</span>
-          <span>Descargar Parte Provincial Consolidado (10 Municipios .PDF)</span>
+          <span>Descargar Informe Consolidado (10 Municipios .PDF)</span>
         </button>
       </div>
 
@@ -250,7 +241,7 @@ export default function PanelDatos({ comunidad, lectura, modo, onSeleccion }: Pr
               <th className="py-3 px-3 whitespace-nowrap">Promedio normal</th>
               <th className="py-3 px-3 whitespace-nowrap">Diagnóstico</th>
               <th className="py-3 px-3">Acción recomendada para Provincia / Municipio</th>
-              <th className="py-3 px-3 whitespace-nowrap text-right">Expediente Oficial</th>
+              <th className="py-3 px-3 whitespace-nowrap text-right">Informe técnico</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/10">
@@ -281,11 +272,9 @@ export default function PanelDatos({ comunidad, lectura, modo, onSeleccion }: Pr
                             : "bg-[#F59E0B]/15 text-[#F59E0B] border border-[#F59E0B]/40"
                       }`}
                     >
-                      {r.estado === "deficit"
-                        ? `🔴 Déficit (${fmt1(r.pct)}%)`
-                        : r.estado === "superavit_reciente"
-                          ? `🟢 Superávit (+${fmt1(r.pct)}%)`
-                          : `🟡 Normal (+${fmt1(r.pct)}%)`}
+                      {r.estado === "deficit" ? "🔴 Déficit" : r.estado === "superavit_reciente" ? "🟢 Superávit" : "🟡 Normal"}
+                      {r.pctEstado != null &&
+                        ` (${r.pctEstado >= 0 ? "+" : ""}${fmt1(r.pctEstado)}%${r.porTemporada ? " temporada" : ""})`}
                     </span>
                   </td>
                   <td className="py-3 px-3 text-[#F4F1EA]/90">{r.accion}</td>
@@ -294,7 +283,7 @@ export default function PanelDatos({ comunidad, lectura, modo, onSeleccion }: Pr
                       <button
                         onClick={() => r.lectura && descargarPdfExpediente(r.comunidad, r.lectura)}
                         className="inline-flex items-center gap-1 rounded-lg bg-[#F59E0B] hover:bg-[#F59E0B]/90 px-2.5 py-1.5 text-[11px] font-bold text-[#0B0D10] transition cursor-pointer"
-                        title={`Descargar anexo oficial en PDF de ${r.comunidad.nombre}`}
+                        title={`Descargar informe técnico en PDF de ${r.comunidad.nombre}`}
                       >
                         📄 Bajar PDF
                       </button>

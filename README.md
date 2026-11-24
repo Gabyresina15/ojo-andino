@@ -35,7 +35,7 @@ Consultado el **22/11/2026 a la mañana (ART)**:
 - **Último día con dato NASA POWER:** `2026-11-19` (los días 20, 21 y 22 vienen con `fill_value: -999.0`; la demora oficial es de 2–3 días).
 - **Lluvia últimos 30 días con dato (`21/10–19/11/2026`):** **82,09 mm** observados (`PRECTOTCORR`) vs **42,61 mm** de climatología 2001–2025 (`MERRA2`) para esas mismas fechas → **anomalía +92,7 %**.
 - **Temperatura media últimos 7 días con dato (`13–19/11/2026`):** **14,19 °C** vs **11,16 °C** climatología de noviembre (`T2M`).
-- **NDVI MODIS `MOD13Q1` (vía ORNL TESViS, escala `0.0001`):**
+- **NDVI MODIS `MYD13Q1` (vía ORNL TESViS, escala `0.0001`):**
   - Composite `2026-11-01` (`A2026305`): **0,138** (anterior `2026-10-16`: **0,115**).
   - Mismo período 2025 (`2025-11-01`): **0,134** (`2025-10-16`: **0,117**).
 
@@ -83,10 +83,10 @@ El jurado pidió explícitamente **que la gente quiera pagar y que escale**:
 - **Validación:** `zod`
 - **APIs externas:**
   - `NASA POWER` (`/api/temporal/daily/point` y `/api/temporal/climatology/point`, `community=AG`, sin API key)
-  - `ORNL TESViS` (`/rst/api/v1/MOD13Q1/dates` y `/subset`, sin API key)
+  - `ORNL TESViS` (`/rst/api/v1/MYD13Q1/dates` y `/subset`, sin API key)
   - `CelesTrak` (`/NORAD/elements/gp.php?NAME=SAOCOM&FORMAT=TLE`, sin API key)
   - `xAI` (`/v1/chat/completions` con `grok-4.7` y `/v1/tts` con `voice_id: "eve"`, `language: "es-MX"` — siempre en el servidor para proteger `XAI_API_KEY`)
-  - `Supabase REST` (opcional, solo para el contador de tracción en el tren)
+  - `Supabase REST` (opcional): contador de tracción y, con `SUPABASE_SERVICE_ROLE_KEY`, historial del barrido diario (`/api/historial`)
 
 ### Resiliencia ante cortes de Starlink
 1. La UI pinta al instante desde `localStorage` o desde el bundle estático `src/data/cache-lecturas.json`.

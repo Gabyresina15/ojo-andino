@@ -1,5 +1,6 @@
 "use client";
 
+import { jurisdiccionDe } from "@/lib/comunidades";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type { AlertaRespuesta, Comunidad, LecturaSatelital } from "@/lib/types";
@@ -11,10 +12,13 @@ import {
   recomendacionGobierno,
   validarNumeros,
 } from "@/lib/alerta";
-import { estadoHidrico } from "@/lib/lecturas";
+import { corteLectura, estadoHidrico } from "@/lib/lecturas";
+import { cruceTemporada, textoCruce } from "@/lib/cruce";
 import { descargarPdfExpediente } from "@/lib/pdf-expediente";
 import { ChakanaIcon } from "./AndeanMotifs";
-import CompartirParteOficial from "./CompartirParteOficial";
+import CompartirInformeTecnico from "./CompartirInformeTecnico";
+import { PronosticoLluvia } from "./PronosticoLluvia";
+import { ContextoSatelital } from "./ContextoSatelital";
 
 type Props = {
   comunidad: Comunidad;
@@ -23,19 +27,6 @@ type Props = {
 
 const fmt1 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const BARRAS_EQ = [35, 75, 50, 95, 60, 100, 70, 45, 85, 55];
-
-export const JURISDICCION_MUNICIPAL: Record<string, string> = {
-  "susques": "Comisión Municipal de Susques",
-  "abra-pampa": "Municipalidad de Abra Pampa",
-  "la-quiaca": "Municipalidad de La Quiaca",
-  "yavi": "Comisión Municipal de Yavi",
-  "humahuaca": "Municipalidad de Humahuaca",
-  "tilcara": "Municipalidad de Tilcara",
-  "maimara": "Comisión Municipal de Maimará",
-  "purmamarca": "Comisión Municipal de Purmamarca",
-  "tumbaya": "Comisión Municipal de Tumbaya",
-  "volcan": "Comisión Municipal de Volcán",
-};
 
 export default function PanelAlerta({ comunidad, lectura }: Props) {
   const [modoDictamen, setModoDictamen] = useState<"parametrico" | "comunidad">("parametrico");
@@ -88,11 +79,12 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
     fetch("/api/alerta", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: comunidad.id, modo: modoDictamen, lectura }),
+      body: JSON.stringify({ id: comunidad.id, modo: modoDictamen }),
     })
       .then((r) => (r.ok ? r.json() : null))
       .then((data: AlertaRespuesta | null) => {
-        if (!cancelado && data) setAlertaGrok(data);
+        // Si el servidor redactó con otro corte, se queda el dictamen local, que coincide con las cifras en pantalla.
+        if (!cancelado && data && data.corteDatos === corteLectura(lectura)) setAlertaGrok(data);
       })
       .catch(() => {})
       .finally(() => {
@@ -105,11 +97,12 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
 
   const alerta = alertaGrok ?? alertaBase;
   const m = lectura?.meteorologia;
+  const cruce = lectura ? cruceTemporada(lectura) : null;
   const ndvi = lectura?.ndvi;
   const patron = lectura ? calcularPatronDiario(lectura) : null;
   const est = lectura ? estadoHidrico(lectura) : "sin_dato";
-  const jurisdiccion = JURISDICCION_MUNICIPAL[comunidad.id] ?? `Municipio de ${comunidad.nombre}`;
-  const expedienteNro = `EXP-JUJ-2026-${comunidad.id.toUpperCase()}`;
+  const jurisdiccion = jurisdiccionDe(comunidad);
+  const expedienteNro = `OA-${comunidad.id.toUpperCase()}`;
 
   const escucharVoz = async () => {
     if (!alerta) return;
@@ -190,7 +183,7 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
 
   const urlDerivacion = alerta
     ? `https://wa.me/?text=${encodeURIComponent(
-        `*GOBIERNO DE JUJUY · DERIVACIÓN DE EXPEDIENTE ${expedienteNro}*\n*Destino:* ${jurisdiccion}\n\n*Directiva Provincial:* ${accionDirecta}\n\n*Dictamen Técnico:* ${alerta.resumen_oral}\n\n*Expediente completo y serie histórica:* ${
+        `*OJO ANDINO · INFORME TÉCNICO ${expedienteNro}*\n*Para:* ${jurisdiccion}\n\n*Recomendación:* ${accionDirecta}\n\n*Análisis técnico:* ${alerta.resumen_oral}\n\n*Informe completo y serie histórica:* ${
           typeof window !== "undefined" ? `${window.location.origin}/municipio/${comunidad.id}` : ""
         }`,
       )}`
@@ -220,7 +213,7 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
           <p className="text-sm sm:text-base font-medium text-[#F4F1EA]/95">
             🏛️{" "}
             <strong>
-              {modoDictamen === "parametrico" ? "Directiva Provincial → Municipio:" : "Recomendación para el Productor:"}
+              {modoDictamen === "parametrico" ? "Recomendación para el municipio:" : "Recomendación para el Productor:"}
             </strong>{" "}
             {accionDirecta}
           </p>
@@ -241,6 +234,19 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
               {fmt1(m.precipitacionMm30d.porcentaje ?? 0)}%)
               {patron ? ` · Racha seca: ${patron.racha_seca_maxima_dias}d` : ""}
             </div>
+            {m.precipitacionTemporada && (
+              <div className="text-xs text-[#9CA3AF] mt-1">
+                Temporada de lluvias{m.precipitacionTemporada.enCurso ? " (en curso)" : ""}:{" "}
+                <strong>{fmt1(m.precipitacionTemporada.observado)} mm</strong> de {fmt1(m.precipitacionTemporada.climatologia)} mm
+                normales ({(m.precipitacionTemporada.porcentaje ?? 0) >= 0 ? "+" : ""}
+                {fmt1(m.precipitacionTemporada.porcentaje ?? 0)}%)
+              </div>
+            )}
+            {cruce && (
+              <div className={`text-xs mt-1 ${cruce.coincide ? "text-[#9CA3AF]" : "text-[#F59E0B]"}`}>
+                {textoCruce(cruce)}
+              </div>
+            )}
           </div>
 
           <div className="rounded-2xl bg-[#0B0D10]/80 border border-white/10 p-4">
@@ -268,6 +274,10 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
         </div>
       )}
 
+      <PronosticoLluvia comunidadId={comunidad.id} />
+
+      <ContextoSatelital comunidadId={comunidad.id} />
+
       {/* Dictamen Hidrológico con Switch Gobierno vs Productor + Audio xAI TTS + Firewall Numérico */}
       {alerta && (
         <div className="space-y-4">
@@ -282,7 +292,7 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
                       : "text-[#9CA3AF] hover:text-[#F4F1EA]"
                   }`}
                 >
-                  🏛️ Dictamen Gobierno / Municipio
+                  🏛️ Informe Gobierno / Municipio
                 </button>
                 <button
                   onClick={() => setModoDictamen("comunidad")}
@@ -333,7 +343,7 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
                 <ChakanaIcon className="h-3.5 w-3.5 text-[#D95D39]" />
                 <span>
                   {modoDictamen === "parametrico"
-                    ? "Justificación Técnica de Expediente (Régimen de 30 días, racha seca y concentración)"
+                    ? "Justificación técnica (Régimen de 30 días, racha seca y concentración)"
                     : "Traducción directa en voz y texto para productores de la jurisdicción"}
                 </span>
               </span>
@@ -354,7 +364,7 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
               className="min-h-[48px] rounded-2xl bg-[#F59E0B] hover:bg-[#F59E0B]/90 text-[#0B0D10] font-bold text-xs px-4 py-3 transition flex items-center justify-center gap-2 shadow-lg cursor-pointer"
             >
               <span>📄</span>
-              <span>Descargar Anexo Oficial (.PDF)</span>
+              <span>Descargar Informe Técnico (.PDF)</span>
             </button>
 
             <a
@@ -364,10 +374,10 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
               className="min-h-[48px] rounded-2xl bg-[#10B981] hover:bg-[#10B981]/90 text-[#0B0D10] font-bold text-xs px-4 py-3 transition flex items-center justify-center gap-2 shadow-lg"
             >
               <span>📨</span>
-              <span>Derivar Orden al Municipio</span>
+              <span>Enviar recomendación al municipio</span>
             </a>
 
-            <CompartirParteOficial comunidad={comunidad} lectura={lectura} />
+            <CompartirInformeTecnico comunidad={comunidad} lectura={lectura} />
 
             <Link
               href={`/municipio/${comunidad.id}`}

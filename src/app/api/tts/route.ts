@@ -1,10 +1,12 @@
 import { z } from "zod";
+import { excedeLimite } from "@/lib/limite";
 
 export const dynamic = "force-dynamic";
 
 const Body = z.object({ text: z.string().min(1).max(2000) });
 
 export async function POST(req: Request) {
+  if (excedeLimite(req, "tts", 10)) return new Response("demasiados pedidos", { status: 429 });
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return new Response("body inválido", { status: 400 });
   const key = process.env.XAI_API_KEY;
