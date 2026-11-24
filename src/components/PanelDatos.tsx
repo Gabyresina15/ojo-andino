@@ -6,7 +6,6 @@ import type { Comunidad, LecturaSatelital } from "@/lib/types";
 import { COMUNIDADES } from "@/lib/comunidades";
 import { lecturaCacheada } from "@/lib/cache";
 import { anomaliaDelEstado, baseEstado, estadoHidrico, porPrioridad } from "@/lib/lecturas";
-import { recomendacionGobierno } from "@/lib/alerta";
 import { descargarPdfExpediente, descargarPdfProvincialConsolidado } from "@/lib/pdf-expediente";
 
 type Props = {
@@ -197,7 +196,16 @@ export default function PanelDatos({ comunidad, lectura, modo, onSeleccion, lect
     const l = c.id === comunidad.id ? lectura : (lecturas?.[c.id] ?? lecturaCacheada(c.id));
     const p = l?.meteorologia?.precipitacionMm30d;
     const est = l ? estadoHidrico(l) : "sin_dato";
-    const accion = l ? recomendacionGobierno(c, l) : "Sin lectura disponible. Verificar necesidades en campo.";
+    let accion = "Seguimiento municipal habitual";
+    if (est === "sin_dato") {
+      accion = "Verificar en campo antes de asistir";
+    } else if (est === "deficit") {
+      accion = "🚚 Priorizar envío de forraje (alfalfa) y agua";
+    } else if (est === "superavit_reciente" && c.region === "quebrada") {
+      accion = "🚧 Vigilar drenajes urbanos, obras y escorrentía en caminos";
+    } else if (est === "superavit_reciente") {
+      accion = "🌱 Sin emergencia de forraje (esperar rebrote natural)";
+    }
 
     return {
       comunidad: c,
