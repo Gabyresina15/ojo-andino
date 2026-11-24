@@ -2,6 +2,7 @@ import { jsPDF } from "jspdf";
 import type { AlertaRespuesta, Comunidad, LecturaSatelital } from "./types";
 import { COMUNIDADES } from "./comunidades";
 import { lecturaCacheada } from "./cache";
+import { sintesisRegional } from "./sintesis";
 import { alertaDeterminista, calcularPatronDiario, recomendacionGobierno } from "./alerta";
 import { estadoHidrico } from "./lecturas";
 
@@ -355,6 +356,7 @@ export function descargarPdfProvincialConsolidado(lecturas?: Record<string, Lect
     };
   }).sort((a, b) => a.pct - b.pct);
 
+  const sint = sintesisRegional(lecturas);
   let y = 40;
   doc.setFillColor(248, 249, 251);
   doc.setDrawColor(215, 220, 228);
@@ -366,7 +368,7 @@ export function descargarPdfProvincialConsolidado(lecturas?: Record<string, Lect
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
   doc.text(
-    "1 jurisdicción en Déficit Crítico de Forraje/Agua (Susques -78,9%)  |  3 en Rango Normal  |  3 Puna Recuperada  |  3 Quebrada en Alerta Vial/Drenajes.",
+    `${sint.deficit.length} en Déficit de Forraje/Agua${sint.deficit.length ? ` (${sint.deficit.map((f) => `${f.c.nombre} ${fmt1(f.pct)}%`).join(", ")})` : ""}  |  ${sint.normal.length} en Rango Normal  |  ${sint.punaConLluvia.length} Puna con lluvia sobre lo normal  |  ${sint.vial.length} Quebrada en Alerta Vial/Drenajes.`,
     18,
     y + 12,
   );

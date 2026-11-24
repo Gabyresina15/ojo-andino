@@ -10,7 +10,7 @@ const enVuelo = new Map<string, Promise<LecturaSatelital>>();
 /** Lectura obtenida por el servidor: lo que llegó en vivo gana; lo que faltó cae al cache del deploy. */
 export async function lecturaServidor(c: Comunidad): Promise<LecturaSatelital> {
   const m = memoria.get(c.id);
-  if (m && Date.now() - m.t < (m.l.fuenteCache ? TTL_SIN_DATO : TTL)) return m.l;
+  if (m && Date.now() - m.t < (m.l.fuenteCache || !m.l.meteorologia ? TTL_SIN_DATO : TTL)) return m.l;
 
   // Pedidos simultáneos comparten una sola consulta a NASA/ORNL.
   let p = enVuelo.get(c.id);
