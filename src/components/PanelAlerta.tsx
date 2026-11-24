@@ -15,6 +15,7 @@ import {
 import { corteLectura, estadoHidrico } from "@/lib/lecturas";
 import { descargarPdfExpediente } from "@/lib/pdf-expediente";
 import { ChakanaIcon } from "./AndeanMotifs";
+import { PronosticoLluvia } from "./PronosticoLluvia";
 
 type Props = {
   comunidad: Comunidad;
@@ -263,6 +264,8 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
           </div>
         </div>
       )}
+
+      <PronosticoLluvia comunidadId={comunidad.id} />
 
       {/* Dictamen Hidrológico con Switch Gobierno vs Productor + Audio xAI TTS + Firewall Numérico */}
       {alerta && (
