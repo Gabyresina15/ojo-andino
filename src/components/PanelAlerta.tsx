@@ -1,8 +1,8 @@
 "use client";
 
-import { jurisdiccionDe } from "@/lib/comunidades";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
+import { jurisdiccionDe } from "@/lib/comunidades";
 import type { AlertaRespuesta, Comunidad, LecturaSatelital } from "@/lib/types";
 import {
   alertaDeterminista,
@@ -26,6 +26,9 @@ type Props = {
 
 const fmt1 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const BARRAS_EQ = [35, 75, 50, 95, 60, 100, 70, 45, 85, 55];
+const sinSuscripcion = () => () => {};
+const leerOrigen = () => window.location.origin;
+const sinOrigen = () => null;
 
 export default function PanelAlerta({ comunidad, lectura }: Props) {
   const [modoDictamen, setModoDictamen] = useState<"parametrico" | "comunidad">("parametrico");
@@ -34,6 +37,7 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
   const [audioCargando, setAudioCargando] = useState(false);
   const [reproduciendo, setReproduciendo] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const origen = useSyncExternalStore(sinSuscripcion, leerOrigen, sinOrigen);
 
   const alertaBase = useMemo<AlertaRespuesta | null>(() => {
     if (!lectura) return null;
@@ -102,6 +106,7 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
   const est = lectura ? estadoHidrico(lectura) : "sin_dato";
   const jurisdiccion = jurisdiccionDe(comunidad);
   const expedienteNro = `OA-${comunidad.id.toUpperCase()}`;
+  const rutaExpediente = `/municipio/${comunidad.id}`;
 
   const escucharVoz = async () => {
     if (!alerta) return;
@@ -180,13 +185,11 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
         ? "Bajo (inicio de rebrote)"
         : "Bueno (cobertura activa)";
 
-  const urlDerivacion = alerta
+  const urlDerivacion = alerta && origen
     ? `https://wa.me/?text=${encodeURIComponent(
-        `*OJO ANDINO · INFORME TÉCNICO ${expedienteNro}*\n*Para:* ${jurisdiccion}\n\n*Recomendación:* ${accionDirecta}\n\n*Análisis técnico:* ${alerta.resumen_oral}\n\n*Informe completo y serie histórica:* ${
-          typeof window !== "undefined" ? `${window.location.origin}/municipio/${comunidad.id}` : ""
-        }`,
+        `*OJO ANDINO · INFORME TÉCNICO ${expedienteNro}*\n*Para:* ${jurisdiccion}\n\n*Recomendación:* ${accionDirecta}\n\n*Análisis técnico:* ${alerta.resumen_oral}\n\n*Informe completo y serie histórica:* ${origen}${rutaExpediente}`,
       )}`
-    : "#";
+    : undefined;
 
   return (
     <div className="amc-surface-elevated rounded-3xl p-5 sm:p-7 space-y-5 shadow-2xl relative overflow-hidden">
@@ -369,16 +372,18 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
 
             <a
               href={urlDerivacion}
+              role={urlDerivacion ? undefined : "link"}
+              aria-disabled={!urlDerivacion || undefined}
               target="_blank"
               rel="noopener noreferrer"
-              className="min-h-[48px] rounded-2xl bg-[#10B981] hover:bg-[#10B981]/90 text-[#0B0D10] font-bold text-xs px-4 py-3 transition flex items-center justify-center gap-2 shadow-lg"
+              className="min-h-[48px] rounded-2xl bg-[#10B981] hover:bg-[#10B981]/90 text-[#0B0D10] font-bold text-xs px-4 py-3 transition flex items-center justify-center gap-2 shadow-lg aria-disabled:pointer-events-none aria-disabled:opacity-50"
             >
               <span>📨</span>
               <span>Enviar recomendación al municipio</span>
             </a>
 
             <Link
-              href={`/municipio/${comunidad.id}`}
+              href={rutaExpediente}
               className="min-h-[48px] rounded-2xl bg-[#D95D39] hover:bg-[#D95D39]/90 text-[#F4F1EA] font-bold text-xs px-4 py-3 transition flex items-center justify-center gap-2 shadow-lg"
             >
               <span>📂</span>
