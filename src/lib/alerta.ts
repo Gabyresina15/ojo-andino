@@ -203,6 +203,9 @@ const RE_FECHA_CORTA = /\b(\d{1,2})\/(\d{1,2})\b/g;
 const KW_PICO = /pico|máximo diario|más fuerte|en 24 ?h/gi;
 const KW_SEMANA = /últim[oa]s? 7 días|últim[oa] semana|en 7 días/gi;
 
+const NUM = String.raw`(?<![\d.,])(\d+(?:[.,]\d+)?)`;
+const KW_SEMANA_DESPUES = /^[^.;,\d]{0,15}?(últim[oa]s? 7 días|últim[oa] semana)/i;
+
 const aNum = (s: string) => Number(s.replace(",", "."));
 const coincide = (n: number, ref: number) => Math.abs(n - ref) <= Math.max(0.11, Math.abs(ref) * 0.015);
 const ddmmDe = (d: number, m: number) => `${String(d).padStart(2, "0")}/${String(m).padStart(2, "0")}`;
@@ -268,17 +271,20 @@ export function validarAfirmaciones(texto: string, payload: unknown): string[] {
   if (lluvia || pat) {
     const refs = [lluvia?.observado_mm, lluvia?.climatologia_mm, pat?.lluvia_ultimos_7d_mm, pat?.pico_maximo_mm, 1].filter(esNumero);
     let corte = 0;
-    for (const m of texto.matchAll(/(\d+(?:,\d+)?)\s?mm\b/g)) {
+    for (const m of texto.matchAll(new RegExp(`${NUM}\\s?mm\\b`, "g"))) {
       const ini = m.index;
       const fin = ini + m[0].length;
       const seg = texto.slice(Math.max(corte, inicioOracion(texto, ini)), ini);
-      corte = fin;
+      const semanaDespues = texto.slice(fin).match(KW_SEMANA_DESPUES);
+      corte = fin + (semanaDespues?.[0].length ?? 0);
       const n = aNum(m[1]);
       const pPico = ultimaPosicion(seg, KW_PICO);
-      const pSemana = ultimaPosicion(seg, KW_SEMANA);
+      const pSemana = semanaDespues ? Infinity : ultimaPosicion(seg, KW_SEMANA);
       if (pat && pPico > pSemana) {
         if (!coincide(n, pat.pico_maximo_mm)) errores.push(`pico de ${m[0]} (dato: ${pat.pico_maximo_mm} mm)`);
-        const fecha = [...texto.slice(fin, fin + 25).matchAll(new RegExp(`${RE_FECHA_LARGA.source}|${RE_FECHA_CORTA.source}`, "gi"))][0];
+        const cola = texto.slice(fin, fin + 25);
+        const finOracion = cola.search(/[.;!?](\s|$)|\d+(?:[.,]\d+)?\s?mm\b/);
+        const fecha = [...cola.slice(0, finOracion < 0 ? undefined : finOracion).matchAll(new RegExp(`${RE_FECHA_LARGA.source}|${RE_FECHA_CORTA.source}`, "gi"))][0];
         if (fecha) {
           const f = fecha[1] ? fechaDe(fecha[1], fecha[2]) : fechaDe(fecha[3], fecha[4]);
           if (f !== pat.pico_maximo_dia) errores.push(`pico el ${fecha[0]} (dato: ${pat.pico_maximo_dia})`);
@@ -293,7 +299,7 @@ export function validarAfirmaciones(texto: string, payload: unknown): string[] {
 
   if (temp) {
     const refs = [temp.diferencia_termica_c, temp.media_7d_c, temp.climatologia_mes_c].filter(esNumero);
-    for (const m of texto.matchAll(/(\d+(?:,\d+)?)\s?(?:°\s?C|grados)/g)) {
+    for (const m of texto.matchAll(new RegExp(`${NUM}\\s?(?:°\\s?C|grados)`, "g"))) {
       if (!refs.some((r) => coincide(aNum(m[1]), r))) errores.push(`${m[0]} no corresponde a la temperatura de la fuente`);
     }
   }
@@ -301,14 +307,14 @@ export function validarAfirmaciones(texto: string, payload: unknown): string[] {
   const refsPct = [lluvia?.anomalia_pct, pat?.concentracion_pico_pct, ndvi?.variacion_vs_anterior_pct, 25]
     .filter(esNumero)
     .map(Math.abs);
-  for (const m of texto.matchAll(/(\d+(?:,\d+)?)\s?%/g)) {
+  for (const m of texto.matchAll(new RegExp(`${NUM}\\s?%`, "g"))) {
     const n = aNum(m[1]);
     if (!refsPct.some((r) => coincide(n, r) || Math.round(r) === n)) errores.push(`${m[0]} no corresponde a ningún porcentaje de la fuente`);
   }
 
   if (ndvi) {
     const refs = [ndvi.ultimo, ndvi.anterior, ndvi.mismo_periodo_anio_anterior].map((c) => c?.ndvi).filter(esNumero);
-    for (const m of texto.matchAll(/\b0,(\d{2,3})\b/g)) {
+    for (const m of texto.matchAll(/(?<![\d.,])0[.,](\d{2,3})(?![\d.,]*\d)/g)) {
       const dec = m[1].length;
       const n = aNum(m[0]);
       if (!refs.some((r) => Math.abs(Number(r.toFixed(dec)) - n) < 1e-9)) errores.push(`índice verde ${m[0]} no corresponde al NDVI de la fuente`);

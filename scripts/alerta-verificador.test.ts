@@ -45,3 +45,28 @@ test("el redactor determinista pasa su propia verificación en todos los municip
     }
   }
 });
+
+test("acepta decimales con punto", () => {
+  const texto = REAL.replace("2,3 mm", "2.3 mm").replace("2,9 °C", "2.9 °C").replace("0,083", "0.083");
+  assert.deepEqual(validarNumeros(texto, payload).noVerificados, []);
+});
+
+test("rechaza decimales con punto falsos", () => {
+  assert.ok(validarNumeros(REAL.replace("2,3 mm", "8.7 mm"), payload).noVerificados.length > 0);
+});
+
+test("la ventana de 7 días escrita después del monto no contamina al monto siguiente", () => {
+  const ok = "Llegaron 2,5 mm en los últimos 7 días y 8,7 mm en el último mes.";
+  assert.deepEqual(validarNumeros(ok, payload).noVerificados, []);
+  assert.ok(validarNumeros(ok.replace("2,5 mm", "4,5 mm"), payload).noVerificados.length > 0);
+});
+
+test("una fecha en la oración siguiente no se toma como fecha del pico", () => {
+  const pico = payload.patron_diario!.pico_maximo_dia;
+  const otra = [...JSON.stringify(payload).matchAll(/\d{4}-(\d{2})-(\d{2})/g)]
+    .map((m) => `${m[2]}/${m[1]}`)
+    .find((f) => f !== pico);
+  assert.ok(otra, "el payload debería tener otra fecha además del pico");
+  const texto = `El pico más fuerte fue de 2,3 mm. Al ${otra} no hubo más lluvias.`;
+  assert.deepEqual(validarNumeros(texto, payload).noVerificados, []);
+});
