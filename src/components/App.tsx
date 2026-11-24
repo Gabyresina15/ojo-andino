@@ -5,6 +5,9 @@ import dynamic from "next/dynamic";
 import { COMUNIDADES, CENTRO_JUJUY, getComunidad } from "@/lib/comunidades";
 import type { LecturaSatelital } from "@/lib/types";
 import { lecturaCacheada } from "@/lib/cache";
+import { lecturaMasReciente } from "@/lib/lectura-reciente";
+import { simularPriorizacion } from "@/lib/priorizacion";
+import SimuladorPriorizacion from "./SimuladorPriorizacion";
 import { nombres, sintesisRegional } from "@/lib/sintesis";
 import RadarOrbital, { type RadarSnapshot } from "./RadarOrbital";
 import PanelDatos from "./PanelDatos";
@@ -74,7 +77,7 @@ export default function App() {
 
   const cacheada = useMemo(() => {
     const local = montado ? leerLocal(seleccion) : null;
-    return local ? { ...local, fuenteCache: true } : lecturaCacheada(seleccion);
+    return lecturaMasReciente(local, lecturaCacheada(seleccion));
   }, [seleccion, montado]);
   const lectura = vivas[seleccion] ?? cacheada;
   const cargando = terminada !== seleccion;
@@ -125,16 +128,23 @@ export default function App() {
     const r: Record<string, LecturaSatelital> = {};
     for (const c of COMUNIDADES) {
       const local = montado ? leerLocal(c.id) : null;
-      const l = vivas[c.id] ?? (local ? { ...local, fuenteCache: true } : null);
+      const l = vivas[c.id] ?? lecturaMasReciente(local, lecturaCacheada(c.id));
       if (l) r[c.id] = l;
     }
     return r;
   }, [vivas, montado]);
   const sint = useMemo(() => sintesisRegional({ ...regionales, [seleccion]: lectura }), [regionales, seleccion, lectura]);
-  const punaEnDeficit = sint.deficit.filter((f) => f.c.region === "puna");
 
   const pueblosPuna = COMUNIDADES.filter((c) => c.region === "puna");
   const pueblosQuebrada = COMUNIDADES.filter((c) => c.region === "quebrada");
+  const nodosPuna = useMemo(
+    () => COMUNIDADES.filter((comunidad) => comunidad.region === "puna").map((comunidad) => ({
+      comunidad,
+      lectura: regionales[comunidad.id] ?? null,
+    })),
+    [regionales],
+  );
+  const priorizacion = simularPriorizacion(nodosPuna, 40);
 
   return (
     <div className="min-h-screen amc-grid-bg text-[#F4F1EA]">
@@ -232,17 +242,19 @@ export default function App() {
               </div>
             </button>
 
-            <div className="amc-surface rounded-2xl p-3.5 text-left border border-[#F59E0B]/30">
-              <div className="text-[11px] font-mono uppercase text-[#F59E0B] font-bold">🚚 Puna sin déficit</div>
+            <a
+              href="#simulador-priorizacion"
+              className="amc-surface rounded-2xl p-3.5 text-left border border-[#F59E0B]/30 hover:border-[#F59E0B]/60 transition cursor-pointer"
+            >
+              <div className="text-[11px] font-mono uppercase text-[#F59E0B] font-bold">🚚 Eficiencia Logística Puna</div>
               <div className="font-display text-xl font-extrabold text-[#F59E0B] mt-0.5">
-                {sint.punaSinDeficit} de {sint.punaTotal} localidades
+                {priorizacion.porcentajeReasignable.toLocaleString("es-AR", { maximumFractionDigits: 1 })}% fletes reasignables
               </div>
               <div className="text-xs text-[#9CA3AF] mt-0.5">
-                {punaEnDeficit.length
-                  ? `Concentrar el envío de forraje en ${nombres(punaEnDeficit)}`
-                  : "Ninguna localidad puneña en déficit"}
+                {priorizacion.nodosRecuperados} de {priorizacion.nodosConDato} nodos puneños con dato recuperados;{" "}
+                <span className="text-[#F59E0B] whitespace-nowrap">Ver simulador ↓</span>
               </div>
-            </div>
+            </a>
           </div>
         </section>
 
@@ -371,6 +383,10 @@ export default function App() {
           )}
 
           {tabDetalle === "cultura" && <FichaCultural comunidad={comunidad} />}
+        </section>
+
+        <section id="simulador-priorizacion" className="scroll-mt-20" aria-label="Gestión logística provincial">
+          <SimuladorPriorizacion nodos={nodosPuna} onSeleccion={setSeleccion} />
         </section>
       </main>
 
