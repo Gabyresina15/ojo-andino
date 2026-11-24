@@ -22,6 +22,21 @@ type Props = {
 
 const HORAS_BUSQUEDA = 36;
 const ELEV_MINIMA = 10;
+const MARGEN_PASADA_MS = 15 * 60 * 1000;
+
+type SatTle = ReturnType<typeof parseTle>[number];
+
+/** Primera pasada que todavía no terminó. Arranca antes de `base` para no perder una pasada en curso que ya bajó de la elevación mínima. */
+function pasadaVigente(s: SatTle, base: Date, o: Observador): Pasada | null {
+  let desde = new Date(base.getTime() - MARGEN_PASADA_MS);
+  for (let i = 0; i < 3; i++) {
+    const p = proximaPasada(s, desde, o, HORAS_BUSQUEDA, ELEV_MINIMA);
+    if (!p || p.fin.getTime() >= base.getTime()) return p;
+    desde = new Date(p.fin.getTime() + 20_000);
+  }
+  return null;
+}
+
 const fechaHora = (d: Date) =>
   d.toLocaleString("es-AR", {
     timeZone: "America/Argentina/Jujuy",
@@ -69,7 +84,7 @@ export default function RadarOrbital({ observador, onSnapshot, seleccion, onSele
     if (!sats.length) return null;
     const base = new Date();
     const pasadas = sats
-      .map((s) => proximaPasada(s, base, observador, HORAS_BUSQUEDA, ELEV_MINIMA))
+      .map((s) => pasadaVigente(s, base, observador))
       .filter((p): p is Pasada => !!p)
       .sort((a, b) => a.inicio.getTime() - b.inicio.getTime());
     return pasadas[0] ?? null;
@@ -83,7 +98,7 @@ export default function RadarOrbital({ observador, onSnapshot, seleccion, onSele
     return COMUNIDADES.map((c) => {
       const o = { lat: c.lat, lon: c.lon, altKm: CENTRO_JUJUY.altKm };
       const p = sats
-        .map((s) => proximaPasada(s, base, o, HORAS_BUSQUEDA, ELEV_MINIMA))
+        .map((s) => pasadaVigente(s, base, o))
         .filter((x): x is Pasada => !!x)
         .sort((a, b) => a.inicio.getTime() - b.inicio.getTime())[0];
       return { id: c.id, nombre: c.nombre, pasada: p ?? null };
