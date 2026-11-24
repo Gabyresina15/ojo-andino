@@ -357,6 +357,10 @@ export function recomendacionGobierno(c: Comunidad, l: LecturaSatelital): string
     return `Priorizar a ${c.nombre} en la asignación provincial de camiones de forraje (alfalfa) y asistencia de agua para productores.`;
   }
   if (est === "superavit_reciente" && c.region === "puna") {
+    const t = l.meteorologia?.precipitacionTemporada;
+    if (t && !t.enCurso && t.porcentaje !== null && t.porcentaje <= UMBRAL_TEMPORADA_PCT) {
+      return `Lluvia reciente sobre lo normal, pero la última temporada de lluvias cerró en déficit: verificar en campo antes de decidir envíos de forraje.`;
+    }
     return `No requiere envío de forraje de emergencia esta semana: las lluvias recientes permiten esperar el rebrote natural y reasignar fletes a zonas deficitarias.`;
   }
   if (est === "superavit_reciente" && c.region === "quebrada") {

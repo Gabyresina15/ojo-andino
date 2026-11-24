@@ -353,6 +353,7 @@ export function descargarPdfProvincialConsolidado(lecturas?: Record<string, Lect
       rachaSeca: pat?.racha_seca_maxima_dias ?? 0,
       pico24h: pat?.pico_maximo_mm ?? 0,
       ndvi: l?.ndvi?.ultimoComposite.ndvi ?? 0,
+      ndviFecha: l?.ndvi?.ultimoComposite.fecha ?? null,
       est,
       accion: l ? recomendacionGobierno(c, l) : "",
     };
@@ -373,7 +374,13 @@ export function descargarPdfProvincialConsolidado(lecturas?: Record<string, Lect
         .map((n) => productoNdvi(n)),
     ),
   ];
-  doc.text(`Fuentes: NASA POWER (climatología 2001–2025) y MODIS ${productos.join(" / ") || "MYD13Q1"} 250m`, 14, 29.5);
+  const fechasNdvi = [...new Set(filas.map((f) => f.ndviFecha).filter((d): d is string => !!d))].sort();
+  const textoNdvi = !fechasNdvi.length
+    ? ""
+    : fechasNdvi.length === 1
+      ? `  |  NDVI: período de 16 días desde el ${fechaCorta(fechasNdvi[0])}`
+      : `  |  NDVI: períodos de 16 días desde el ${fechaCorta(fechasNdvi[0])} al ${fechaCorta(fechasNdvi[fechasNdvi.length - 1])}`;
+  doc.text(`Fuentes: NASA POWER (climatología 2001–2025) y MODIS ${productos.join(" / ") || "MYD13Q1"} 250m${textoNdvi}`, 14, 29.5);
 
   const sint = sintesisRegional(lecturas);
   doc.setFontSize(8);
@@ -389,7 +396,7 @@ export function descargarPdfProvincialConsolidado(lecturas?: Record<string, Lect
   doc.setTextColor(25, 30, 40);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8.5);
-  doc.text("SÍNTESIS EJECUTIVA PARA ASIGNACIÓN PRESUPUESTARIA Y LOGÍSTICA:", 18, y + 6);
+  doc.text("SÍNTESIS DEL ESTADO POR LOCALIDAD:", 18, y + 6);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
   doc.text(lineasSintesis, 18, y + 12);
@@ -463,12 +470,24 @@ export function descargarPdfProvincialConsolidado(lecturas?: Record<string, Lect
     doc.text(textoAccion, 16, fy + 14);
   });
 
+  // Localidades vecinas caen en la misma celda de NASA POWER y traen la misma lluvia: se avisa para que no parezca un error.
+  const porCelda = new Map<string, string[]>();
+  for (const f of filas) {
+    if (!f.corte) continue;
+    const k = `${f.obs}|${f.clim}|${f.pct}|${f.temporadaPct}`;
+    porCelda.set(k, [...(porCelda.get(k) ?? []), f.c.nombre]);
+  }
+  const grupos = [...porCelda.values()].filter((g) => g.length > 1).map((g) => g.join(", "));
+  const notaCeldas = grupos.length
+    ? ` Lluvia idéntica entre localidades vecinas (${grupos.join("; ")}): comparten la misma celda de la grilla de NASA POWER (0,5° × 0,625°).`
+    : "";
+
   doc.setFont("helvetica", "normal");
   doc.setFontSize(6.8);
   doc.setTextColor(95, 102, 114);
   doc.text(
     doc.splitTextToSize(
-      `TEMPORADA: lluvia acumulada de la última temporada de lluvias completa (1/12 al 30/4) frente a lo normal.${filas.some((f) => f.temporadaEnCurso) ? " * Temporada en curso: acumulado parcial desde el 1/12 hasta la fecha de corte, frente a lo normal de esos mismos días." : ""} En negrita, el desvío que decide el estado: el de temporada cuando la normal de 30 días es menor a ${PISO_NORMAL_30D_MM} mm (época seca); si no, el de 30 días. Umbrales provisorios, sin calibrar.`,
+      `TEMPORADA: lluvia acumulada de la última temporada de lluvias completa (1/12 al 30/4) frente a lo normal.${filas.some((f) => f.temporadaEnCurso) ? " * Temporada en curso: acumulado parcial desde el 1/12 hasta la fecha de corte, frente a lo normal de esos mismos días." : ""} En negrita, el desvío que decide el estado: el de temporada cuando la normal de 30 días es menor a ${PISO_NORMAL_30D_MM} mm (época seca); si no, el de 30 días. Umbrales provisorios, sin calibrar.${notaCeldas}`,
       182,
     ),
     14,
