@@ -11,7 +11,7 @@ import {
   recomendacionGobierno,
   validarNumeros,
 } from "@/lib/alerta";
-import { estadoHidrico } from "@/lib/lecturas";
+import { corteLectura, estadoHidrico } from "@/lib/lecturas";
 import { descargarPdfExpediente } from "@/lib/pdf-expediente";
 import { ChakanaIcon } from "./AndeanMotifs";
 
@@ -87,11 +87,12 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
     fetch("/api/alerta", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: comunidad.id, modo: modoDictamen, lectura }),
+      body: JSON.stringify({ id: comunidad.id, modo: modoDictamen }),
     })
       .then((r) => (r.ok ? r.json() : null))
       .then((data: AlertaRespuesta | null) => {
-        if (!cancelado && data) setAlertaGrok(data);
+        // Si el servidor redactó con otro corte, se queda el dictamen local, que coincide con las cifras en pantalla.
+        if (!cancelado && data && data.corteDatos === corteLectura(lectura)) setAlertaGrok(data);
       })
       .catch(() => {})
       .finally(() => {

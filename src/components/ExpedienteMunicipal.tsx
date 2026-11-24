@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { AlertaRespuesta, Comunidad, LecturaSatelital } from "@/lib/types";
 import { lecturaCacheada } from "@/lib/cache";
-import { estadoHidrico } from "@/lib/lecturas";
+import { corteLectura, estadoHidrico } from "@/lib/lecturas";
 import { alertaDeterminista, payloadUsuario, recomendacionGobierno, validarNumeros } from "@/lib/alerta";
 import { descargarPdfExpediente } from "@/lib/pdf-expediente";
 import { JURISDICCION_MUNICIPAL } from "./PanelAlerta";
@@ -50,11 +50,11 @@ export default function ExpedienteMunicipal({ comunidad }: { comunidad: Comunida
     fetch("/api/alerta", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: comunidad.id, modo: "comunidad", lectura }),
+      body: JSON.stringify({ id: comunidad.id, modo: "comunidad" }),
     })
       .then((r) => (r.ok ? r.json() : null))
       .then((a: AlertaRespuesta | null) => {
-        if (a) setAlertaGrok(a);
+        setAlertaGrok(a && a.corteDatos === corteLectura(lectura) ? a : null);
       })
       .catch(() => {});
   }, [comunidad.id, lectura]);
