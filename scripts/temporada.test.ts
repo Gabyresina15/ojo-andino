@@ -135,11 +135,15 @@ test("un texto de Grok que descarta forraje con la temporada cerrada en déficit
     "No se requiere envío de forraje esta semana.",
     "Conviene reasignar los fletes a otras zonas.",
     "Se puede esperar el rebrote natural del pastizal.",
+    "No es necesario enviar forraje.",
+    "El envío de fardos resulta innecesario.",
   ]) {
     assert.ok(validarNumeros(t, payload).noVerificados.length > 0, t);
   }
-  const det = alertaDeterminista(c, l, "parametrico");
-  assert.deepEqual(validarNumeros(`${det.resumen_oral} ${det.nota_parametrica}`, payload).noVerificados, []);
+  for (const modo of ["parametrico", "comunidad"] as const) {
+    const det = alertaDeterminista(c, l, modo);
+    assert.deepEqual(validarNumeros(`${det.resumen_oral} ${det.nota_parametrica}`, payloadUsuario(c, l, modo)).noVerificados, []);
+  }
   m.precipitacionTemporada = { ...m.precipitacionTemporada!, porcentaje: -5 };
   assert.deepEqual(validarNumeros("Conviene reasignar los fletes a otras zonas.", payloadUsuario(c, l, "parametrico")).noVerificados, []);
 });

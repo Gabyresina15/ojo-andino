@@ -215,7 +215,7 @@ const RE_FECHA_LARGA = new RegExp(`\\b(\\d{1,2}) de (${MESES_ES.join("|")})\\b`,
 const RE_FECHA_CORTA = /\b(\d{1,2})\/(\d{1,2})\b/g;
 /** Frases que descartan el envío de forraje; no valen si la última temporada de lluvias cerró en déficit. */
 const RE_DESCARTA_FORRAJE =
-  /no (?:se )?(?:requiere|necesita|hace falta|justifica)[^.;]{0,40}(?:forraje|fardos|alfalfa|flete|asistencia)|reasignar[^.;]{0,25}(?:fletes|camiones|forraje|fardos)|(?:evitar|sin)[^.;]{0,40}(?:fardos|forraje)[^.;]{0,15}(?:de )?emergencia|gasto innecesario|esperar (?:el|al) rebrote/i;
+  /no (?:se )?(?:requiere|necesita|hace falta|justifica|es necesari[oa]|conviene|corresponde)[^.;]{0,40}(?:forraje|fardos|alfalfa|flete|asistencia)|reasignar[^.;]{0,25}(?:fletes|camiones|forraje|fardos)|(?:evitar|sin)[^.;]{0,40}(?:fardos|forraje)[^.;]{0,15}(?:de )?emergencia|gasto innecesario|innecesari[oa]s?[^.;]{0,25}(?:forraje|fardos|alfalfa|flete|asistencia)|(?:forraje|fardos|alfalfa|fletes?|asistencia)[^.;]{0,25}innecesari[oa]s?|esperar (?:el|al) rebrote/i;
 const KW_PICO = /pico|máximo diario|más fuerte|en 24 ?h/gi;
 const KW_SEMANA = /últim[oa]s? 7 días|últim[oa] semana|en 7 días/gi;
 
