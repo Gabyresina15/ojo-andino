@@ -10,7 +10,9 @@ export function excedeLimite(req: Request, clave: string, max: number, ventanaMs
   const ahora = Date.now();
   const v = ventanas.get(k);
   if (!v || ahora - v.inicio >= ventanaMs) {
-    if (ventanas.size > 5000) ventanas.clear();
+    if (ventanas.size > 5000) {
+      for (const [k2, v2] of ventanas) if (ahora - v2.inicio >= ventanaMs) ventanas.delete(k2);
+    }
     ventanas.set(k, { inicio: ahora, n: 1 });
     return false;
   }
