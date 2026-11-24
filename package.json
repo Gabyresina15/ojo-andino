@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "precache": "tsx scripts/precache.ts",
+    "chirps": "tsx scripts/chirps-temporadas.ts",
+    "backtest": "tsx scripts/backtest.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

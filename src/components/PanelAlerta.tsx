@@ -13,8 +13,11 @@ import {
   validarNumeros,
 } from "@/lib/alerta";
 import { corteLectura, estadoHidrico } from "@/lib/lecturas";
+import { cruceTemporada, textoCruce } from "@/lib/cruce";
 import { descargarPdfExpediente } from "@/lib/pdf-expediente";
 import { ChakanaIcon } from "./AndeanMotifs";
+import { PronosticoLluvia } from "./PronosticoLluvia";
+import { ContextoSatelital } from "./ContextoSatelital";
 
 type Props = {
   comunidad: Comunidad;
@@ -93,6 +96,7 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
 
   const alerta = alertaGrok ?? alertaBase;
   const m = lectura?.meteorologia;
+  const cruce = lectura ? cruceTemporada(lectura) : null;
   const ndvi = lectura?.ndvi;
   const patron = lectura ? calcularPatronDiario(lectura) : null;
   const est = lectura ? estadoHidrico(lectura) : "sin_dato";
@@ -237,6 +241,11 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
                 {fmt1(m.precipitacionTemporada.porcentaje ?? 0)}%)
               </div>
             )}
+            {cruce && (
+              <div className={`text-xs mt-1 ${cruce.coincide ? "text-[#9CA3AF]" : "text-[#F59E0B]"}`}>
+                {textoCruce(cruce)}
+              </div>
+            )}
           </div>
 
           <div className="rounded-2xl bg-[#0B0D10]/80 border border-white/10 p-4">
@@ -263,6 +272,10 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
           </div>
         </div>
       )}
+
+      <PronosticoLluvia comunidadId={comunidad.id} />
+
+      <ContextoSatelital comunidadId={comunidad.id} />
 
       {/* Dictamen Hidrológico con Switch Gobierno vs Productor + Audio xAI TTS + Firewall Numérico */}
       {alerta && (

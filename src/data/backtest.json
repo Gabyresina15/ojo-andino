@@ -1,0 +1,129 @@
+{
+ "generadoEn": "2026-11-24T20:00:25.755Z",
+ "evento": {
+  "fecha": "2026-09-23",
+  "descripcion": "Entrega de alfalfa de la Provincia en los cinco departamentos puneños por sequía"
+ },
+ "umbrales": {
+  "temporadaPct": -20,
+  "lluvia30dPct": 25
+ },
+ "fuentes": {
+  "coordenadas": "Base de Asentamientos Humanos de la República Argentina (BAHRA), IGN/INDEC, vía WFS del IGN",
+  "lluvia": "NASA POWER (PRECTOTCORR), serie hasta la fecha del evento",
+  "segundaFuente": "CHIRPS (Climate Hazards Center, UCSB) vía ClimateSERV, celda de ~5 km"
+ },
+ "nota": "temporadaNasaPct: desvío frente a la climatología mensual de NASA POWER, como en el tablero. chirpsPct, temporadaAnterior y correlacionTemporadas: totales del 1/12 al 30/4 frente al promedio 2001–2025 de cada fuente.",
+ "filas": [
+  {
+   "lugar": "Abra Pampa",
+   "departamento": "Cochinoca",
+   "codBahra": "38007020",
+   "lat": -22.722692,
+   "lon": -65.697039,
+   "corteDatos": "2026-09-23",
+   "lluvia30d": {
+    "observado": 12.18,
+    "normal": 6.15,
+    "porcentaje": 98
+   },
+   "estadoRegla30d": "superavit_reciente",
+   "temporadaNasaPct": -21,
+   "estadoReglaActual": "deficit",
+   "chirpsPct": -7.2,
+   "temporadaAnterior": {
+    "nasaPct": -30.7,
+    "chirpsPct": -16.1
+   },
+   "correlacionTemporadas": 0.49
+  },
+  {
+   "lugar": "Susques",
+   "departamento": "Susques",
+   "codBahra": "38084100",
+   "lat": -23.397541,
+   "lon": -66.367351,
+   "corteDatos": "2026-09-23",
+   "lluvia30d": {
+    "observado": 7.43,
+    "normal": 4.38,
+    "porcentaje": 69.6
+   },
+   "estadoRegla30d": "superavit_reciente",
+   "temporadaNasaPct": -10.6,
+   "estadoReglaActual": "normal",
+   "chirpsPct": -0.2,
+   "temporadaAnterior": {
+    "nasaPct": -34.5,
+    "chirpsPct": -13.5
+   },
+   "correlacionTemporadas": 0.38
+  },
+  {
+   "lugar": "La Quiaca",
+   "departamento": "Yavi",
+   "codBahra": "38112050",
+   "lat": -22.104452,
+   "lon": -65.596373,
+   "corteDatos": "2026-09-23",
+   "lluvia30d": {
+    "observado": 12.53,
+    "normal": 5.16,
+    "porcentaje": 142.8
+   },
+   "estadoRegla30d": "superavit_reciente",
+   "temporadaNasaPct": -24.3,
+   "estadoReglaActual": "deficit",
+   "chirpsPct": -8.1,
+   "temporadaAnterior": {
+    "nasaPct": -28.5,
+    "chirpsPct": -24.3
+   },
+   "correlacionTemporadas": 0.48
+  },
+  {
+   "lugar": "Santa Catalina",
+   "departamento": "Santa Catalina",
+   "codBahra": "38077100",
+   "lat": -21.947109,
+   "lon": -66.051768,
+   "corteDatos": "2026-09-23",
+   "lluvia30d": {
+    "observado": 11.32,
+    "normal": 3.48,
+    "porcentaje": 225.3
+   },
+   "estadoRegla30d": "superavit_reciente",
+   "temporadaNasaPct": -38.5,
+   "estadoReglaActual": "deficit",
+   "chirpsPct": -6.1,
+   "temporadaAnterior": {
+    "nasaPct": -36.3,
+    "chirpsPct": -25.9
+   },
+   "correlacionTemporadas": 0.73
+  },
+  {
+   "lugar": "Rinconada",
+   "departamento": "Rinconada",
+   "codBahra": "38049040",
+   "lat": -22.4407,
+   "lon": -66.167151,
+   "corteDatos": "2026-09-23",
+   "lluvia30d": {
+    "observado": 14.39,
+    "normal": 4.24,
+    "porcentaje": 239.4
+   },
+   "estadoRegla30d": "superavit_reciente",
+   "temporadaNasaPct": -23.8,
+   "estadoReglaActual": "deficit",
+   "chirpsPct": -12.5,
+   "temporadaAnterior": {
+    "nasaPct": -33.2,
+    "chirpsPct": -25.5
+   },
+   "correlacionTemporadas": 0.64
+  }
+ ]
+}
