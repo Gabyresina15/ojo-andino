@@ -51,22 +51,28 @@ async function serieDiaria(lat: number, lon: number, desde: string, hasta: strin
   );
 }
 
-async function main() {
-  const hasta = Number(process.argv[2] ?? new Date().getUTCFullYear());
+/** mm de cada temporada de lluvias (1/12 al 30/4) desde 2001; la clave es el año en que termina. */
+export async function temporadasChirps(lat: number, lon: number, hasta: number): Promise<Record<string, number>> {
   const tramos = [
     ["12/01/2000", "04/30/2009"],
     ["05/01/2009", "04/30/2018"],
     ["05/01/2018", `04/30/${hasta}`],
   ];
+  const serie: Record<string, number> = {};
+  for (const [a, b] of tramos) Object.assign(serie, await serieDiaria(lat, lon, a, b));
+  const out: Record<string, number> = {};
+  for (let anio = 2001; anio <= hasta; anio++) {
+    const dias = Object.entries(serie).filter(([f, v]) => f >= `${anio - 1}1201` && f <= `${anio}0430` && v >= 0);
+    if (dias.length >= MIN_DIAS) out[anio] = Math.round(dias.reduce((s, [, v]) => s + v, 0) * 10) / 10;
+  }
+  return out;
+}
+
+async function main() {
+  const hasta = Number(process.argv[2] ?? new Date().getUTCFullYear());
   const temporadas: Record<string, Record<string, number>> = {};
   for (const c of COMUNIDADES) {
-    const serie: Record<string, number> = {};
-    for (const [a, b] of tramos) Object.assign(serie, await serieDiaria(c.lat, c.lon, a, b));
-    temporadas[c.id] = {};
-    for (let anio = 2001; anio <= hasta; anio++) {
-      const dias = Object.entries(serie).filter(([f, v]) => f >= `${anio - 1}1201` && f <= `${anio}0430` && v >= 0);
-      if (dias.length >= MIN_DIAS) temporadas[c.id][anio] = Math.round(dias.reduce((s, [, v]) => s + v, 0) * 10) / 10;
-    }
+    temporadas[c.id] = await temporadasChirps(c.lat, c.lon, hasta);
     console.log(c.id, Object.keys(temporadas[c.id]).length, "temporadas; última:", temporadas[c.id][hasta] ?? "sin dato");
   }
   writeFileSync(
@@ -84,7 +90,7 @@ async function main() {
   );
 }
 
-main().catch((e) => {
+if (process.argv[1]?.endsWith("chirps-temporadas.ts")) main().catch((e) => {
   console.error(e);
   process.exit(1);
 });
