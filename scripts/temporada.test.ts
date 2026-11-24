@@ -104,3 +104,18 @@ test("el cruce con CHIRPS solo aplica a temporadas cerradas y dice si coincide c
   enCurso.meteorologia!.precipitacionTemporada!.enCurso = true;
   assert.equal(cruceTemporada(enCurso), null);
 });
+
+test("Puna con lluvia reciente y temporada cerrada en déficit: el texto y la recomendación piden verificar, no reasignar fletes", async () => {
+  const { lecturaCacheada } = await import("../src/lib/cache");
+  const { COMUNIDADES } = await import("../src/lib/comunidades");
+  const c = COMUNIDADES.find((x) => x.id === "abra-pampa")!;
+  const l = structuredClone(lecturaCacheada("abra-pampa")!);
+  const m = l.meteorologia!;
+  m.precipitacionMm30d = { ...m.precipitacionMm30d, observado: 80, climatologia: 40, porcentaje: 100 };
+  m.precipitacionTemporada = { ...m.precipitacionTemporada!, enCurso: false, porcentaje: -21 };
+  const det = alertaDeterminista(c, l, "parametrico");
+  assert.match(det.resumen_oral, /verificar en campo/);
+  assert.doesNotMatch(det.resumen_oral + det.nota_parametrica, /reasignar fletes|no requiere/i);
+  m.precipitacionTemporada = { ...m.precipitacionTemporada!, porcentaje: -5 };
+  assert.match(alertaDeterminista(c, l, "parametrico").resumen_oral, /reasignar fletes/);
+});

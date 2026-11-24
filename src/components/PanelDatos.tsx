@@ -5,7 +5,7 @@ import Link from "next/link";
 import type { Comunidad, LecturaSatelital } from "@/lib/types";
 import { COMUNIDADES, jurisdiccionDe } from "@/lib/comunidades";
 import { lecturaCacheada } from "@/lib/cache";
-import { anomaliaDelEstado, baseEstado, estadoHidrico, porPrioridad } from "@/lib/lecturas";
+import { anomaliaDelEstado, baseEstado, estadoHidrico, porPrioridad, temporadaCerradaEnDeficit } from "@/lib/lecturas";
 import { descargarPdfExpediente, descargarPdfProvincialConsolidado } from "@/lib/pdf-expediente";
 
 type Props = {
@@ -188,6 +188,8 @@ export default function PanelDatos({ comunidad, lectura, modo, onSeleccion, lect
       accion = "🚚 Priorizar envío de forraje (alfalfa) y agua";
     } else if (est === "superavit_reciente" && c.region === "quebrada") {
       accion = "🚧 Vigilar drenajes urbanos, obras y escorrentía en caminos";
+    } else if (est === "superavit_reciente" && l && temporadaCerradaEnDeficit(l)) {
+      accion = "🔎 Temporada en déficit: verificar en campo antes de decidir forraje";
     } else if (est === "superavit_reciente") {
       accion = "🌱 Sin emergencia de forraje (esperar rebrote natural)";
     }
