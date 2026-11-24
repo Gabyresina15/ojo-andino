@@ -6,18 +6,21 @@ import { lecturaCacheada } from "@/lib/cache";
 import { estadoHidrico } from "@/lib/lecturas";
 import type { Fix } from "./PanelGps";
 import type { RadarSnapshot } from "./RadarOrbital";
+import type { LecturaSatelital } from "@/lib/types";
 
 type Props = {
   seleccion: string;
   onSeleccion: (id: string) => void;
   fix: Fix | null;
   radar: RadarSnapshot | null;
+  /** Lecturas en vivo por localidad; la que falte usa el cache del deploy. */
+  lecturas?: Record<string, LecturaSatelital>;
 };
 
 const TRAZA_TREN: [number, number][] = PARADAS_TREN.map((p) => [p.lat, p.lon]);
 const fmt1 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
-export default function Mapa({ seleccion, onSeleccion, fix, radar }: Props) {
+export default function Mapa({ seleccion, onSeleccion, fix, radar, lecturas }: Props) {
   return (
     <MapContainer center={[-23.1, -65.6]} zoom={8} className="h-full w-full z-0" scrollWheelZoom={false}>
       <TileLayer
@@ -62,7 +65,7 @@ export default function Mapa({ seleccion, onSeleccion, fix, radar }: Props) {
       {/* 10 Jurisdicciones Municipales coloreadas por su Semáforo Hídrico Real */}
       {COMUNIDADES.map((c) => {
         const activa = c.id === seleccion;
-        const l = lecturaCacheada(c.id);
+        const l = lecturas?.[c.id] ?? lecturaCacheada(c.id);
         const est = l ? estadoHidrico(l) : "normal";
         const pct = l?.meteorologia?.precipitacionMm30d.porcentaje ?? 0;
 

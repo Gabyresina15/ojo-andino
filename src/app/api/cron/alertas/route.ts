@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { COMUNIDADES } from "@/lib/comunidades";
-import { lecturaCacheada } from "@/lib/cache";
+import { lecturaServidor } from "@/lib/lectura-servidor";
 import { estadoHidrico } from "@/lib/lecturas";
 import { generarAlerta } from "@/lib/alerta";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 export type DespachoMunicipal = {
   comunidadId: string;
@@ -15,6 +16,9 @@ export type DespachoMunicipal = {
   lluviaNormalMm: number;
   anomaliaPct: number;
   estado: "deficit" | "normal" | "superavit_reciente" | "sin_dato";
+  /** Último día con dato de lluvia y si la lectura salió del cache del deploy por falla de la fuente. */
+  corteDatos: string | null;
+  desdeCache: boolean;
   accionAutomatica: "enviada" | "en_vigilancia";
   canal: "meta_cloud_api" | "webhook" | "cola_institucional";
   mensajeEnviado: string | null;
@@ -98,8 +102,11 @@ export async function GET() {
     process.env.META_WHATSAPP_TOKEN && process.env.META_PHONE_NUMBER_ID && process.env.META_RECIPIENT_PHONE,
   );
 
-  for (const c of COMUNIDADES) {
-    const l = lecturaCacheada(c.id);
+  // Datos del día: cada localidad se lee en vivo y solo cae al cache del deploy si la fuente no responde.
+  const lecturas = await Promise.all(COMUNIDADES.map(lecturaServidor));
+
+  for (const [i, c] of COMUNIDADES.entries()) {
+    const l = lecturas[i];
     const p = l?.meteorologia?.precipitacionMm30d;
     const est = l ? estadoHidrico(l) : "sin_dato";
     const organismo = ORGANISMO_POR_ID[c.id] ?? `Municipio de ${c.nombre}`;
@@ -132,6 +139,8 @@ export async function GET() {
         lluviaNormalMm: p?.climatologia ?? 0,
         anomaliaPct: p?.porcentaje ?? 0,
         estado: est,
+        corteDatos: l.meteorologia?.ultimoDiaConDato ?? null,
+        desdeCache: l.fuenteCache,
         accionAutomatica: "enviada",
         canal,
         mensajeEnviado: alerta.resumen_oral,
@@ -147,6 +156,8 @@ export async function GET() {
         lluviaNormalMm: p?.climatologia ?? 0,
         anomaliaPct: p?.porcentaje ?? 0,
         estado: est,
+        corteDatos: l.meteorologia?.ultimoDiaConDato ?? null,
+        desdeCache: l.fuenteCache,
         accionAutomatica: "en_vigilancia",
         canal: "cola_institucional",
         mensajeEnviado: null,

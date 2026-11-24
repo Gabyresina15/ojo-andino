@@ -97,6 +97,19 @@ export default function App() {
     return () => ctrl.abort();
   }, [seleccion]);
 
+  // Las 10 localidades en vivo para el mapa y la tabla regional; no pisa la lectura ya pedida de la seleccionada.
+  useEffect(() => {
+    const ctrl = new AbortController();
+    fetch("/api/lecturas", { signal: ctrl.signal })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((todas: LecturaSatelital[]) => {
+        const nuevas = Object.fromEntries(todas.filter((l) => l.meteorologia && !l.fuenteCache).map((l) => [l.comunidadId, l]));
+        setVivas((v) => ({ ...nuevas, ...v }));
+      })
+      .catch(() => {});
+    return () => ctrl.abort();
+  }, []);
+
   const observador = useMemo(
     () => ({ lat: comunidad.lat, lon: comunidad.lon, altKm: CENTRO_JUJUY.altKm, etiqueta: comunidad.nombre }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -213,7 +226,7 @@ export default function App() {
             </div>
 
             <div className="h-[260px] sm:h-[300px]">
-              <Mapa seleccion={seleccion} onSeleccion={setSeleccion} fix={null} radar={radar} />
+              <Mapa seleccion={seleccion} onSeleccion={setSeleccion} fix={null} radar={radar} lecturas={vivas} />
             </div>
 
             {/* Leyenda cromática del Semáforo en el Mapa */}
@@ -318,13 +331,13 @@ export default function App() {
           </div>
 
           {tabDetalle === "priorizacion" && (
-            <PanelDatos comunidad={comunidad} lectura={lectura} modo="parametrico" onSeleccion={setSeleccion} />
+            <PanelDatos comunidad={comunidad} lectura={lectura} modo="parametrico" onSeleccion={setSeleccion} lecturas={vivas} />
           )}
 
           {tabDetalle === "satelite" && (
             <div className="grid gap-5 lg:grid-cols-[380px_1fr]">
               <RadarOrbital observador={observador} onSnapshot={setRadar} />
-              <PanelDatos comunidad={comunidad} lectura={lectura} modo="comunidad" onSeleccion={setSeleccion} />
+              <PanelDatos comunidad={comunidad} lectura={lectura} modo="comunidad" onSeleccion={setSeleccion} lecturas={vivas} />
             </div>
           )}
 

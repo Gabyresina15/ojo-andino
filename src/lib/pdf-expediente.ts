@@ -309,7 +309,7 @@ export function descargarPdfExpediente(
   doc.save(`Expediente-Jujuy-${comunidad.id}-${m?.ultimoDiaConDato ?? "2026-11-22"}.pdf`);
 }
 
-export function descargarPdfProvincialConsolidado() {
+export function descargarPdfProvincialConsolidado(lecturas?: Record<string, LecturaSatelital>) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const fechaEmision = new Date().toLocaleString("es-AR", { timeZone: "America/Argentina/Jujuy" });
 
@@ -337,7 +337,7 @@ export function descargarPdfProvincialConsolidado() {
   );
 
   const filas = COMUNIDADES.map((c) => {
-    const l = lecturaCacheada(c.id);
+    const l = lecturas?.[c.id] ?? lecturaCacheada(c.id);
     const p = l?.meteorologia?.precipitacionMm30d;
     const pat = l ? calcularPatronDiario(l) : null;
     const est = l ? estadoHidrico(l) : "normal";
