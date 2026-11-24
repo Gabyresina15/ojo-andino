@@ -357,23 +357,25 @@ export function descargarPdfProvincialConsolidado(lecturas?: Record<string, Lect
   }).sort((a, b) => a.pct - b.pct);
 
   const sint = sintesisRegional(lecturas);
+  doc.setFontSize(8);
+  const lineasSintesis: string[] = doc.splitTextToSize(
+    `${sint.deficit.length} en Déficit de Forraje/Agua${sint.deficit.length ? ` (${sint.deficit.map((f) => `${f.c.nombre} ${fmt1(f.pct)}%`).join(", ")})` : ""}  |  ${sint.normal.length} en Rango Normal  |  ${sint.punaConLluvia.length} Puna con lluvia sobre lo normal  |  ${sint.vial.length} Quebrada en Alerta Vial/Drenajes.`,
+    174,
+  );
+  const altoSintesis = 12 + lineasSintesis.length * 4;
   let y = 40;
   doc.setFillColor(248, 249, 251);
   doc.setDrawColor(215, 220, 228);
-  doc.roundedRect(14, y, 182, 16, 2, 2, "FD");
+  doc.roundedRect(14, y, 182, altoSintesis, 2, 2, "FD");
   doc.setTextColor(25, 30, 40);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8.5);
   doc.text("SÍNTESIS EJECUTIVA PARA ASIGNACIÓN PRESUPUESTARIA Y LOGÍSTICA:", 18, y + 6);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
-  doc.text(
-    `${sint.deficit.length} en Déficit de Forraje/Agua${sint.deficit.length ? ` (${sint.deficit.map((f) => `${f.c.nombre} ${fmt1(f.pct)}%`).join(", ")})` : ""}  |  ${sint.normal.length} en Rango Normal  |  ${sint.punaConLluvia.length} Puna con lluvia sobre lo normal  |  ${sint.vial.length} Quebrada en Alerta Vial/Drenajes.`,
-    18,
-    y + 12,
-  );
+  doc.text(lineasSintesis, 18, y + 12);
 
-  y = 62;
+  y = 46 + altoSintesis;
   doc.setFillColor(25, 32, 44);
   doc.rect(14, y, 182, 7, "F");
   doc.setTextColor(255, 255, 255);
