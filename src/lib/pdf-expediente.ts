@@ -3,7 +3,7 @@ import type { AlertaRespuesta, Comunidad, LecturaSatelital } from "./types";
 import { COMUNIDADES } from "./comunidades";
 import { lecturaCacheada } from "./cache";
 import { alertaDeterminista, calcularPatronDiario, recomendacionGobierno } from "./alerta";
-import { estadoHidrico } from "./lecturas";
+import { estadoHidrico, porPrioridad } from "./lecturas";
 
 const fmt1 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const fmt2 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -353,7 +353,7 @@ export function descargarPdfProvincialConsolidado() {
       est,
       accion: l ? recomendacionGobierno(c, l) : "",
     };
-  }).sort((a, b) => a.pct - b.pct);
+  }).sort((a, b) => porPrioridad({ estado: a.est, pct: a.pct }, { estado: b.est, pct: b.pct }));
 
   let y = 40;
   doc.setFillColor(248, 249, 251);

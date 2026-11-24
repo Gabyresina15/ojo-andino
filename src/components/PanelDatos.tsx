@@ -5,7 +5,7 @@ import Link from "next/link";
 import type { Comunidad, LecturaSatelital } from "@/lib/types";
 import { COMUNIDADES } from "@/lib/comunidades";
 import { lecturaCacheada } from "@/lib/cache";
-import { estadoHidrico } from "@/lib/lecturas";
+import { anomaliaDelEstado, baseEstado, estadoHidrico, porPrioridad } from "@/lib/lecturas";
 import { descargarPdfExpediente, descargarPdfProvincialConsolidado } from "@/lib/pdf-expediente";
 
 type Props = {
@@ -210,10 +210,12 @@ export default function PanelDatos({ comunidad, lectura, modo, onSeleccion }: Pr
       obs: p?.observado ?? 0,
       clim: p?.climatologia ?? 0,
       pct: p?.porcentaje ?? 0,
+      pctEstado: (l && anomaliaDelEstado(l)?.porcentaje) ?? null,
+      porTemporada: !!l && baseEstado(l) === "temporada_lluvias",
       estado: est,
       accion,
     };
-  }).sort((a, b) => a.pct - b.pct);
+  }).sort(porPrioridad);
 
   return (
     <div className="amc-surface rounded-2xl p-5 sm:p-6 space-y-4 shadow-xl">
@@ -281,11 +283,9 @@ export default function PanelDatos({ comunidad, lectura, modo, onSeleccion }: Pr
                             : "bg-[#F59E0B]/15 text-[#F59E0B] border border-[#F59E0B]/40"
                       }`}
                     >
-                      {r.estado === "deficit"
-                        ? `🔴 Déficit (${fmt1(r.pct)}%)`
-                        : r.estado === "superavit_reciente"
-                          ? `🟢 Superávit (+${fmt1(r.pct)}%)`
-                          : `🟡 Normal (+${fmt1(r.pct)}%)`}
+                      {r.estado === "deficit" ? "🔴 Déficit" : r.estado === "superavit_reciente" ? "🟢 Superávit" : "🟡 Normal"}
+                      {r.pctEstado != null &&
+                        ` (${r.pctEstado >= 0 ? "+" : ""}${fmt1(r.pctEstado)}%${r.porTemporada ? " temporada" : ""})`}
                     </span>
                   </td>
                   <td className="py-3 px-3 text-[#F4F1EA]/90">{r.accion}</td>

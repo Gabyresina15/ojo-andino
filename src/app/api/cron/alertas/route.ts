@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { COMUNIDADES } from "@/lib/comunidades";
 import { lecturaCacheada } from "@/lib/cache";
-import { estadoHidrico } from "@/lib/lecturas";
+import { estadoHidrico, porPrioridad } from "@/lib/lecturas";
 import { generarAlerta } from "@/lib/alerta";
 
 export const dynamic = "force-dynamic";
@@ -156,7 +156,7 @@ export async function GET() {
   }
 
   // Ordenar: primero los que dispararon alerta automática (peor déficit primero)
-  despachos.sort((a, b) => a.anomaliaPct - b.anomaliaPct);
+  despachos.sort((a, b) => porPrioridad({ estado: a.estado, pct: a.anomaliaPct }, { estado: b.estado, pct: b.anomaliaPct }));
 
   const res: ResultadoBarrido = {
     fechaBarrido: new Date().toLocaleDateString("es-AR", { timeZone: "America/Argentina/Jujuy" }),
