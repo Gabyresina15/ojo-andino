@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Ojo Andino · Telemetría SAOCOM y alertas satelitales para Jujuy",
+  title: "Ojo Andino · Tablero hídrico para municipios de la Puna y la Quebrada de Jujuy",
   description:
-    "Telemetría orbital en vivo (SAOCOM 1A/1B), GPS en el Tren Solar y datos reales de NASA POWER y MODIS MOD13Q1 traducidos por Grok.",
+    "Lluvia y vegetación por localidad a partir de datos públicos de NASA POWER y MODIS MYD13Q1, con alerta redactada y verificada cifra por cifra.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
