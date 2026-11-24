@@ -10,6 +10,7 @@ import { alertaDeterminista, payloadUsuario, recomendacionGobierno, validarNumer
 import { cruceTemporada, textoCruce } from "@/lib/cruce";
 import { descargarPdfExpediente } from "@/lib/pdf-expediente";
 import { ChakanaIcon } from "./AndeanMotifs";
+import CompartirInformeTecnico from "./CompartirInformeTecnico";
 
 const fmt1 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const fmt2 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -110,6 +111,7 @@ export default function ExpedienteMunicipal({ comunidad }: { comunidad: Comunida
               <span>📄</span>
               <span>Descargar Informe Técnico (.PDF)</span>
             </button>
+            <CompartirInformeTecnico comunidad={comunidad} lectura={lectura} />
           </div>
         </div>
       </header>
