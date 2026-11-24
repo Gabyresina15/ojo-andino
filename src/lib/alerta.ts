@@ -279,7 +279,9 @@ export function validarAfirmaciones(texto: string, payload: unknown): string[] {
       corte = fin + (semanaDespues?.[0].length ?? 0);
       const n = aNum(m[1]);
       const pPico = ultimaPosicion(seg, KW_PICO);
-      const pSemana = semanaDespues && pPico < 0 ? Infinity : ultimaPosicion(seg, KW_SEMANA);
+      const trasPico = pPico >= 0 ? seg.slice(pPico) : "";
+      const picoPegado = pPico >= 0 && trasPico.length <= 30 && !/[,;:]|\by\b/.test(trasPico);
+      const pSemana = semanaDespues && !picoPegado ? Infinity : ultimaPosicion(seg, KW_SEMANA);
       if (pat && pPico > pSemana) {
         if (!coincide(n, pat.pico_maximo_mm)) errores.push(`pico de ${m[0]} (dato: ${pat.pico_maximo_mm} mm)`);
         const cola = texto.slice(fin, fin + 25);
