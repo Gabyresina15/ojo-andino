@@ -22,3 +22,11 @@ test("focos: si el último compuesto es viejo, se marca como desactualizado", ()
   assert.equal(resumirFocos(s, new Date("2026-12-08T12:00:00Z"))?.desactualizado, false);
   assert.equal(resumirFocos(s, new Date("2026-12-10T12:00:00Z"))?.desactualizado, true);
 });
+
+test("vegetación: el producto y la fecha citados salen de la lectura, no de un texto fijo", async () => {
+  const { fechaComposite, productoNdvi } = await import("../src/lib/lecturas");
+  const base = { ultimoComposite: { fecha: "2026-10-24", modisDate: "A2026297", ndvi: 0.1 }, compositeAnterior: null, compositeAnioAnterior: null, aviso: "" };
+  assert.equal(productoNdvi({ ...base, fuente: "MODIS MOD13Q1 vía ORNL TESViS" }), "MOD13Q1");
+  assert.equal(productoNdvi({ ...base, fuente: "MODIS MYD13Q1 vía ORNL TESViS" }), "MYD13Q1");
+  assert.equal(fechaComposite("2025-10-24"), "24 oct 2025");
+});

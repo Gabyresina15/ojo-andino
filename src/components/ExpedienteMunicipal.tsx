@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { AlertaRespuesta, Comunidad, LecturaSatelital } from "@/lib/types";
 import { lecturaCacheada } from "@/lib/cache";
-import { corteLectura, estadoHidrico } from "@/lib/lecturas";
+import { corteLectura, estadoHidrico, fechaComposite, productoNdvi } from "@/lib/lecturas";
 import { alertaDeterminista, payloadUsuario, recomendacionGobierno, validarNumeros } from "@/lib/alerta";
 import { cruceTemporada, textoCruce } from "@/lib/cruce";
 import { descargarPdfExpediente } from "@/lib/pdf-expediente";
@@ -237,7 +237,7 @@ export default function ExpedienteMunicipal({ comunidad }: { comunidad: Comunida
               </div>
               <div className="text-xs text-[#9CA3AF] print:text-slate-600 mt-1">
                 {ndvi?.compositeAnioAnterior
-                  ? `Noviembre 2025: ${fmt3(ndvi.compositeAnioAnterior.ndvi)}`
+                  ? `${fechaComposite(ndvi.compositeAnioAnterior.fecha)}: ${fmt3(ndvi.compositeAnioAnterior.ndvi)}`
                   : "Escala satelital 0 a 1"}
               </div>
             </div>
@@ -375,7 +375,7 @@ export default function ExpedienteMunicipal({ comunidad }: { comunidad: Comunida
 
         <footer className="text-[11px] text-[#9CA3AF] print:text-slate-600 border-t border-white/10 print:border-slate-300 pt-4">
           Informe técnico generado automáticamente por Ojo Andino sobre {jurisdiccion}. No es un documento oficial. Fuentes:
-          NASA/POWER (serie 2001–2025) y MODIS MYD13Q1 (ORNL DAAC).
+          NASA/POWER (serie 2001–2025) y MODIS {productoNdvi(ndvi)} (ORNL DAAC).
         </footer>
       </main>
     </div>

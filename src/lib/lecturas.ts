@@ -258,3 +258,14 @@ export function estadoHidrico(l: LecturaSatelital): "deficit" | "normal" | "supe
   if (p >= UMBRAL_30D_PCT) return "superavit_reciente";
   return "normal";
 }
+
+/** Código del producto MODIS del que salió una lectura de vegetación (el cache del deploy puede traer el de Terra). */
+export function productoNdvi(ndvi: LecturaSatelital["ndvi"] | undefined): "MYD13Q1" | "MOD13Q1" {
+  return ndvi?.fuente.includes("MOD13Q1") ? "MOD13Q1" : "MYD13Q1";
+}
+
+const MESES_ES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+/** "2025-10-24" → "24 oct 2025": rótulo del compuesto, tomado de su fecha real. */
+export function fechaComposite(iso: string): string {
+  return `${Number(iso.slice(8, 10))} ${MESES_ES[Number(iso.slice(5, 7)) - 1]} ${iso.slice(0, 4)}`;
+}

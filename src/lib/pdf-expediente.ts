@@ -5,7 +5,7 @@ import { COMUNIDADES } from "./comunidades";
 import { lecturaCacheada } from "./cache";
 import { sintesisRegional } from "./sintesis";
 import { alertaDeterminista, calcularPatronDiario, recomendacionGobierno } from "./alerta";
-import { PISO_NORMAL_30D_MM, baseEstado, estadoHidrico, porPrioridad } from "./lecturas";
+import { PISO_NORMAL_30D_MM, baseEstado, estadoHidrico, fechaComposite, porPrioridad, productoNdvi } from "./lecturas";
 
 /** Hora en 24 h: el formato por defecto de es-AR es de 12 h y el PDF perdía el "p. m.". */
 const fechaHoraEmision = () =>
@@ -82,7 +82,7 @@ export function descargarPdfExpediente(
   doc.setFontSize(8);
   doc.setTextColor(80, 86, 98);
   doc.text(
-    `Serie climatológica base: 2001–2025 (25 años, NASA MERRA-2/GEOS-IT)  |  Vegetación: MODIS MYD13Q1 250m (${ndvi?.ultimoComposite.fecha ?? "s/d"})`,
+    `Serie climatológica base: 2001–2025 (25 años, NASA MERRA-2/GEOS-IT)  |  Vegetación: MODIS ${productoNdvi(ndvi)} 250m (${ndvi?.ultimoComposite.fecha ?? "s/d"})`,
     18,
     y + 13.5,
   );
@@ -148,7 +148,7 @@ export function descargarPdfExpediente(
     {
       label: "VEGETACIÓN MODIS (0-1)",
       val: ndvi ? fmt3(ndvi.ultimoComposite.ndvi) : "s/d",
-      sub: ndvi?.compositeAnioAnterior ? `Nov 2025: ${fmt3(ndvi.compositeAnioAnterior.ndvi)} | Oct 26: ${ndvi.compositeAnterior ? fmt3(ndvi.compositeAnterior.ndvi) : "s/d"}` : "",
+      sub: ndvi?.compositeAnioAnterior ? `${fechaComposite(ndvi.compositeAnioAnterior.fecha)}: ${fmt3(ndvi.compositeAnioAnterior.ndvi)}${ndvi.compositeAnterior ? ` | ${fechaComposite(ndvi.compositeAnterior.fecha)}: ${fmt3(ndvi.compositeAnterior.ndvi)}` : ""}` : "",
     },
   ];
 
@@ -168,7 +168,9 @@ export function descargarPdfExpediente(
 
     doc.setTextColor(90, 98, 110);
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(6.7);
+    let cuerpo = 6.7;
+    doc.setFontSize(cuerpo);
+    while (cuerpo > 5 && doc.getTextWidth(k.sub) > boxW - 6) doc.setFontSize((cuerpo -= 0.2));
     doc.text(k.sub, x + 3, y + 18.2);
   });
 
@@ -364,7 +366,14 @@ export function descargarPdfProvincialConsolidado(lecturas?: Record<string, Lect
       : `${fechaCorta(cortes[0])} a ${fechaCorta(cortes[cortes.length - 1])} según la localidad`;
   doc.text(`Emisión: ${fechaEmision} (hora de Argentina)  |  Datos de lluvia hasta: ${textoCorte}`, 14, 25);
   doc.setFontSize(7.5);
-  doc.text("Fuentes: NASA POWER (climatología 2001–2025) y MODIS MYD13Q1 250m", 14, 29.5);
+  const productos = [
+    ...new Set(
+      COMUNIDADES.map((c) => (lecturas?.[c.id] ?? lecturaCacheada(c.id))?.ndvi)
+        .filter((n) => !!n)
+        .map((n) => productoNdvi(n)),
+    ),
+  ];
+  doc.text(`Fuentes: NASA POWER (climatología 2001–2025) y MODIS ${productos.join(" / ") || "MYD13Q1"} 250m`, 14, 29.5);
 
   const sint = sintesisRegional(lecturas);
   doc.setFontSize(8);

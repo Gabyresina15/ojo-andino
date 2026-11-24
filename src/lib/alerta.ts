@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { AlertaRespuesta, Comunidad, LecturaSatelital } from "./types";
-import { anomaliaDelEstado, baseEstado, estadoHidrico, UMBRAL_TEMPORADA_PCT } from "./lecturas";
+import { anomaliaDelEstado, baseEstado, estadoHidrico, productoNdvi, UMBRAL_TEMPORADA_PCT } from "./lecturas";
 
 export const AlertaSchema = z.object({
   resumen_oral: z.string().min(80).max(1200),
@@ -471,7 +471,7 @@ export function alertaDeterminista(c: Comunidad, l: LecturaSatelital, modo: "com
     nota_parametrica: p
       ? `${accion} (Ventana: ${p.ventana}, desvío ${desvioRedondeado >= 0 ? "+" : ""}${fmt1(desvioRedondeado)} % vs serie 2001–2025).`
       : accion,
-    fuentes: `NASA POWER (corte ${m?.ultimoDiaConDato ?? "s/d"}, demora oficial 2–3 días) y MODIS MYD13Q1 (compuesto 16 días al ${l.ndvi?.ultimoComposite.fecha ?? "s/d"}).`,
+    fuentes: `NASA POWER (corte ${m?.ultimoDiaConDato ?? "s/d"}, demora oficial 2–3 días) y MODIS ${productoNdvi(l.ndvi)} (compuesto 16 días al ${l.ndvi?.ultimoComposite.fecha ?? "s/d"}).`,
   };
 }
 
