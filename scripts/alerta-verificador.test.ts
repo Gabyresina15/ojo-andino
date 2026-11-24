@@ -70,3 +70,15 @@ test("una fecha en la oración siguiente no se toma como fecha del pico", () => 
   const texto = `El pico más fuerte fue de 2,3 mm. Al ${otra} no hubo más lluvias.`;
   assert.deepEqual(validarNumeros(texto, payload).noVerificados, []);
 });
+
+test("una ventana de 7 días tras una conjunción pertenece al monto siguiente", () => {
+  const ok = "En el mes cayeron 8,7 mm y en los últimos 7 días llegaron 2,5 mm.";
+  assert.deepEqual(validarNumeros(ok, payload).noVerificados, []);
+  assert.ok(validarNumeros(ok.replace("2,5 mm", "8,7 mm"), payload).noVerificados.length > 0);
+});
+
+test("un pico seguido de 'en la última semana' se verifica como pico", () => {
+  const ok = "El pico fue de 2,3 mm en la última semana.";
+  assert.deepEqual(validarNumeros(ok, payload).noVerificados, []);
+  assert.ok(validarNumeros(ok.replace("2,3 mm", "2,5 mm"), payload).noVerificados.length > 0);
+});
