@@ -254,7 +254,7 @@ export function estadoHidrico(l: LecturaSatelital): "deficit" | "normal" | "supe
   if (base === "temporada_lluvias") {
     return l.meteorologia!.precipitacionTemporada!.porcentaje! <= UMBRAL_TEMPORADA_PCT ? "deficit" : "normal";
   }
-  if (base === "epoca_seca_sin_temporada") return "normal";
+  if (base === "epoca_seca_sin_temporada") return "sin_dato";
   if (p <= UMBRAL_DEFICIT_PCT) return "deficit";
   if (p >= UMBRAL_SUPERAVIT_PCT) return "superavit_reciente";
   return "normal";

@@ -40,9 +40,44 @@ test("época seca: +98 % sobre 6 mm no es superávit; decide la temporada", () =
   assert.equal(estadoHidrico(lectura(anom(7.4, 4.4), anom(459, 513))), "normal");
 });
 
-test("época seca sin dato de temporada: ni déficit ni superávit", () => {
-  assert.equal(estadoHidrico(lectura(anom(12.2, 6.2))), "normal");
-  assert.equal(estadoHidrico(lectura(anom(0.5, 6.2))), "normal");
+test("época seca sin dato de temporada: estado sin_dato, no normal", () => {
+  assert.equal(estadoHidrico(lectura(anom(12.2, 6.2))), "sin_dato");
+  assert.equal(estadoHidrico(lectura(anom(0.5, 6.2))), "sin_dato");
+});
+
+test("sin temporada evaluable, diagnóstico, riesgo, recomendación y payload piden verificación sin afirmar normalidad", () => {
+  for (const id of ["abra-pampa", "tilcara"]) {
+    const c = getComunidad(id)!;
+    for (const datoNulo of [false, true]) {
+      const l = lectura(anom(12.2, 6.2));
+      l.comunidadId = id;
+      if (datoNulo) l.meteorologia!.precipitacionTemporada = {
+        ...anom(361, 456), porcentaje: null, enCurso: false,
+      };
+      for (const modo of ["parametrico", "comunidad"] as const) {
+        const a = alertaDeterminista(c, l, modo);
+        const p = payloadUsuario(c, l, modo);
+        const texto = `${a.resumen_oral} ${a.nota_parametrica}`;
+        assert.equal(a.estado_hidrico, "sin_dato");
+        assert.equal(p.estado_hidrico_calculado, "sin_dato");
+        assert.equal(p.estado_basado_en, "epoca_seca_sin_temporada");
+        assert.equal(p.gatillo.estado, "sin_dato");
+        assert.equal(p.gatillo.activado, false);
+        assert.match(p.recomendacion_base, /Sin datos suficientes|Faltan datos/);
+        assert.match(a.resumen_oral, /No hay datos suficientes/);
+        assert.doesNotMatch(texto, /dentro del promedio|cerca del promedio|manejo habitual|sin operativo de emergencia|desvío/);
+        if (modo === "parametrico") {
+          assert.match(a.resumen_oral, /Gatillo paramétrico no evaluable/);
+          assert.match(a.resumen_oral, /Verificar necesidades en campo/);
+          assert.doesNotMatch(texto, /verificá|revisá|cuidá|podés|tenés|fijate|avisá/i);
+        } else {
+          assert.match(a.resumen_oral, /revisá en campo/);
+          assert.match(a.nota_parametrica, /Faltan datos.*revisá/);
+        }
+        assert.deepEqual(validarNumeros(texto, p).noVerificados, []);
+      }
+    }
+  }
 });
 
 test("con normal de 30 días sobre el piso sigue decidiendo la lluvia de 30 días", () => {
