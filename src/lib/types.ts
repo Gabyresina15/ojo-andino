@@ -63,7 +63,8 @@ export type LecturaSatelital = {
     serie: { fecha: string; lluviaMm: number | null; climaMm: number | null; t2m: number | null }[];
   } | null;
   ndvi: {
-    fuente: "MODIS MOD13Q1 vía ORNL TESViS";
+    /** MOD13Q1 (satélite Terra) solo queda en el cache del deploy anterior al 01/12/2026. */
+    fuente: "MODIS MYD13Q1 vía ORNL TESViS" | "MODIS MOD13Q1 vía ORNL TESViS";
     ultimoComposite: CompositeNdvi;
     compositeAnterior: CompositeNdvi | null;
     compositeAnioAnterior: CompositeNdvi | null;
