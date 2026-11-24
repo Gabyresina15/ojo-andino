@@ -87,3 +87,16 @@ test("las recomendaciones del informe consolidado no pasan el margen derecho", (
     assert.ok(ancho <= 178, `La recomendación excede el ancho de la fila: ${texto}`);
   }
 });
+
+test("informe consolidado: avisa celdas compartidas, fecha del NDVI y no descarta forraje con temporada en déficit", (t) => {
+  const abra = structuredClone(lecturaCacheada("abra-pampa")!);
+  const m = abra.meteorologia!;
+  m.precipitacionMm30d = { ...m.precipitacionMm30d, observado: 80, climatologia: 40, porcentaje: 100 };
+  m.precipitacionTemporada = { ...m.precipitacionTemporada!, enCurso: false, porcentaje: -21 };
+  const textos = capturarTexto(t, undefined, () => descargarPdfProvincialConsolidado({ "abra-pampa": abra }));
+  const todo = textos.map(({ texto }) => texto).join(" ");
+  assert.match(todo, /Recomendación: Lluvia reciente sobre lo normal, pero la última temporada de lluvias cerró en déficit: verificar en campo/);
+  assert.match(todo, /comparten la misma celda de la grilla de NASA POWER/);
+  assert.match(todo, /NDVI: período/);
+  assert.doesNotMatch(todo, /ASIGNACIÓN PRESUPUESTARIA/);
+});

@@ -269,3 +269,9 @@ const MESES_ES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep",
 export function fechaComposite(iso: string): string {
   return `${Number(iso.slice(8, 10))} ${MESES_ES[Number(iso.slice(5, 7)) - 1]} ${iso.slice(0, 4)}`;
 }
+
+/** Lluvia reciente sobre lo normal no borra una temporada de lluvias cerrada en déficit: en ese caso no se descarta el envío de forraje. */
+export function temporadaCerradaEnDeficit(l: LecturaSatelital): boolean {
+  const t = l.meteorologia?.precipitacionTemporada;
+  return !!t && !t.enCurso && t.porcentaje !== null && t.porcentaje <= UMBRAL_TEMPORADA_PCT;
+}
