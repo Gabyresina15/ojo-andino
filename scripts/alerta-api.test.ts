@@ -22,6 +22,7 @@ test("ignora la lectura que manda el cliente y redacta con datos del servidor", 
   assert.equal(r.status, 200);
   const a = await r.json();
   assert.equal(a.estado_hidrico, "deficit");
+  assert.match(a.corteDatos, /^\d{4}-\d{2}-\d{2}\|A\d{7}$/);
   assert.doesNotMatch(`${a.resumen_oral} ${a.nota_parametrica}`, /999|33,3|400/);
 });
 

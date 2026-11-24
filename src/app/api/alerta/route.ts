@@ -4,6 +4,7 @@ import { getComunidad } from "@/lib/comunidades";
 import { generarAlerta } from "@/lib/alerta";
 import { lecturaServidor } from "@/lib/lectura-servidor";
 import { excedeLimite } from "@/lib/limite";
+import { corteLectura } from "@/lib/lecturas";
 
 export const dynamic = "force-dynamic";
 
@@ -23,5 +24,5 @@ export async function POST(req: Request) {
   const lectura = await lecturaServidor(c);
 
   const alerta = await generarAlerta(c, lectura, parsed.data.modo);
-  return NextResponse.json(alerta);
+  return NextResponse.json({ ...alerta, corteDatos: corteLectura(lectura) });
 }
