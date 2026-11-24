@@ -13,6 +13,7 @@ import {
   validarNumeros,
 } from "@/lib/alerta";
 import { corteLectura, estadoHidrico } from "@/lib/lecturas";
+import { cruceTemporada, textoCruce } from "@/lib/cruce";
 import { descargarPdfExpediente } from "@/lib/pdf-expediente";
 import { ChakanaIcon } from "./AndeanMotifs";
 
@@ -93,6 +94,7 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
 
   const alerta = alertaGrok ?? alertaBase;
   const m = lectura?.meteorologia;
+  const cruce = lectura ? cruceTemporada(lectura) : null;
   const ndvi = lectura?.ndvi;
   const patron = lectura ? calcularPatronDiario(lectura) : null;
   const est = lectura ? estadoHidrico(lectura) : "sin_dato";
@@ -235,6 +237,11 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
                 <strong>{fmt1(m.precipitacionTemporada.observado)} mm</strong> de {fmt1(m.precipitacionTemporada.climatologia)} mm
                 normales ({(m.precipitacionTemporada.porcentaje ?? 0) >= 0 ? "+" : ""}
                 {fmt1(m.precipitacionTemporada.porcentaje ?? 0)}%)
+              </div>
+            )}
+            {cruce && (
+              <div className={`text-xs mt-1 ${cruce.coincide ? "text-[#9CA3AF]" : "text-[#F59E0B]"}`}>
+                {textoCruce(cruce)}
               </div>
             )}
           </div>
