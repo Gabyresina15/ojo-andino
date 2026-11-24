@@ -35,6 +35,12 @@ const FUENTES = [
       "No interviene en el estado hídrico ni en la recomendación. Es un modelo global, no una estación del lugar, y no está verificado contra lluvia medida en la Puna. No sirve como alerta de crecidas o tormentas.",
   },
   {
+    nombre: "MODIS MOD14A2 (NASA), Sentinel-1 (ESA/Copernicus) y humedad de suelo de NASA POWER",
+    uso: "Contexto que se muestra aparte en cada localidad: focos de calor en píxeles de 1 km, fechas de las últimas imágenes de radar tomadas sobre el lugar, y humedad de suelo.",
+    limite:
+      "Nada de esto interviene en el estado hídrico ni en la recomendación. Los focos chicos o bajo nubes pueden no detectarse. De Sentinel-1 solo se informa que la imagen existe: Ojo Andino no la procesa. La humedad de suelo la calcula un modelo (GEOS) sobre una grilla regional: no es una medición.",
+  },
+  {
     nombre: "Grok (xAI)",
     uso: "Redacta el texto de la alerta a partir de las cifras anteriores.",
     limite:

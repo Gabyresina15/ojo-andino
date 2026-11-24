@@ -22,11 +22,11 @@ que los publica. El aval local (INTA, SMN, CONAE, UNJu) es un trámite aparte.
 | Fuente | Qué da | Resolución / demora | Acceso | Licencia | Para qué serviría |
 |---|---|---|---|---|---|
 | Sentinel-2 L2A (ESA/Copernicus) vía Earth Search | Imagen óptica, 13 bandas | 10 m / ~5 días | STAC + COG sin clave | Aviso legal de Copernicus: acceso libre, pleno y abierto; permite reproducción, distribución y adaptación | Verde de vegas con ubicación conocida |
-| Sentinel-1 GRD (ESA/Copernicus) vía Earth Search | Radar SAR banda C | 10 m / 6–12 días. Última escena sobre Abra Pampa: 19/11/2026 | STAC sin clave | Mismo aviso legal de Copernicus | Radar real y abierto. Humedad de suelo requiere procesamiento propio y validación |
-| MODIS MOD11A2 (ORNL) | Temperatura de superficie | 1 km / 8 días. Último dato: 09/11/2026 | API sin clave | Datos NASA | Heladas y estrés térmico |
+| Sentinel-1 GRD (ESA/Copernicus) vía Earth Search | Radar SAR banda C | 10 m / 6–12 días. Última escena sobre Abra Pampa: 19/11/2026 | STAC sin clave | Mismo aviso legal de Copernicus | En uso solo para informar las fechas de las imágenes. Humedad de suelo requiere procesamiento propio y validación |
+| MODIS MOD11A2 (ORNL) | Temperatura de superficie | 1 km / 8 días. Último dato: 09/11/2026 | API sin clave | Datos NASA | Descartada para comparar años: la hora de pasada de Terra se corrió de ~10:20 (2019) a ~8:25 (2026), así que la temperatura de día baja por la hora y no por el clima |
 | MODIS MOD16A2GF (ORNL) | Evapotranspiración | 500 m / 8 días. Último dato: 27/12/2025 | API sin clave | Datos NASA | Balance hídrico, con un año de atraso. En suelo desnudo devuelve valor de relleno |
-| MODIS MOD14A2 (ORNL) | Focos de calor | 1 km / 8 días. Último dato: 09/11/2026 | API sin clave | Datos NASA | Quemas |
-| NASA POWER GWETTOP / GWETROOT | Humedad de suelo | Grilla regional / 2–3 días | API sin clave | Datos NASA | Contexto. Sale de un modelo (GEOS), no de una medición satelital directa |
+| MODIS MOD14A2 (ORNL) | Focos de calor | 1 km / 8 días. Último dato: 09/11/2026 | API sin clave | Datos NASA | En uso como contexto desde este PR |
+| NASA POWER GWETTOP / GWETROOT | Humedad de suelo | Grilla regional / 2–3 días | API sin clave | Datos NASA | En uso como contexto. Sale de un modelo (GEOS), no de una medición satelital directa. No se compara con años anteriores porque la serie mezcla dos modelos (MERRA-2 y GEOS-IT) |
 | BAHRA (IGN/INDEC) | Coordenadas oficiales de localidades | — | WFS del IGN sin clave | Sin verificar | Ya se usa en la prueba retrospectiva |
 | IGN, capa "vegetación hidrófila" | 467 polígonos de pajonal/juncal/totoral en la Puna jujeña | — | WFS del IGN sin clave | Sin verificar | Ver "Vegas" |
 
