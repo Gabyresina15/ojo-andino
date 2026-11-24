@@ -51,7 +51,11 @@ export function ContextoSatelital({ comunidadId }: { comunidadId: string }) {
             titulo="Focos de calor"
             fuente={`MODIS Terra MOD14A2 (NASA), píxeles de 1 km en un cuadrado de ${RADIO_FOCOS_KM} km hacia cada lado. Los fuegos chicos o bajo nubes pueden no detectarse.`}
           >
-            {f ? (
+            {f?.desactualizado ? (
+              <div className="text-[#FBBF24] print:text-black">
+                La fuente no se actualiza desde el período que empezó el {dia(f.hasta)}. No hay dato reciente de focos.
+              </div>
+            ) : f ? (
               f.periodos.length === 0 ? (
                 <div>
                   Sin focos detectados en los últimos {f.compuestos} períodos de 8 días (último: desde el {dia(f.hasta)}).

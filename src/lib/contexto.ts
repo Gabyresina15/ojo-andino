@@ -11,6 +11,8 @@ const POWER = "https://power.larc.nasa.gov/api/temporal/daily/point";
 const STAC = "https://earth-search.aws.element84.com/v1/search";
 
 export const RADIO_FOCOS_KM = 10;
+/** Un compuesto de 8 días suele publicarse con unas dos semanas de demora; pasado este plazo ya no describe el presente. */
+export const DIAS_FOCOS_VIGENTES = 30;
 /** Clases de FireMask de MOD14A2: 7, 8 y 9 son fuego con confianza baja, nominal y alta. */
 const FOCO_MIN = 7;
 const FOCO_NOMINAL = 8;
@@ -21,6 +23,8 @@ export type FocosCalor = {
   /** Compuestos de 8 días con al menos un píxel de fuego, y cantidad de píxeles de 1 km en cada uno. */
   periodos: { fecha: string; pixeles: number; nominalOAlta: number }[];
   compuestos: number;
+  /** El último compuesto empezó hace más de `DIAS_FOCOS_VIGENTES` días: la fuente dejó de actualizarse. */
+  desactualizado: boolean;
 };
 export type RadarSentinel1 = {
   escenas: { id: string; fecha: string; satelite: string; orbita: string }[];
@@ -46,7 +50,7 @@ type Subset = { scale?: string; ncols?: number; subset: { modis_date: string; ca
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 
-export function resumirFocos(subset: Subset["subset"]): FocosCalor | null {
+export function resumirFocos(subset: Subset["subset"], hoy = new Date()): FocosCalor | null {
   if (!subset.length) return null;
   const periodos = subset
     .map((s) => ({
@@ -55,7 +59,9 @@ export function resumirFocos(subset: Subset["subset"]): FocosCalor | null {
       nominalOAlta: s.data.filter((c) => c >= FOCO_NOMINAL).length,
     }))
     .filter((p) => p.pixeles > 0);
-  return { desde: subset[0].calendar_date, hasta: subset[subset.length - 1].calendar_date, periodos, compuestos: subset.length };
+  const hasta = subset[subset.length - 1].calendar_date;
+  const desactualizado = hoy.getTime() - Date.parse(hasta) > DIAS_FOCOS_VIGENTES * 86_400_000;
+  return { desde: subset[0].calendar_date, hasta, periodos, compuestos: subset.length, desactualizado };
 }
 
 export function resumirHumedad(top: Record<string, number>, raiz: Record<string, number>, fill = -999): HumedadSuelo | null {
