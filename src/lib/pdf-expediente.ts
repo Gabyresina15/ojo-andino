@@ -1,5 +1,6 @@
 import { jurisdiccionDe } from "@/lib/comunidades";
 import { jsPDF } from "jspdf";
+import QRCode from "qrcode";
 import type { AlertaRespuesta, Comunidad, LecturaSatelital } from "./types";
 import { COMUNIDADES } from "./comunidades";
 import { lecturaCacheada } from "./cache";
@@ -24,6 +25,26 @@ const fmt2 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 2
 const fmt3 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
 const ddmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
 
+const URL_PUBLICA = "https://ojo-andino.vercel.app";
+
+function dibujarQr(doc: jsPDF, url: string, x: number, y: number, lado: number) {
+  const { modules } = QRCode.create(url, { errorCorrectionLevel: "M" });
+  const margen = 2;
+  const celda = lado / (modules.size + margen * 2);
+  doc.setFillColor(255, 255, 255);
+  doc.roundedRect(x, y, lado, lado, 1, 1, "F");
+  doc.setFillColor(11, 13, 16);
+  for (let fila = 0; fila < modules.size; fila++) {
+    for (let col = 0; col < modules.size; col++) {
+      if (!modules.get(fila, col)) continue;
+      const inicio = col;
+      while (col + 1 < modules.size && modules.get(fila, col + 1)) col++;
+      doc.rect(x + (inicio + margen) * celda, y + (fila + margen) * celda, (col - inicio + 1) * celda, celda, "F");
+    }
+  }
+  doc.link(x, y, lado, lado, { url });
+}
+
 export function descargarPdfExpediente(
   comunidad: Comunidad,
   lectura: LecturaSatelital,
@@ -39,6 +60,7 @@ export function descargarPdfExpediente(
   const motorTexto = alertaActual?.origen === "grok" ? `Grok AI (${alertaActual.modelo}) + Validación Zod` : "Motor Hidrológico Determinista";
   const jurisdiccion = jurisdiccionDe(comunidad);
   const expedienteNro = `OA-${comunidad.id.toUpperCase()}`;
+  const urlInforme = `${URL_PUBLICA}/municipio/${comunidad.id}`;
   const fechaEmision = fechaHoraEmision();
 
   // 1. ENCABEZADO INSTITUCIONAL (Banda oscura superior)
@@ -58,12 +80,18 @@ export function descargarPdfExpediente(
 
   doc.setTextColor(180, 186, 196);
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(8.5);
+  doc.setFontSize(8);
   doc.text(
     `Jurisdicción: ${jurisdiccion}  |  Región: ${comunidad.region.toUpperCase()}  |  Coordenadas WGS84: ${comunidad.lat.toFixed(4)}°, ${comunidad.lon.toFixed(4)}°`,
     14,
     26,
   );
+
+  dibujarQr(doc, urlInforme, 175, 3.5, 21);
+  doc.setTextColor(245, 158, 11);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(5.5);
+  doc.text("VERIFICAR INFORME", 185.5, 28.6, { align: "center" });
 
   // 2. CAJA DE METADATOS ADMINISTRATIVOS
   let y = 40;
@@ -304,9 +332,12 @@ export function descargarPdfExpediente(
   doc.setFontSize(7);
   doc.setTextColor(110, 116, 128);
   doc.text(
-    "Documento técnico auditable generado con telemetría pública NASA/POWER y MODIS (ORNL DAAC). Verificar serie en https://ojo-andino.vercel.app",
+    doc.splitTextToSize(
+      `Documento técnico auditable generado con telemetría pública NASA/POWER y MODIS (ORNL DAAC). Verificar serie en ${urlInforme}`,
+      182,
+    ),
     14,
-    288,
+    285.5,
   );
 
   doc.save(`Informe-OjoAndino-${comunidad.id}-${m?.ultimoDiaConDato ?? "2026-11-22"}.pdf`);
