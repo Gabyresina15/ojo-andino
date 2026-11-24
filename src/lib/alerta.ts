@@ -21,13 +21,13 @@ const JSON_SCHEMA = {
       resumen_oral: {
         type: "string",
         description:
-          "Dictamen de 4 a 5 oraciones adaptado al modo ('comunidad' para productores/pueblo o 'parametrico' para gestión pública/aseguradoras). Analiza distribución diaria (días secos, racha seca máxima, pico diario y concentración) y su impacto real en terreno.",
+          "Dictamen de 4 a 5 oraciones adaptado al modo ('comunidad' para productores/pueblo o 'parametrico' para gestión pública). Analiza distribución diaria (días secos, racha seca máxima, pico diario y concentración) y su impacto real en terreno.",
       },
       estado_hidrico: { type: "string", enum: ["deficit", "normal", "superavit_reciente", "sin_dato"] },
       nota_parametrica: {
         type: "string",
         description:
-          "1 a 2 oraciones con recomendación accionable concreta (manejo de agua/forraje para comunidad, o directiva logística/gatillo paramétrico para Gobierno).",
+          "1 a 2 oraciones con recomendación accionable concreta (manejo de agua/forraje para comunidad, o recomendación logística para Gobierno).",
       },
       fuentes: { type: "string", description: "Fuentes satelitales y fecha del último dato." },
     },
@@ -40,7 +40,7 @@ Tu trabajo NO es repetir de memoria los promedios que ya muestran las tarjetas s
 
 1. ADAPTACIÓN POR "modo":
    - Si modo === "comunidad": hablá directo, claro y respetuoso a familias productoras, pastores y referentes comunitarios. Explicá qué significa la lluvia y el estado del pastizal para las aguadas, el ganado (llamas, ovejas, cabras) o los cultivos, integrando de forma natural el contexto cultural local ("contexto") sin jerga burocrática ni menciones a ministerios o expedientes.
-   - Si modo === "parametrico": redactá un dictamen técnico de expediente y gatillo paramétrico para el Gobierno de Jujuy (Producción, Recursos Hídricos, Vialidad) y Municipios, justificando asignación de fletes de forraje, alertas viales/drenajes o activación de asistencia.
+   - Si modo === "parametrico": redactá un dictamen técnico de expediente para el Gobierno de Jujuy (Producción, Recursos Hídricos, Vialidad) y Municipios, justificando asignación de fletes de forraje, alertas viales/drenajes o activación de asistencia.
 
 2. ANÁLISIS HIDROLÓGICO OBLIGATORIO EN "resumen_oral" (4 a 5 oraciones en castellano de Argentina):
    - Citá el comportamiento interno del mes usando "patron_diario": cuántos días estuvieron secos ("dias_secos"), cuál fue la racha seca consecutiva más larga ("racha_seca_maxima_dias"), cuánto cayó en los últimos 7 días ("lluvia_ultimos_7d_mm") y el pico máximo en 24h ("pico_maximo_mm" el "pico_maximo_dia", que representa "concentracion_pico_pct"% del agua del mes).
@@ -402,7 +402,7 @@ export function alertaDeterminista(c: Comunidad, l: LecturaSatelital, modo: "com
       );
       if (!esComunidad) {
         partes.push(
-          `Gatillo operativo: se justifica priorizar a ${c.nombre} en el despacho de alfalfa y agua de emergencia.`,
+          `Criterio operativo: se justifica priorizar a ${c.nombre} en el despacho de alfalfa y agua de emergencia.`,
         );
       }
     } else if (est === "deficit") {
@@ -416,7 +416,7 @@ export function alertaDeterminista(c: Comunidad, l: LecturaSatelital, modo: "com
       );
       if (!esComunidad) {
         partes.push(
-          `Gatillo operativo: se justifica priorizar a ${c.nombre} en el despacho de alfalfa y agua de emergencia.`,
+          `Criterio operativo: se justifica priorizar a ${c.nombre} en el despacho de alfalfa y agua de emergencia.`,
         );
       }
     } else if (est === "superavit_reciente" && c.region === "puna") {
@@ -430,7 +430,7 @@ export function alertaDeterminista(c: Comunidad, l: LecturaSatelital, modo: "com
       );
       if (!esComunidad) {
         partes.push(
-          `Gatillo operativo: no requiere fardos de emergencia esta semana; conviene reasignar fletes hacia zonas con déficit activo.`,
+          `Criterio operativo: no requiere fardos de emergencia esta semana; conviene reasignar fletes hacia zonas con déficit activo.`,
         );
       }
     } else if (est === "superavit_reciente" && c.region === "quebrada") {
@@ -442,7 +442,7 @@ export function alertaDeterminista(c: Comunidad, l: LecturaSatelital, modo: "com
       );
       if (!esComunidad) {
         partes.push(
-          `Gatillo operativo: sin sequía activa; priorizar limpieza preventiva de drenajes pluviales y control vial.`,
+          `Criterio operativo: sin sequía activa; priorizar limpieza preventiva de drenajes pluviales y control vial.`,
         );
       }
     } else {

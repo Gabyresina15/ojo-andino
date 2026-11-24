@@ -1,5 +1,6 @@
 "use client";
 
+import { jurisdiccionDe } from "@/lib/comunidades";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { AlertaRespuesta, Comunidad, LecturaSatelital } from "@/lib/types";
@@ -7,7 +8,6 @@ import { lecturaCacheada } from "@/lib/cache";
 import { corteLectura, estadoHidrico } from "@/lib/lecturas";
 import { alertaDeterminista, payloadUsuario, recomendacionGobierno, validarNumeros } from "@/lib/alerta";
 import { descargarPdfExpediente } from "@/lib/pdf-expediente";
-import { JURISDICCION_MUNICIPAL } from "./PanelAlerta";
 import { ChakanaIcon } from "./AndeanMotifs";
 
 const fmt1 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -63,7 +63,7 @@ export default function ExpedienteMunicipal({ comunidad }: { comunidad: Comunida
   const m = lectura?.meteorologia;
   const ndvi = lectura?.ndvi;
   const est = lectura ? estadoHidrico(lectura) : "sin_dato";
-  const jurisdiccion = JURISDICCION_MUNICIPAL[comunidad.id] ?? `Municipio de ${comunidad.nombre}`;
+  const jurisdiccion = jurisdiccionDe(comunidad);
 
   const copiarLink = async () => {
     try {

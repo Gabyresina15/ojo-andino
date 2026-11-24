@@ -1,3 +1,4 @@
+import { jurisdiccionDe } from "@/lib/comunidades";
 import { jsPDF } from "jspdf";
 import type { AlertaRespuesta, Comunidad, LecturaSatelital } from "./types";
 import { COMUNIDADES } from "./comunidades";
@@ -10,19 +11,6 @@ const fmt1 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 1
 const fmt2 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmt3 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
 const ddmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
-
-const JURISDICCION: Record<string, string> = {
-  "susques": "Comisión Municipal de Susques",
-  "abra-pampa": "Municipalidad de Abra Pampa",
-  "la-quiaca": "Municipalidad de La Quiaca",
-  "yavi": "Comisión Municipal de Yavi",
-  "humahuaca": "Municipalidad de Humahuaca",
-  "tilcara": "Municipalidad de Tilcara",
-  "maimara": "Comisión Municipal de Maimará",
-  "purmamarca": "Comisión Municipal de Purmamarca",
-  "tumbaya": "Comisión Municipal de Tumbaya",
-  "volcan": "Comisión Municipal de Volcán",
-};
 
 export function descargarPdfExpediente(
   comunidad: Comunidad,
@@ -37,7 +25,7 @@ export function descargarPdfExpediente(
   const det = alertaDeterminista(comunidad, lectura, "comunidad");
   const textoDictamen = alertaActual?.resumen_oral ?? det.resumen_oral;
   const motorTexto = alertaActual?.origen === "grok" ? `Grok AI (${alertaActual.modelo}) + Validación Zod` : "Motor Hidrológico Determinista";
-  const jurisdiccion = JURISDICCION[comunidad.id] ?? `Municipio de ${comunidad.nombre}`;
+  const jurisdiccion = jurisdiccionDe(comunidad);
   const expedienteNro = `EXP-JUJ-2026-${comunidad.id.toUpperCase()}`;
   const fechaEmision = new Date().toLocaleString("es-AR", { timeZone: "America/Argentina/Jujuy" });
 
@@ -344,7 +332,7 @@ export function descargarPdfProvincialConsolidado(lecturas?: Record<string, Lect
     const est = l ? estadoHidrico(l) : "normal";
     return {
       c,
-      jurisdiccion: JURISDICCION[c.id] ?? c.nombre,
+      jurisdiccion: jurisdiccionDe(c),
       obs: p?.observado ?? 0,
       clim: p?.climatologia ?? 0,
       pct: p?.porcentaje ?? 0,

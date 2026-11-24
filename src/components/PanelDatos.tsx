@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { Comunidad, LecturaSatelital } from "@/lib/types";
-import { COMUNIDADES } from "@/lib/comunidades";
+import { COMUNIDADES, jurisdiccionDe } from "@/lib/comunidades";
 import { lecturaCacheada } from "@/lib/cache";
 import { anomaliaDelEstado, baseEstado, estadoHidrico, porPrioridad } from "@/lib/lecturas";
 import { descargarPdfExpediente, descargarPdfProvincialConsolidado } from "@/lib/pdf-expediente";
@@ -23,19 +23,6 @@ const fmt2 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 2
 type DiaSerie = NonNullable<LecturaSatelital["meteorologia"]>["serie"][number];
 
 const ddmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
-
-const ORGANISMO_POR_ID: Record<string, string> = {
-  "susques": "Comisión Municipal de Susques",
-  "abra-pampa": "Municipalidad de Abra Pampa",
-  "la-quiaca": "Municipalidad de La Quiaca",
-  "yavi": "Comisión Municipal de Yavi",
-  "humahuaca": "Municipalidad de Humahuaca",
-  "tilcara": "Municipalidad de Tilcara",
-  "maimara": "Comisión Municipal de Maimará",
-  "purmamarca": "Comisión Municipal de Purmamarca",
-  "tumbaya": "Comisión Municipal de Tumbaya",
-  "volcan": "Comisión Municipal de Volcán",
-};
 
 function GraficoLluvia({ serie }: { serie: DiaSerie[] }) {
   const [activo, setActivo] = useState<number | null>(null);
@@ -208,7 +195,7 @@ export default function PanelDatos({ comunidad, lectura, modo, onSeleccion, lect
     return {
       comunidad: c,
       lectura: l,
-      organismo: ORGANISMO_POR_ID[c.id] ?? `Municipio de ${c.nombre}`,
+      organismo: jurisdiccionDe(c),
       obs: p?.observado ?? 0,
       clim: p?.climatologia ?? 0,
       pct: p?.porcentaje ?? 0,

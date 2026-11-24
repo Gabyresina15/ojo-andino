@@ -1,5 +1,6 @@
 "use client";
 
+import { jurisdiccionDe } from "@/lib/comunidades";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type { AlertaRespuesta, Comunidad, LecturaSatelital } from "@/lib/types";
@@ -22,19 +23,6 @@ type Props = {
 
 const fmt1 = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const BARRAS_EQ = [35, 75, 50, 95, 60, 100, 70, 45, 85, 55];
-
-export const JURISDICCION_MUNICIPAL: Record<string, string> = {
-  "susques": "Comisión Municipal de Susques",
-  "abra-pampa": "Municipalidad de Abra Pampa",
-  "la-quiaca": "Municipalidad de La Quiaca",
-  "yavi": "Comisión Municipal de Yavi",
-  "humahuaca": "Municipalidad de Humahuaca",
-  "tilcara": "Municipalidad de Tilcara",
-  "maimara": "Comisión Municipal de Maimará",
-  "purmamarca": "Comisión Municipal de Purmamarca",
-  "tumbaya": "Comisión Municipal de Tumbaya",
-  "volcan": "Comisión Municipal de Volcán",
-};
 
 export default function PanelAlerta({ comunidad, lectura }: Props) {
   const [modoDictamen, setModoDictamen] = useState<"parametrico" | "comunidad">("parametrico");
@@ -108,7 +96,7 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
   const ndvi = lectura?.ndvi;
   const patron = lectura ? calcularPatronDiario(lectura) : null;
   const est = lectura ? estadoHidrico(lectura) : "sin_dato";
-  const jurisdiccion = JURISDICCION_MUNICIPAL[comunidad.id] ?? `Municipio de ${comunidad.nombre}`;
+  const jurisdiccion = jurisdiccionDe(comunidad);
   const expedienteNro = `EXP-JUJ-2026-${comunidad.id.toUpperCase()}`;
 
   const escucharVoz = async () => {

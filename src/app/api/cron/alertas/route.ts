@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { COMUNIDADES } from "@/lib/comunidades";
+import { COMUNIDADES, jurisdiccionDe } from "@/lib/comunidades";
 import { lecturaServidor } from "@/lib/lectura-servidor";
 import { anomaliaDelEstado, estadoHidrico, porPrioridad } from "@/lib/lecturas";
 import { generarAlerta } from "@/lib/alerta";
@@ -35,19 +35,6 @@ export type ResultadoBarrido = {
   /** Si este barrido quedó registrado en el historial persistente. */
   historial: EstadoHistorial;
   despachos: DespachoMunicipal[];
-};
-
-const ORGANISMO_POR_ID: Record<string, string> = {
-  "susques": "Comisión Municipal de Susques · Área Producción y Agua",
-  "abra-pampa": "Municipalidad de Abra Pampa · Secretaría de Desarrollo Productivo",
-  "la-quiaca": "Municipalidad de La Quiaca · Dirección de Asuntos Rurales",
-  "yavi": "Comisión Municipal de Yavi",
-  "humahuaca": "Municipalidad de Humahuaca · Defensa Civil y Agro",
-  "tilcara": "Municipalidad de Tilcara · Área Rural y Ambiente",
-  "maimara": "Comisión Municipal de Maimará",
-  "purmamarca": "Comisión Municipal de Purmamarca",
-  "tumbaya": "Comisión Municipal de Tumbaya",
-  "volcan": "Comisión Municipal de Volcán",
 };
 
 let cacheBarrido: { t: number; res: ResultadoBarrido } | null = null;
@@ -121,7 +108,7 @@ export async function GET(req: Request) {
     // Las cifras del despacho son las del indicador que decide el estado (30 días o temporada de lluvias).
     const p = (l && anomaliaDelEstado(l)) ?? l?.meteorologia?.precipitacionMm30d;
     const est = l ? estadoHidrico(l) : "sin_dato";
-    const organismo = ORGANISMO_POR_ID[c.id] ?? `Municipio de ${c.nombre}`;
+    const organismo = jurisdiccionDe(c);
 
     // El motor decide SOLO: si hay déficit hídrico (<= -25%), genera y despacha la alerta sin intervención humana.
     if (l && est === "deficit") {
