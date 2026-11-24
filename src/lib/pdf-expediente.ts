@@ -26,7 +26,7 @@ export function descargarPdfExpediente(
   const textoDictamen = alertaActual?.resumen_oral ?? det.resumen_oral;
   const motorTexto = alertaActual?.origen === "grok" ? `Grok AI (${alertaActual.modelo}) + Validación Zod` : "Motor Hidrológico Determinista";
   const jurisdiccion = jurisdiccionDe(comunidad);
-  const expedienteNro = `EXP-JUJ-2026-${comunidad.id.toUpperCase()}`;
+  const expedienteNro = `OA-${comunidad.id.toUpperCase()}`;
   const fechaEmision = new Date().toLocaleString("es-AR", { timeZone: "America/Argentina/Jujuy" });
 
   // 1. ENCABEZADO INSTITUCIONAL (Banda oscura superior)
@@ -38,11 +38,11 @@ export function descargarPdfExpediente(
   doc.setTextColor(245, 158, 11);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8.5);
-  doc.text("GOBIERNO DE LA PROVINCIA DE JUJUY · SISTEMA SATELITAL OJO ANDINO", 14, 11);
+  doc.text("OJO ANDINO · INFORME TÉCNICO AUTOMÁTICO · NO ES UN DOCUMENTO OFICIAL", 14, 11);
 
   doc.setTextColor(244, 241, 234);
   doc.setFontSize(15);
-  doc.text(`ANEXO TÉCNICO DE EXPEDIENTE · ${comunidad.nombre.toUpperCase()}`, 14, 19);
+  doc.text(`INFORME TÉCNICO HÍDRICO · ${comunidad.nombre.toUpperCase()}`, 14, 19);
 
   doc.setTextColor(180, 186, 196);
   doc.setFont("helvetica", "normal");
@@ -62,7 +62,7 @@ export function descargarPdfExpediente(
   doc.setTextColor(30, 35, 45);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
-  doc.text(`EXPEDIENTE N°: ${expedienteNro}`, 18, y + 6.5);
+  doc.text(`REFERENCIA: ${expedienteNro}`, 18, y + 6.5);
   doc.text(`ÚLTIMO CORTE NASA POWER: ${m?.ultimoDiaConDato ?? "s/d"}`, 85, y + 6.5);
   doc.text(`EMISIÓN: ${fechaEmision} ART`, 145, y + 6.5);
 
@@ -165,7 +165,7 @@ export function descargarPdfExpediente(
   doc.setTextColor(20, 25, 35);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
-  doc.text("1. DICTAMEN HIDROLÓGICO Y JUSTIFICACIÓN TÉCNICA DE EXPEDIENTE", 14, y);
+  doc.text("1. ANÁLISIS HIDROLÓGICO Y JUSTIFICACIÓN TÉCNICA", 14, y);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.5);
   doc.setTextColor(100, 108, 120);
@@ -186,7 +186,7 @@ export function descargarPdfExpediente(
   doc.setTextColor(20, 25, 35);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
-  doc.text("2. DIRECTIVA DE ASIGNACIÓN DE RECURSOS (PROVINCIA -> MUNICIPIO)", 14, y);
+  doc.text("2. RECOMENDACIÓN DE ASIGNACIÓN DE RECURSOS", 14, y);
 
   y += 3;
   const textoAccion = recomendacionGobierno(comunidad, lectura);
@@ -209,7 +209,7 @@ export function descargarPdfExpediente(
     doc.setTextColor(100, 108, 120);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
-    doc.text(`EXPEDIENTE N°: ${expedienteNro}`, 14, 14);
+    doc.text(`REFERENCIA: ${expedienteNro}`, 14, 14);
     y = 23;
   }
   doc.setTextColor(20, 25, 35);
@@ -283,8 +283,8 @@ export function descargarPdfExpediente(
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7.5);
   doc.setTextColor(40, 45, 55);
-  doc.text("DIRECCIÓN PROVINCIAL / MINISTERIO DE PRODUCCIÓN", 14, yFirma + 4.5);
-  doc.text(`RECEPCIÓN: ${jurisdiccion.toUpperCase()}`, 128, yFirma + 4.5);
+  doc.text("ELABORÓ: OJO ANDINO (INFORME AUTOMÁTICO)", 14, yFirma + 4.5);
+  doc.text(`RECIBIÓ: ${jurisdiccion.toUpperCase()}`, 128, yFirma + 4.5);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7);
@@ -295,7 +295,7 @@ export function descargarPdfExpediente(
     288,
   );
 
-  doc.save(`Expediente-Jujuy-${comunidad.id}-${m?.ultimoDiaConDato ?? "2026-11-22"}.pdf`);
+  doc.save(`Informe-OjoAndino-${comunidad.id}-${m?.ultimoDiaConDato ?? "2026-11-22"}.pdf`);
 }
 
 export function descargarPdfProvincialConsolidado(lecturas?: Record<string, LecturaSatelital>) {
@@ -310,11 +310,11 @@ export function descargarPdfProvincialConsolidado(lecturas?: Record<string, Lect
   doc.setTextColor(245, 158, 11);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8.5);
-  doc.text("GOBIERNO DE LA PROVINCIA DE JUJUY · SISTEMA SATELITAL OJO ANDINO", 14, 11);
+  doc.text("OJO ANDINO · INFORME TÉCNICO AUTOMÁTICO · NO ES UN DOCUMENTO OFICIAL", 14, 11);
 
   doc.setTextColor(244, 241, 234);
   doc.setFontSize(14.5);
-  doc.text("PARTE PROVINCIAL CONSOLIDADO · 10 JURISDICCIONES MUNICIPALES", 14, 19);
+  doc.text("INFORME CONSOLIDADO · 10 LOCALIDADES DE PUNA Y QUEBRADA", 14, 19);
 
   doc.setTextColor(180, 186, 196);
   doc.setFont("helvetica", "normal");
@@ -415,7 +415,7 @@ export function descargarPdfProvincialConsolidado(lecturas?: Record<string, Lect
     doc.setFont("helvetica", "bold");
     doc.setFontSize(7);
     doc.setTextColor(60, 68, 80);
-    doc.text(`Directiva: ${f.accion}`, 16, fy + 14);
+    doc.text(`Recomendación: ${f.accion}`, 16, fy + 14);
   });
 
   const yFirma = 266;
@@ -425,8 +425,8 @@ export function descargarPdfProvincialConsolidado(lecturas?: Record<string, Lect
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7.5);
   doc.setTextColor(40, 45, 55);
-  doc.text("MINISTERIO DE DESARROLLO ECONÓMICO Y PRODUCCIÓN", 14, yFirma + 4.5);
-  doc.text("MINISTERIO DE INFRAESTRUCTURA / RECURSOS HÍDRICOS", 122, yFirma + 4.5);
+  doc.text("ELABORÓ: OJO ANDINO (INFORME AUTOMÁTICO)", 14, yFirma + 4.5);
+  doc.text("RECIBIÓ:", 122, yFirma + 4.5);
 
-  doc.save("Parte-Provincial-Jujuy-10-Municipios-2026-11-22.pdf");
+  doc.save("Informe-OjoAndino-10-Localidades.pdf");
 }

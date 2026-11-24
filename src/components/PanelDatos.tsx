@@ -167,7 +167,7 @@ export default function PanelDatos({ comunidad, lectura, modo, onSeleccion, lect
             className="min-h-[40px] inline-flex items-center gap-1.5 rounded-xl bg-[#F59E0B] hover:bg-[#F59E0B]/90 text-[#0B0D10] font-bold text-xs px-3.5 py-2 transition cursor-pointer"
           >
             <span>📄</span>
-            <span>Descargar Dictamen Oficial (.PDF)</span>
+            <span>Descargar Informe Técnico (.PDF)</span>
           </button>
         </div>
         {m && m.serie.length > 1 ? (
@@ -211,14 +211,14 @@ export default function PanelDatos({ comunidad, lectura, modo, onSeleccion, lect
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <span className="text-[11px] uppercase tracking-wider font-bold text-[#F59E0B]">
-            🏛️ Tablero Provincial de Asignación de Recursos · Gobierno de Jujuy
+            🏛️ Tablero de Priorización de Recursos · 10 localidades
           </span>
           <h3 className="font-display text-lg sm:text-xl font-bold text-[#F4F1EA]">
             Priorización de los 10 Municipios y Comisiones Municipales
           </h3>
           <p className="text-xs text-[#9CA3AF] mt-0.5">
             Ordenado automáticamente desde la jurisdicción con mayor déficit de agua hasta la de mayor lluvia acumulada.
-            Descargá el parte provincial consolidado en PDF o el expediente individual de cada municipio.
+            Descargá el informe consolidado en PDF o el informe individual de cada municipio.
           </p>
         </div>
 
@@ -227,7 +227,7 @@ export default function PanelDatos({ comunidad, lectura, modo, onSeleccion, lect
           className="min-h-[44px] inline-flex items-center gap-2 rounded-xl bg-[#F59E0B] hover:bg-[#F59E0B]/90 text-[#0B0D10] font-bold text-xs px-4 py-2.5 transition shadow cursor-pointer"
         >
           <span>📄</span>
-          <span>Descargar Parte Provincial Consolidado (10 Municipios .PDF)</span>
+          <span>Descargar Informe Consolidado (10 Municipios .PDF)</span>
         </button>
       </div>
 
@@ -241,7 +241,7 @@ export default function PanelDatos({ comunidad, lectura, modo, onSeleccion, lect
               <th className="py-3 px-3 whitespace-nowrap">Promedio normal</th>
               <th className="py-3 px-3 whitespace-nowrap">Diagnóstico</th>
               <th className="py-3 px-3">Acción recomendada para Provincia / Municipio</th>
-              <th className="py-3 px-3 whitespace-nowrap text-right">Expediente Oficial</th>
+              <th className="py-3 px-3 whitespace-nowrap text-right">Informe técnico</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/10">
@@ -283,7 +283,7 @@ export default function PanelDatos({ comunidad, lectura, modo, onSeleccion, lect
                       <button
                         onClick={() => r.lectura && descargarPdfExpediente(r.comunidad, r.lectura)}
                         className="inline-flex items-center gap-1 rounded-lg bg-[#F59E0B] hover:bg-[#F59E0B]/90 px-2.5 py-1.5 text-[11px] font-bold text-[#0B0D10] transition cursor-pointer"
-                        title={`Descargar anexo oficial en PDF de ${r.comunidad.nombre}`}
+                        title={`Descargar informe técnico en PDF de ${r.comunidad.nombre}`}
                       >
                         📄 Bajar PDF
                       </button>

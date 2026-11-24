@@ -180,7 +180,7 @@ export default function App() {
             </h2>
             <p className="text-sm sm:text-base text-[#9CA3AF] leading-relaxed">
               Traduce datos satelitales de lluvia y vegetación en un{" "}
-              <strong className="text-[#F4F1EA]">expediente oficial auditable por municipio</strong> para decidir dónde enviar
+              <strong className="text-[#F4F1EA]">informe técnico trazable por localidad</strong> para decidir dónde enviar
               camiones de forraje y agua en la Puna o dónde vigilar drenajes y caminos por exceso de lluvia en la Quebrada.
             </p>
           </div>
@@ -242,7 +242,7 @@ export default function App() {
           </div>
         </section>
 
-        {/* BLOQUE PRINCIPAL: MAPA DE LAS 10 JURISDICCIONES + PARTE OFICIAL DE LA JURISDICCIÓN SELECCIONADA */}
+        {/* BLOQUE PRINCIPAL: MAPA DE LAS 10 JURISDICCIONES + INFORME DE LA JURISDICCIÓN SELECCIONADA */}
         <section className="grid gap-5 lg:grid-cols-[400px_1fr] items-start">
           <div className="amc-surface rounded-3xl overflow-hidden shadow-xl">
             <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">

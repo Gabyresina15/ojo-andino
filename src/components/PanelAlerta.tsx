@@ -97,7 +97,7 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
   const patron = lectura ? calcularPatronDiario(lectura) : null;
   const est = lectura ? estadoHidrico(lectura) : "sin_dato";
   const jurisdiccion = jurisdiccionDe(comunidad);
-  const expedienteNro = `EXP-JUJ-2026-${comunidad.id.toUpperCase()}`;
+  const expedienteNro = `OA-${comunidad.id.toUpperCase()}`;
 
   const escucharVoz = async () => {
     if (!alerta) return;
@@ -178,7 +178,7 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
 
   const urlDerivacion = alerta
     ? `https://wa.me/?text=${encodeURIComponent(
-        `*GOBIERNO DE JUJUY · DERIVACIÓN DE EXPEDIENTE ${expedienteNro}*\n*Destino:* ${jurisdiccion}\n\n*Directiva Provincial:* ${accionDirecta}\n\n*Dictamen Técnico:* ${alerta.resumen_oral}\n\n*Expediente completo y serie histórica:* ${
+        `*OJO ANDINO · INFORME TÉCNICO ${expedienteNro}*\n*Para:* ${jurisdiccion}\n\n*Recomendación:* ${accionDirecta}\n\n*Análisis técnico:* ${alerta.resumen_oral}\n\n*Informe completo y serie histórica:* ${
           typeof window !== "undefined" ? `${window.location.origin}/municipio/${comunidad.id}` : ""
         }`,
       )}`
@@ -208,7 +208,7 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
           <p className="text-sm sm:text-base font-medium text-[#F4F1EA]/95">
             🏛️{" "}
             <strong>
-              {modoDictamen === "parametrico" ? "Directiva Provincial → Municipio:" : "Recomendación para el Productor:"}
+              {modoDictamen === "parametrico" ? "Recomendación para el municipio:" : "Recomendación para el Productor:"}
             </strong>{" "}
             {accionDirecta}
           </p>
@@ -278,7 +278,7 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
                       : "text-[#9CA3AF] hover:text-[#F4F1EA]"
                   }`}
                 >
-                  🏛️ Dictamen Gobierno / Municipio
+                  🏛️ Informe Gobierno / Municipio
                 </button>
                 <button
                   onClick={() => setModoDictamen("comunidad")}
@@ -329,7 +329,7 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
                 <ChakanaIcon className="h-3.5 w-3.5 text-[#D95D39]" />
                 <span>
                   {modoDictamen === "parametrico"
-                    ? "Justificación Técnica de Expediente (Régimen de 30 días, racha seca y concentración)"
+                    ? "Justificación técnica (Régimen de 30 días, racha seca y concentración)"
                     : "Traducción directa en voz y texto para productores de la jurisdicción"}
                 </span>
               </span>
@@ -351,7 +351,7 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
               className="min-h-[48px] rounded-2xl bg-[#F59E0B] hover:bg-[#F59E0B]/90 text-[#0B0D10] font-bold text-xs px-4 py-3 transition flex items-center justify-center gap-2 shadow-lg cursor-pointer"
             >
               <span>📄</span>
-              <span>Descargar Anexo Oficial (.PDF)</span>
+              <span>Descargar Informe Técnico (.PDF)</span>
             </button>
 
             <a
@@ -361,7 +361,7 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
               className="min-h-[48px] rounded-2xl bg-[#10B981] hover:bg-[#10B981]/90 text-[#0B0D10] font-bold text-xs px-4 py-3 transition flex items-center justify-center gap-2 shadow-lg"
             >
               <span>📨</span>
-              <span>Derivar Orden al Municipio</span>
+              <span>Enviar recomendación al municipio</span>
             </a>
 
             <Link
