@@ -186,6 +186,14 @@ export default function ExpedienteMunicipal({ comunidad }: { comunidad: Comunida
               <div className="text-xs text-[#9CA3AF] print:text-slate-600 mt-1">
                 Promedio 2001–2025: <strong>{fmt1(m.precipitacionMm30d.climatologia)} mm</strong>
               </div>
+              {m.precipitacionTemporada && (
+                <div className="text-xs text-[#9CA3AF] print:text-slate-600 mt-1">
+                  Temporada de lluvias{m.precipitacionTemporada.enCurso ? " (en curso)" : ""}:{" "}
+                  <strong>{fmt1(m.precipitacionTemporada.observado)} mm</strong> de {fmt1(m.precipitacionTemporada.climatologia)} mm
+                  normales ({(m.precipitacionTemporada.porcentaje ?? 0) >= 0 ? "+" : ""}
+                  {fmt1(m.precipitacionTemporada.porcentaje ?? 0)}%)
+                </div>
+              )}
             </div>
 
             <div className="amc-surface rounded-2xl p-4 print:border print:border-slate-300 print:bg-white">

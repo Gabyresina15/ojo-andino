@@ -1,6 +1,6 @@
 import { COMUNIDADES } from "./comunidades";
 import { lecturaCacheada } from "./cache";
-import { estadoHidrico } from "./lecturas";
+import { anomaliaDelEstado, estadoHidrico } from "./lecturas";
 import type { Comunidad, LecturaSatelital } from "./types";
 
 export type FilaSintesis = { c: Comunidad; pct: number };
@@ -13,7 +13,7 @@ export function sintesisRegional(lecturas?: Record<string, LecturaSatelital | nu
   const normal: FilaSintesis[] = [];
   for (const c of COMUNIDADES) {
     const l = lecturas?.[c.id] ?? lecturaCacheada(c.id);
-    const fila = { c, pct: l?.meteorologia?.precipitacionMm30d.porcentaje ?? 0 };
+    const fila = { c, pct: (l && anomaliaDelEstado(l)?.porcentaje) ?? l?.meteorologia?.precipitacionMm30d.porcentaje ?? 0 };
     const est = l ? estadoHidrico(l) : "sin_dato";
     if (est === "deficit") deficit.push(fila);
     else if (est === "superavit_reciente") (c.region === "quebrada" ? vial : punaConLluvia).push(fila);

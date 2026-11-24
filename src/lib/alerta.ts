@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { AlertaRespuesta, Comunidad, LecturaSatelital } from "./types";
-import { estadoHidrico } from "./lecturas";
+import { anomaliaDelEstado, baseEstado, estadoHidrico, UMBRAL_TEMPORADA_PCT } from "./lecturas";
 
 export const AlertaSchema = z.object({
   resumen_oral: z.string().min(80).max(1200),
@@ -49,6 +49,7 @@ Tu trabajo NO es repetir de memoria los promedios que ya muestran las tarjetas s
      * superavit_reciente en puna: recarga superficial tras meses secos -> monitorear rebrote natural y evitar gasto innecesario de fardos de emergencia.
      * superavit_reciente en quebrada (o concentracion_pico_pct >= 55% en pendiente): lluvia concentrada en pocas horas genera escorrentía rápida -> alerta de drenajes, badenes, caminos rurales y obras.
      * normal: acompaña el ciclo histórico de inicio de temporada húmeda.
+   - Si "estado_basado_en" es "temporada_lluvias" o "epoca_seca_sin_temporada", es época seca: lo normal en 30 días es casi cero y "lluvia.anomalia_pct" NO indica ni sequía ni exceso; no la cites como señal. Con "temporada_lluvias", explicá el estado con "temporada_lluvias" (observado_mm, climatologia_mm, anomalia_pct): de esa lluvia dependen las pasturas y aguadas hasta la próxima temporada.
 
 3. REGLAS ANTI-ALUCINACIÓN (ESTRICTO):
    - Respondé SOLO con el JSON del esquema. Cero markdown.
@@ -128,6 +129,16 @@ export function payloadUsuario(c: Comunidad, l: LecturaSatelital, modo: "comunid
     modo,
     fecha_hoy_art: new Date().toLocaleDateString("es-AR", { timeZone: "America/Argentina/Jujuy" }),
     estado_hidrico_calculado: estadoHidrico(l),
+    estado_basado_en: baseEstado(l),
+    temporada_lluvias: m?.precipitacionTemporada
+      ? {
+          ventana: m.precipitacionTemporada.ventana,
+          en_curso: m.precipitacionTemporada.enCurso,
+          observado_mm: r1(m.precipitacionTemporada.observado),
+          climatologia_mm: r1(m.precipitacionTemporada.climatologia),
+          anomalia_pct: m.precipitacionTemporada.porcentaje,
+        }
+      : null,
     lluvia: m
       ? {
           ventana: m.precipitacionMm30d.ventana,
@@ -244,7 +255,7 @@ function fechasDelPayload(payload: unknown): Set<string> {
 
 /** Verifica que cada cifra esté atada al dato correcto (no solo que exista en algún lugar del payload). */
 export function validarAfirmaciones(texto: string, payload: unknown): string[] {
-  const { patron_diario: pat, lluvia, temperatura: temp, ndvi } = (payload ?? {}) as PayloadAlerta;
+  const { patron_diario: pat, lluvia, temperatura: temp, ndvi, temporada_lluvias: temporada } = (payload ?? {}) as PayloadAlerta;
   const errores: string[] = [];
 
   if (pat) {
@@ -268,8 +279,9 @@ export function validarAfirmaciones(texto: string, payload: unknown): string[] {
     }
   }
 
-  if (lluvia || pat) {
+  if (lluvia || pat || temporada) {
     const refs = [lluvia?.observado_mm, lluvia?.climatologia_mm, pat?.lluvia_ultimos_7d_mm, pat?.pico_maximo_mm, 1].filter(esNumero);
+    const refsTemporada = [temporada?.observado_mm, temporada?.climatologia_mm].filter(esNumero);
     let corte = 0;
     for (const m of texto.matchAll(new RegExp(`${NUM}\\s?mm\\b`, "g"))) {
       const ini = m.index;
@@ -293,6 +305,9 @@ export function validarAfirmaciones(texto: string, payload: unknown): string[] {
         }
       } else if (pat && pSemana > pPico) {
         if (!coincide(n, pat.lluvia_ultimos_7d_mm)) errores.push(`${m[0]} en 7 días (dato: ${pat.lluvia_ultimos_7d_mm} mm)`);
+      } else if (/temporada/i.test(texto.slice(inicioOracion(texto, ini), ini))) {
+        // Un acumulado atribuido a la temporada de lluvias solo puede ser el de la temporada.
+        if (!refsTemporada.some((r) => coincide(n, r))) errores.push(`${m[0]} no corresponde al acumulado de la temporada de lluvias`);
       } else if (!refs.some((r) => coincide(n, r))) {
         errores.push(`${m[0]} no corresponde a ningún acumulado de la fuente`);
       }
@@ -306,7 +321,7 @@ export function validarAfirmaciones(texto: string, payload: unknown): string[] {
     }
   }
 
-  const refsPct = [lluvia?.anomalia_pct, pat?.concentracion_pico_pct, ndvi?.variacion_vs_anterior_pct, 25]
+  const refsPct = [lluvia?.anomalia_pct, temporada?.anomalia_pct, pat?.concentracion_pico_pct, ndvi?.variacion_vs_anterior_pct, 25, ...(temporada ? [UMBRAL_TEMPORADA_PCT] : [])]
     .filter(esNumero)
     .map(Math.abs);
   for (const m of texto.matchAll(new RegExp(`${NUM}\\s?%`, "g"))) {
@@ -370,13 +385,27 @@ export function alertaDeterminista(c: Comunidad, l: LecturaSatelital, modo: "com
   const patron = calcularPatronDiario(l);
   const partes: string[] = [];
   const esComunidad = modo === "comunidad";
+  const porTemporada = baseEstado(l) === "temporada_lluvias";
+  const t = m?.precipitacionTemporada;
 
   if (m && patron) {
     const deltaTemp = fmt1(Math.abs(m.temperaturaC7d.mediaObservada - m.temperaturaC7d.climatologiaMes));
     const ndviAct = l.ndvi ? fmt3(l.ndvi.ultimoComposite.ndvi) : null;
     const ndviPrev = l.ndvi?.compositeAnterior ? fmt3(l.ndvi.compositeAnterior.ndvi) : null;
 
-    if (est === "deficit") {
+    if (est === "deficit" && porTemporada && t) {
+      partes.push(
+        `En ${c.nombre} la temporada de lluvias (${t.ventana}) dejó ${fmt1(t.observado)} mm frente a ${fmt1(t.climatologia)} mm de lo normal, un ${fmt1(Math.abs(t.porcentaje ?? 0))} % menos.`,
+      );
+      partes.push(
+        `Ahora es época seca: en los últimos ${patron.dias_totales} días hubo ${patron.dias_secos} días sin lluvia útil y cayeron ${fmt1(patron.lluvia_ultimos_7d_mm)} mm en la última semana, que no alcanzan para recuperar pasturas ni aguadas${ndviAct ? ` (índice verde ${ndviAct})` : ""}.`,
+      );
+      if (!esComunidad) {
+        partes.push(
+          `Gatillo operativo: se justifica priorizar a ${c.nombre} en el despacho de alfalfa y agua de emergencia.`,
+        );
+      }
+    } else if (est === "deficit") {
       partes.push(
         esComunidad
           ? `Reporte para ${c.nombre}: en los últimos ${patron.dias_totales} días hubo ${patron.dias_secos} días sin lluvia útil, con una racha seca de ${patron.racha_seca_maxima_dias} días seguidos y apenas ${fmt1(patron.lluvia_ultimos_7d_mm)} mm en la última semana.`
@@ -421,7 +450,11 @@ export function alertaDeterminista(c: Comunidad, l: LecturaSatelital, modo: "com
         `En ${c.nombre} la lluvia se repartió en ${patron.dias_con_lluvia_significativa} días activos (pico de ${fmt1(patron.pico_maximo_mm)} mm el ${patron.pico_maximo_dia} y ${fmt1(patron.lluvia_ultimos_7d_mm)} mm en los últimos 7 días).`,
       );
       partes.push(
-        `El balance hídrico acompaña el promedio histórico de los últimos 25 años para el inicio de la temporada húmeda.`,
+        porTemporada && t
+          ? `Es época seca y la última temporada de lluvias (${t.ventana}) dejó ${fmt1(t.observado)} mm frente a ${fmt1(t.climatologia)} mm de lo normal: no hay señal de déficit.`
+          : baseEstado(l) === "epoca_seca_sin_temporada"
+            ? `Es época seca: con una normal tan baja, la lluvia de 30 días no alcanza para indicar ni sequía ni exceso.`
+            : `El balance hídrico acompaña el promedio histórico de los últimos 25 años para el inicio de la temporada húmeda.`,
       );
     }
   } else {
@@ -429,7 +462,7 @@ export function alertaDeterminista(c: Comunidad, l: LecturaSatelital, modo: "com
   }
 
   const accion = esComunidad ? recomendacionComunidad(c, l) : recomendacionGobierno(c, l);
-  const p = m?.precipitacionMm30d;
+  const p = anomaliaDelEstado(l);
   const desvioRedondeado = p?.porcentaje != null ? r1(p.porcentaje) : 0;
 
   return {

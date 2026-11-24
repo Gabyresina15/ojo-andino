@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { COMUNIDADES } from "@/lib/comunidades";
 import { lecturaServidor } from "@/lib/lectura-servidor";
-import { estadoHidrico } from "@/lib/lecturas";
+import { anomaliaDelEstado, estadoHidrico, porPrioridad } from "@/lib/lecturas";
 import { generarAlerta } from "@/lib/alerta";
 import { fechaJujuy, guardarBarrido, type EstadoHistorial } from "@/lib/historial";
 
@@ -118,7 +118,8 @@ export async function GET(req: Request) {
 
   for (const [i, c] of COMUNIDADES.entries()) {
     const l = lecturas[i];
-    const p = l?.meteorologia?.precipitacionMm30d;
+    // Las cifras del despacho son las del indicador que decide el estado (30 días o temporada de lluvias).
+    const p = (l && anomaliaDelEstado(l)) ?? l?.meteorologia?.precipitacionMm30d;
     const est = l ? estadoHidrico(l) : "sin_dato";
     const organismo = ORGANISMO_POR_ID[c.id] ?? `Municipio de ${c.nombre}`;
 
@@ -178,7 +179,7 @@ export async function GET(req: Request) {
   }
 
   // Ordenar: primero los que dispararon alerta automática (peor déficit primero)
-  despachos.sort((a, b) => a.anomaliaPct - b.anomaliaPct);
+  despachos.sort((a, b) => porPrioridad({ estado: a.estado, pct: a.anomaliaPct }, { estado: b.estado, pct: b.anomaliaPct }));
 
   const res: ResultadoBarrido = {
     fechaBarrido: new Date().toLocaleDateString("es-AR", { timeZone: "America/Argentina/Jujuy" }),
