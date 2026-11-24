@@ -1,4 +1,4 @@
-import type { Anomalia, CompositeNdvi, LecturaSatelital } from "./types";
+import type { Anomalia, AnomaliaTemporada, CompositeNdvi, LecturaSatelital } from "./types";
 
 const POWER = "https://power.larc.nasa.gov/api/temporal";
 const ORNL = "https://modis.ornl.gov/rst/api/v1/MOD13Q1";
@@ -39,8 +39,39 @@ type PowerClim = {
   header?: { range?: string };
 };
 
+/**
+ * Con una normal de 30 días por debajo de este piso (estación seca de la Puna: 2–6 mm), unos pocos mm
+ * mueven el desvío a ±100 % o más sin cambiar la condición del campo: el porcentaje de 30 días no se usa.
+ */
+export const PISO_NORMAL_30D_MM = 10;
+/** Desvío de la temporada de lluvias que se considera déficit. Provisorio: falta calibrarlo con registros de emergencia. */
+export const UMBRAL_TEMPORADA_PCT = -20;
+const MIN_DIAS_TEMPORADA_EN_CURSO = 60;
+const COBERTURA_MINIMA = 0.9;
+
+function diasEntre(a: string, b: string): number {
+  return Math.round((Date.parse(isoFromYmd(b)) - Date.parse(isoFromYmd(a))) / 86400000) + 1;
+}
+
+/**
+ * Temporada de lluvias a evaluar para un corte dado: la que está en curso si ya lleva 60 días
+ * (desde el 1/12), o la última completa (1/12 al 30/4).
+ */
+export function ventanaTemporada(ultimo: string): { desde: string; hasta: string; enCurso: boolean } {
+  const anio = Number(ultimo.slice(0, 4));
+  const mes = Number(ultimo.slice(4, 6));
+  if (mes === 12 || mes <= 4) {
+    const desde = `${mes === 12 ? anio : anio - 1}1201`;
+    if (diasEntre(desde, ultimo) >= MIN_DIAS_TEMPORADA_EN_CURSO) return { desde, hasta: ultimo, enCurso: true };
+    const a = Number(desde.slice(0, 4));
+    return { desde: `${a - 1}1201`, hasta: `${a}0430`, enCurso: false };
+  }
+  return { desde: `${anio - 1}1201`, hasta: `${anio}0430`, enCurso: false };
+}
+
 export async function leerMeteorologia(lat: number, lon: number, hoy = new Date()): Promise<NonNullable<LecturaSatelital["meteorologia"]>> {
-  const inicio = new Date(hoy.getTime() - 45 * 86400000);
+  // Alcanza para la última temporada de lluvias completa aunque el corte caiga en diciembre–enero.
+  const inicio = new Date(hoy.getTime() - 530 * 86400000);
   const q = `community=AG&longitude=${lon}&latitude=${lat}&format=JSON`;
   const [diario, clima] = await Promise.all([
     fetchJson<PowerDaily>(`${POWER}/daily/point?parameters=PRECTOTCORR,T2M&${q}&start=${ymd(inicio)}&end=${ymd(hoy)}`, 6000),
@@ -72,6 +103,30 @@ export async function leerMeteorologia(lat: number, lon: number, hoy = new Date(
     diasConDato: ult30.length,
   };
 
+  const anomalia = (dias: string[], desde: string, hasta: string): Anomalia | undefined => {
+    if (dias.length < diasEntre(desde, hasta) * COBERTURA_MINIMA) return undefined;
+    const o = dias.reduce((s, f) => s + P[f], 0);
+    const c = dias.reduce((s, f) => s + climaDia(f), 0);
+    const a = isoFromYmd(dias[0]);
+    const b = isoFromYmd(dias[dias.length - 1]);
+    return {
+      observado: r2(o),
+      climatologia: r2(c),
+      unidad: "mm",
+      porcentaje: c > 0 ? r1((o / c - 1) * 100) : null,
+      ventana: `${ddmm(a)}/${a.slice(0, 4)}–${ddmm(b)}/${b.slice(0, 4)} (${dias.length} días con dato)`,
+      diasConDato: dias.length,
+    };
+  };
+  const ultimoYmd = ult30[ult30.length - 1];
+  const ultimosN = (n: number) => {
+    const desde = ymd(new Date(Date.parse(isoFromYmd(ultimoYmd)) - (n - 1) * 86400000));
+    return anomalia(validas.filter((f) => f >= desde), desde, ultimoYmd);
+  };
+  const temp = ventanaTemporada(ultimoYmd);
+  const aTemp = anomalia(validas.filter((f) => f >= temp.desde && f <= temp.hasta), temp.desde, temp.hasta);
+  const temporada: AnomaliaTemporada | undefined = aTemp ? { ...aTemp, enCurso: temp.enCurso } : undefined;
+
   const tVal = fechas.filter((f) => T[f] !== fill && T[f] > fill + 1).slice(-7);
   const mesUlt = MESES[Number(ult30[ult30.length - 1].slice(4, 6)) - 1];
   const tMedia = tVal.reduce((s, f) => s + T[f], 0) / Math.max(tVal.length, 1);
@@ -82,6 +137,9 @@ export async function leerMeteorologia(lat: number, lon: number, hoy = new Date(
     demoraDeclarada: "2–3 días (meteorología)",
     climatologiaPeriodo: clima.header?.range?.match(/\((.*?)\)/)?.[1] ?? "January 2001 - December 2025",
     precipitacionMm30d: precip,
+    precipitacionMm90d: ultimosN(90),
+    precipitacionMm180d: ultimosN(180),
+    precipitacionTemporada: temporada,
     temperaturaC7d: {
       mediaObservada: r2(tMedia),
       climatologiaMes: CT[mesUlt],
@@ -156,10 +214,25 @@ export async function leerTodo(id: string, lat: number, lon: number): Promise<Le
   };
 }
 
+/**
+ * Qué indicador decide el estado: la lluvia de 30 días, salvo en época seca (normal de 30 días bajo el piso),
+ * donde decide la temporada de lluvias. "epoca_seca_sin_temporada" = época seca y no hay dato de temporada.
+ */
+export function baseEstado(l: LecturaSatelital): "lluvia_30d" | "temporada_lluvias" | "epoca_seca_sin_temporada" {
+  const m = l.meteorologia;
+  if (!m || m.precipitacionMm30d.climatologia >= PISO_NORMAL_30D_MM) return "lluvia_30d";
+  return m.precipitacionTemporada?.porcentaje != null ? "temporada_lluvias" : "epoca_seca_sin_temporada";
+}
+
 /** Clasificación determinista: la verdad la decide el dato, no el LLM. */
 export function estadoHidrico(l: LecturaSatelital): "deficit" | "normal" | "superavit_reciente" | "sin_dato" {
   const p = l.meteorologia?.precipitacionMm30d.porcentaje;
   if (p === null || p === undefined) return "sin_dato";
+  const base = baseEstado(l);
+  if (base === "temporada_lluvias") {
+    return l.meteorologia!.precipitacionTemporada!.porcentaje! <= UMBRAL_TEMPORADA_PCT ? "deficit" : "normal";
+  }
+  if (base === "epoca_seca_sin_temporada") return "normal";
   if (p <= -25) return "deficit";
   if (p >= 25) return "superavit_reciente";
   return "normal";

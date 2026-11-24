@@ -35,6 +35,9 @@ export type Anomalia = {
   diasConDato: number;
 };
 
+/** Temporada de lluvias (1/12 al 30/4). `enCurso` indica que todavía no terminó y el acumulado es parcial. */
+export type AnomaliaTemporada = Anomalia & { enCurso: boolean };
+
 export type CompositeNdvi = { fecha: string; modisDate: string; ndvi: number };
 
 export type LecturaSatelital = {
@@ -47,6 +50,10 @@ export type LecturaSatelital = {
     demoraDeclarada: string;
     climatologiaPeriodo: string;
     precipitacionMm30d: Anomalia;
+    /** Ventanas largas: ausentes en lecturas viejas (cache del deploy, localStorage) o si faltan días. */
+    precipitacionMm90d?: Anomalia;
+    precipitacionMm180d?: Anomalia;
+    precipitacionTemporada?: AnomaliaTemporada;
     temperaturaC7d: {
       mediaObservada: number;
       climatologiaMes: number;

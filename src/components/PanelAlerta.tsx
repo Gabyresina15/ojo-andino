@@ -240,6 +240,14 @@ export default function PanelAlerta({ comunidad, lectura }: Props) {
               {fmt1(m.precipitacionMm30d.porcentaje ?? 0)}%)
               {patron ? ` · Racha seca: ${patron.racha_seca_maxima_dias}d` : ""}
             </div>
+            {m.precipitacionTemporada && (
+              <div className="text-xs text-[#9CA3AF] mt-1">
+                Temporada de lluvias{m.precipitacionTemporada.enCurso ? " (en curso)" : ""}:{" "}
+                <strong>{fmt1(m.precipitacionTemporada.observado)} mm</strong> de {fmt1(m.precipitacionTemporada.climatologia)} mm
+                normales ({(m.precipitacionTemporada.porcentaje ?? 0) >= 0 ? "+" : ""}
+                {fmt1(m.precipitacionTemporada.porcentaje ?? 0)}%)
+              </div>
+            )}
           </div>
 
           <div className="rounded-2xl bg-[#0B0D10]/80 border border-white/10 p-4">
