@@ -78,7 +78,7 @@ test("la bitácora pasa de página si un dictamen largo dejaría poco espacio", 
 
 test("las recomendaciones del informe consolidado no pasan el margen derecho", (t) => {
   const susques = structuredClone(lecturaCacheada("susques")!);
-  susques.meteorologia!.precipitacionMm30d = { observado: 80, climatologia: 40, porcentaje: 100 };
+  susques.meteorologia!.precipitacionMm30d = { ...susques.meteorologia!.precipitacionMm30d, observado: 80, climatologia: 40, porcentaje: 100 };
   const textos = capturarTexto(t, undefined, () => descargarPdfProvincialConsolidado({ susques }));
   const recomendaciones = textos.filter(({ texto }) => texto.startsWith("Recomendación: "));
   assert.equal(recomendaciones.length, 10);
