@@ -22,6 +22,12 @@ const FUENTES = [
       "Es un compuesto de 16 días: no cambia de un día para otro. Se muestra como contexto y no interviene en el estado hídrico.",
   },
   {
+    nombre: "CHIRPS (Climate Hazards Center, UCSB)",
+    uso: "Segunda fuente de lluvia, grilla de unos 5 km. Se usa solo para cruzar el acumulado de la última temporada de lluvias cerrada.",
+    limite:
+      "No decide el estado: si no coincide con NASA POWER, se avisa que hay que verificar en campo. Llega con semanas de demora, así que no cubre los últimos 30 días ni la temporada en curso. También es una estimación satelital, no una estación.",
+  },
+  {
     nombre: "Grok (xAI)",
     uso: "Redacta el texto de la alerta a partir de las cifras anteriores.",
     limite:
@@ -29,18 +35,18 @@ const FUENTES = [
   },
 ];
 
-// Prueba retrospectiva sobre la serie de NASA POWER al 23/09/2026 (una sola corrida).
+// Prueba retrospectiva sobre la serie de NASA POWER al 23/09/2026 (una sola corrida). `chirps`: misma temporada según CHIRPS.
 const BACKTEST = [
-  { lugar: "Abra Pampa", obs: 12.2, normal: 6.2, pct30: 98, temporada: -21 },
-  { lugar: "Susques", obs: 7.4, normal: 4.4, pct30: 70, temporada: -11 },
-  { lugar: "La Quiaca", obs: 12.5, normal: 5.2, pct30: 143, temporada: -24 },
-  { lugar: "Santa Catalina *", obs: 11.3, normal: 3.5, pct30: 225, temporada: -39 },
-  { lugar: "Rinconada *", obs: 14.4, normal: 4.2, pct30: 239, temporada: -24 },
+  { lugar: "Abra Pampa", obs: 12.2, normal: 6.2, pct30: 98, temporada: -21, chirps: -7 },
+  { lugar: "Susques", obs: 7.4, normal: 4.4, pct30: 70, temporada: -11, chirps: 0 },
+  { lugar: "La Quiaca", obs: 12.5, normal: 5.2, pct30: 143, temporada: -24, chirps: -8 },
+  { lugar: "Santa Catalina *", obs: 11.3, normal: 3.5, pct30: 225, temporada: -39, chirps: -6 },
+  { lugar: "Rinconada *", obs: 14.4, normal: 4.2, pct30: 239, temporada: -24, chirps: -13 },
 ];
 
 const NO_MIDE = [
   "No mide el agua de un campo, una aguada o una vega en particular.",
-  "No usa imágenes de radar SAOCOM ni datos de estaciones meteorológicas locales.",
+  "No usa imágenes de radar SAOCOM ni datos de estaciones meteorológicas locales. La segunda fuente (CHIRPS) también es satelital.",
   "No sirve para emergencias de horas (crecidas, tormentas): los datos tienen 2 a 3 días de demora.",
   "No pronostica: describe lo que ya llovió frente a lo normal.",
   "No reemplaza la verificación en el territorio ni la decisión del organismo competente.",
@@ -138,7 +144,8 @@ export default function MetodologiaPage() {
                   <th className="py-2 pr-3">Lluvia 30 días vs normal</th>
                   <th className="py-2 pr-3">Regla anterior (solo 30 días)</th>
                   <th className="py-2 pr-3">Temporada vs normal</th>
-                  <th className="py-2">Regla actual</th>
+                  <th className="py-2 pr-3">Regla actual</th>
+                  <th className="py-2">Temporada según CHIRPS</th>
                 </tr>
               </thead>
               <tbody>
@@ -150,7 +157,10 @@ export default function MetodologiaPage() {
                     </td>
                     <td className="py-2 pr-3">superávit</td>
                     <td className="py-2 pr-3">{b.temporada} %</td>
-                    <td className="py-2 text-[#F4F1EA]">{estadoNuevo(b.temporada)}</td>
+                    <td className="py-2 pr-3 text-[#F4F1EA]">{estadoNuevo(b.temporada)}</td>
+                    <td className="py-2 whitespace-nowrap">
+                      {b.chirps} % ({estadoNuevo(b.chirps)})
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -160,7 +170,16 @@ export default function MetodologiaPage() {
             <li>La regla anterior falló en los cinco casos. La regla actual se agregó después de ver este resultado, así que la prueba no es independiente.</li>
             <li>Susques recibió asistencia y su temporada fue casi normal según NASA POWER: la fuente no explica ese caso.</li>
             <li>Tres de los cuatro déficits están entre −21 % y −24 %. Con un umbral de −25 % solo quedaría Santa Catalina.</li>
-            <li>Es un solo evento y una sola fuente. No alcanza para estimar aciertos ni falsas alarmas.</li>
+            <li>
+              <strong className="text-[#F4F1EA]">La segunda fuente no confirma el déficit de 2026.</strong> Con CHIRPS (grilla de unos 5 km)
+              ninguna de las cinco localidades llega al umbral. Para la temporada 2025 las dos fuentes sí coinciden en lluvia por debajo de
+              lo normal.
+            </li>
+            <li>
+              Entre 2001 y 2026 los desvíos de temporada de NASA POWER y CHIRPS se parecen poco en estas localidades (correlación de 0,4
+              a 0,7). Sin estaciones en tierra no se puede decir cuál de las dos acierta.
+            </li>
+            <li>Es un solo evento. No alcanza para estimar aciertos ni falsas alarmas.</li>
             <li>* Santa Catalina y Rinconada no están en el tablero y sus coordenadas en la prueba son aproximadas.</li>
           </ul>
         </Seccion>

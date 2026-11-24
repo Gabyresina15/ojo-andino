@@ -84,3 +84,23 @@ test("el verificador no acepta el acumulado de 30 días presentado como el de la
   assert.notDeepEqual(validarNumeros("La temporada de lluvias dejó 12,2 mm.", p).noVerificados, []);
   assert.notDeepEqual(validarNumeros("En los últimos 30 días cayeron 361,0 mm.", p).noVerificados, []);
 });
+
+test("el cruce con CHIRPS solo aplica a temporadas cerradas y dice si coincide con NASA POWER", async () => {
+  const { cruceTemporada } = await import("../src/lib/cruce");
+  const base = lectura(anom(12.2, 6.2), anom(350, 446));
+  base.meteorologia!.ultimoDiaConDato = "2026-09-23";
+  const c = cruceTemporada(base)!;
+  assert.equal(c.temporada, 2026);
+  assert.equal(c.observado, 372.5);
+  assert.ok(c.porcentaje > -20 && c.porcentaje < 0);
+  assert.equal(c.coincide, false);
+
+  const normal = lectura(anom(12.2, 6.2), anom(430, 446));
+  normal.meteorologia!.ultimoDiaConDato = "2026-09-23";
+  assert.equal(cruceTemporada(normal)!.coincide, true);
+
+  const enCurso = lectura(anom(60, 80), anom(100, 150));
+  enCurso.meteorologia!.ultimoDiaConDato = "2027-02-15";
+  enCurso.meteorologia!.precipitacionTemporada!.enCurso = true;
+  assert.equal(cruceTemporada(enCurso), null);
+});
