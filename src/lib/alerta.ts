@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { AlertaRespuesta, Comunidad, LecturaSatelital } from "./types";
-import { estadoHidrico, UMBRAL_DEFICIT_PCT, UMBRAL_SUPERAVIT_PCT } from "./lecturas";
+import { anomaliaDelEstado, baseEstado, estadoHidrico, UMBRAL_DEFICIT_PCT, UMBRAL_SUPERAVIT_PCT, UMBRAL_TEMPORADA_PCT } from "./lecturas";
 
 export const AlertaSchema = z.object({
   resumen_oral: z.string().min(80).max(1600),
@@ -39,6 +39,7 @@ export const SYSTEM_PROMPT = `Sos analista de riesgo hídrico de Ojo Andino para
 Glosario del JSON de entrada:
 pueblo y region ubican el análisis; modo define destinatario; fecha_hoy_art no es la fecha de medición. contexto es contexto local, no evidencia de condiciones actuales ni autorización para citar instituciones.
 lluvia contiene ventana, acumulado observado, climatología, anomalía y último día con dato. estado_hidrico_calculado es la clasificación determinista.
+estado_basado_en identifica el indicador usado. Si es temporada_lluvias o epoca_seca_sin_temporada, es época seca: lluvia.anomalia_pct no indica sequía ni exceso y no debe citarse como señal. Con temporada_lluvias, explicá el estado con su ventana, observado_mm, climatologia_mm y anomalia_pct; de esa lluvia dependen pasturas y aguadas hasta la próxima temporada. Sin temporada disponible, no inventes una anomalía ni un gatillo evaluado.
 patron_diario describe días secos (sin lluvia significativa), días de lluvia de 1 mm o más, racha seca máxima, lluvia reciente, pico diario, fecha y concentración del total en ese día. No permite afirmar intensidad horaria.
 temperatura contiene media, referencia y diferencia térmica con signo; no supongas calor si la diferencia es negativa.
 ndvi es índice de verdor con fechas de compuestos, no disponibilidad medida de forraje ni agua.
@@ -147,14 +148,25 @@ export function payloadUsuario(c: Comunidad, l: LecturaSatelital, modo: "comunid
     fecha_hoy_art: new Date().toLocaleDateString("es-AR", { timeZone: "America/Argentina/Jujuy" }),
     estado_hidrico_calculado: estadoHidrico(l),
     gatillo: {
-      umbral_deficit_pct: UMBRAL_DEFICIT_PCT,
+      umbral_deficit_pct: baseEstado(l) === "temporada_lluvias" ? UMBRAL_TEMPORADA_PCT : UMBRAL_DEFICIT_PCT,
       umbral_superavit_pct: UMBRAL_SUPERAVIT_PCT,
+      umbral_temporada_pct: UMBRAL_TEMPORADA_PCT,
       estado: estadoHidrico(l),
       activado: estadoHidrico(l) === "deficit" || estadoHidrico(l) === "superavit_reciente",
     },
     riesgo_operativo_foco: c.region === "puna" ? "forraje y agua de aguadas y vegas" : "escorrentía, corte de trazas, badenes y caminos",
     escorrentia_concentrada: patron != null && patron.concentracion_pico_pct >= 55,
     recomendacion_base: modo === "parametrico" ? recomendacionGobierno(c, l) : recomendacionComunidad(c, l),
+    estado_basado_en: baseEstado(l),
+    temporada_lluvias: m?.precipitacionTemporada
+      ? {
+          ventana: m.precipitacionTemporada.ventana,
+          en_curso: m.precipitacionTemporada.enCurso,
+          observado_mm: r1(m.precipitacionTemporada.observado),
+          climatologia_mm: r1(m.precipitacionTemporada.climatologia),
+          anomalia_pct: m.precipitacionTemporada.porcentaje,
+        }
+      : null,
     lluvia: m
       ? {
           ventana: m.precipitacionMm30d.ventana,
@@ -271,7 +283,7 @@ function fechasDelPayload(payload: unknown): Set<string> {
 
 /** Verifica que cada cifra esté atada al dato correcto (no solo que exista en algún lugar del payload). */
 export function validarAfirmaciones(texto: string, payload: unknown): string[] {
-  const { patron_diario: pat, lluvia, temperatura: temp, ndvi } = (payload ?? {}) as PayloadAlerta;
+  const { patron_diario: pat, lluvia, temperatura: temp, ndvi, temporada_lluvias: temporada } = (payload ?? {}) as PayloadAlerta;
   const errores: string[] = [];
 
   if (pat) {
@@ -295,8 +307,9 @@ export function validarAfirmaciones(texto: string, payload: unknown): string[] {
     }
   }
 
-  if (lluvia || pat) {
+  if (lluvia || pat || temporada) {
     const refs = [lluvia?.observado_mm, lluvia?.climatologia_mm, pat?.lluvia_ultimos_7d_mm, pat?.pico_maximo_mm, 1].filter(esNumero);
+    const refsTemporada = [temporada?.observado_mm, temporada?.climatologia_mm].filter(esNumero);
     let corte = 0;
     for (const m of texto.matchAll(new RegExp(`${NUM}\\s?mm\\b`, "g"))) {
       const ini = m.index;
@@ -320,6 +333,9 @@ export function validarAfirmaciones(texto: string, payload: unknown): string[] {
         }
       } else if (pat && pSemana > pPico) {
         if (!coincide(n, pat.lluvia_ultimos_7d_mm)) errores.push(`${m[0]} en 7 días (dato: ${pat.lluvia_ultimos_7d_mm} mm)`);
+      } else if (/temporada/i.test(texto.slice(inicioOracion(texto, ini), ini))) {
+        // Un acumulado atribuido a la temporada de lluvias solo puede ser el de la temporada.
+        if (!refsTemporada.some((r) => coincide(n, r))) errores.push(`${m[0]} no corresponde al acumulado de la temporada de lluvias`);
       } else if (!refs.some((r) => coincide(n, r))) {
         errores.push(`${m[0]} no corresponde a ningún acumulado de la fuente`);
       }
@@ -333,7 +349,7 @@ export function validarAfirmaciones(texto: string, payload: unknown): string[] {
     }
   }
 
-  const refsPct = [lluvia?.anomalia_pct, pat?.concentracion_pico_pct, ndvi?.variacion_vs_anterior_pct, 25]
+  const refsPct = [lluvia?.anomalia_pct, temporada?.anomalia_pct, pat?.concentracion_pico_pct, ndvi?.variacion_vs_anterior_pct, 25, ...(temporada ? [UMBRAL_TEMPORADA_PCT] : [])]
     .filter(esNumero)
     .map(Math.abs);
   for (const m of texto.matchAll(new RegExp(`${NUM}\\s?%`, "g"))) {
@@ -402,11 +418,17 @@ export function alertaDeterminista(c: Comunidad, l: LecturaSatelital, modo: "com
   const est = estadoHidrico(l);
   const patron = calcularPatronDiario(l);
   const esComunidad = modo === "comunidad";
+  const base = baseEstado(l);
+  const temporada = m?.precipitacionTemporada;
   const partes: string[] = [];
   if (est === "sin_dato") {
     partes.push(`En ${c.nombre} faltan datos para clasificar el balance de lluvia; no se puede afirmar sequía ni normalidad.`);
   } else if (m) {
-    if (est === "superavit_reciente" && c.region === "quebrada" && patron) {
+    if (base === "temporada_lluvias" && temporada) {
+      partes.push(`En ${c.nombre} la temporada de lluvias (${temporada.ventana}) dejó ${fmt1(temporada.observado)} mm frente a ${fmt1(temporada.climatologia)} mm de lo normal. Es época seca; ${est === "deficit" ? "la temporada presenta señal de déficit" : "la temporada no presenta señal de déficit"}.`);
+    } else if (base === "epoca_seca_sin_temporada") {
+      partes.push(`En ${c.nombre} es época seca: con una normal tan baja, la lluvia de 30 días no alcanza para indicar ni sequía ni exceso. Falta el dato de la temporada de lluvias.`);
+    } else if (est === "superavit_reciente" && c.region === "quebrada" && patron) {
       partes.push(`En ${c.nombre} la lluvia acumulada superó el promedio histórico, con ${patron.dias_con_lluvia_significativa} días de lluvia de 1 mm o más, un pico de ${fmt1(patron.pico_maximo_mm)} mm el ${patron.pico_maximo_dia} (${patron.concentracion_pico_pct} % del total en un solo día) y ${fmt1(patron.lluvia_ultimos_7d_mm)} mm en la última semana.`);
     } else {
       const balance = est === "deficit" ? "quedó por debajo del promedio histórico" : est === "superavit_reciente" ? "superó el promedio histórico" : "estuvo cerca del promedio histórico";
@@ -450,21 +472,29 @@ export function alertaDeterminista(c: Comunidad, l: LecturaSatelital, modo: "com
   const riesgo = esComunidad ? riesgoComunidad : riesgoGobierno;
 
   const accion = esComunidad ? recomendacionComunidad(c, l) : recomendacionGobierno(c, l);
-  const p = m?.precipitacionMm30d;
+  const p = anomaliaDelEstado(l);
   const desvioRedondeado = p?.porcentaje != null ? r1(p.porcentaje) : 0;
   const desvio = `${desvioRedondeado >= 0 ? "+" : ""}${fmt1(desvioRedondeado)} %`;
-  const umbral = est === "deficit" ? `${UMBRAL_DEFICIT_PCT}` : `+${UMBRAL_SUPERAVIT_PCT}`;
+  const umbral = est === "deficit" ? `${base === "temporada_lluvias" ? UMBRAL_TEMPORADA_PCT : UMBRAL_DEFICIT_PCT}` : `+${UMBRAL_SUPERAVIT_PCT}`;
   const rango = `±${UMBRAL_SUPERAVIT_PCT}`;
   const gatillo = est === "sin_dato"
     ? "No es posible evaluar el gatillo por falta de datos de lluvia."
+    : !p
+      ? "No es posible evaluar el gatillo sin datos de la temporada de lluvias en época seca."
+      : base === "temporada_lluvias" && est === "normal"
+        ? `El gatillo de déficit de temporada permanece inactivo: desvío ${desvio} frente al umbral de ${UMBRAL_TEMPORADA_PCT} %.`
     : est === "normal"
       ? `El gatillo permanece inactivo: el desvío de ${desvio} se encuentra dentro del rango de ${rango} %.`
-      : `Se activa el gatillo de ${est === "deficit" ? "déficit" : "exceso hídrico"} por un desvío de ${desvio} frente al umbral de ${umbral} %; señal del índice, no pago automático.`;
+      : `Se activa el gatillo de ${est === "deficit" ? "déficit" : "exceso hídrico"}: desvío ${desvio} frente al umbral de ${umbral} %; señal del índice, no pago automático.`;
   const verificacion = c.region === "puna"
     ? "Verificar en campo aguadas y reservas de forraje y dejar registro."
     : "Verificar drenajes y transitabilidad de badenes y dejar registro.";
   const gatilloOral = est === "sin_dato"
     ? "Gatillo paramétrico no evaluable: sin dato de lluvia."
+    : !p
+      ? "Gatillo paramétrico no evaluable: sin dato de temporada en época seca."
+      : base === "temporada_lluvias" && est === "normal"
+        ? `Gatillo paramétrico no activado por déficit de temporada: desvío de ${desvio} frente al umbral de ${UMBRAL_TEMPORADA_PCT} %.`
     : est === "normal"
       ? `Gatillo paramétrico no activado: desvío de ${desvio}, dentro del rango de ${rango} %.`
       : `Gatillo paramétrico activado por ${est === "deficit" ? "déficit" : "exceso hídrico"}: desvío de ${desvio} frente al umbral de ${umbral} %.`;
